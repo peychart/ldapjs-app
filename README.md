@@ -92,12 +92,12 @@ Un exemple de fichier config.json est présenté ici :
 ```
 
 Explications :
-- l'entrée "ldap" définie l'accès à la base ; il doit être read/write,
-- l'entrée "schema" définie l'accès à son schéma ; un readOnly est suffisant,
-- l'entrée définie le lieu de stockage dans la base du paramétrage de l'application :
- - définitions associées aux attributs,
- - logique des classes (associations métiers, attributs de recherche, etc.)
- - ...
+-l'entrée "ldap" définie l'accès à la base ; il doit être read/write,
+-l'entrée "schema" définie l'accès à son schéma ; un readOnly est suffisant,
+-l'entrée définie le lieu de stockage dans la base du paramétrage de l'application :
+ -définitions associées aux attributs,
+ -logique des classes (associations métiers, attributs de recherche, etc.)
+ -...
 
 
 ## Utilisation
@@ -113,11 +113,11 @@ Ouvrir un navigateur et appeler le lien suivant : http://localhost:3000.
 
 ## Routes disponibles à ce jour
 
-* GET / : Page d'accueil pour la recherche LDAP.
-* POST /search : Effectue une recherche sur les entrées LDAP.
-* GET /edit/:dn : Accède à la page d'édition d'une entrée LDAP.
-* POST /update-attributeCtl : Met à jour le format des attributs d'une entrée LDAP.
-* GET /logout : Déconnexion et réinitialisation de la connexion LDAP.
+-GET / : Page d'accueil pour la recherche LDAP.
+-POST /search : Effectue une recherche sur les entrées LDAP.
+-GET /edit/:dn : Accède à la page d'édition d'une entrée LDAP.
+-POST /update-attributeCtl : Met à jour le format des attributs d'une entrée LDAP.
+-GET /logout : Déconnexion et réinitialisation de la connexion LDAP.
 
 
 ## Fonctions utilitaires de contrôle des saisies d'attributs
