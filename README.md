@@ -12,7 +12,7 @@ On peut le trouver ici : https://github.com/peychart/libldapcppei (archive zip :
 Ce tout nouveau projet est lui, en quelque sorte, un début de ré-écrite en nodeJS, offrant ainsi un accès beaucoup plus immédiat puisqu'au format web ; mais les principes de fonctionnement restent similaires :
 
 - la lecture du schéma de l'annuaire permet la constitution dynamique des masques de saisie des informations stockées dans la base,
-- le principe d'association "onglet-objectClass" autorise une vision claire des propriétés, permettant ajouts et retraits contrôlés des objectClass structurant chacune des entrée créées ou éditées,
+- Le principe d'association 'onglet-objectClass' permet une vision claire des propriétés, facilitant les ajouts et retraits contrôlés des objectClass structurant chacune des entrées créées ou éditées,
 - un principe de paramétrage de chacun des attributs (à personnaliser ici en JavaScript) permet de gérer à la fois les contraintes de saisie de chaque attribut d'annuaire mais, également, les contraintes d'intégrité qui peuvent exister entre les attributs eux-mêmes.
 
 
