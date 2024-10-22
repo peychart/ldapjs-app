@@ -3,7 +3,6 @@ A web application for managing LDAP entries using ldapjs, allowing users to sear
 
 
 
-
 Une application nodeJS simple, utilisant la bibliothèque `ldapjs` pour interagir avec un serveur LDAP ; elle permet de rechercher, éditer et gérer des entrées d'une base LDAP via une simple interface web.
 
 Ce projet dérive d'un autre vieux projet écrit en Qt et C++ d'une application client-serveur qui permettait de gérer différents aspects de l'administration d'un réseau d'entreprise : users, groups, dns, serveurs, ressources partagés, crons, firewals, ...
@@ -47,6 +46,7 @@ Pour exécuter cette application, suivre ces étapes :
 
 1. Cloner ce dépôt :
 
+```
 bash
 git clone https://github.com/votre-utilisateur/ldapjs-app.git
 cd ldapjs-app
@@ -54,7 +54,9 @@ cd ldapjs-app
 
 2. Installer les dépendances :
 
+```
 bash npm install
+```
 
 
 ## Configuration
@@ -68,6 +70,7 @@ Avant de démarrer l'application, il conviendra d'ajuster les informations du co
 
 Un exemple de fichier config.json est présenté ici :
 
+```
 {
     "ldap": {
         "url": "ldap://localhost:389",
@@ -87,6 +90,7 @@ Un exemple de fichier config.json est présenté ici :
         "attributs": "ou=attribut"
     }
 }
+```
 
 Explications :
 * l'entrée "ldap" définie l'accés à la base ; il doit être read/write,
@@ -116,6 +120,7 @@ GET /logout : Déconnexion et réinitialisation de la connexion LDAP.
 
 1. Conrôle de saisie de l'attribut 'sn' :
 
+```
 function check(input, data, initialValue) {
  // Convertit la valeur saisie en majuscules  
  input.value = input.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -126,6 +131,7 @@ function check(input, data, initialValue) {
  data.forEach(objectClass => {if (objectClass.givenName && objectClass.givenName.value) givenName = objectClass.givenName.value.trim();});
  data.forEach(objectClass => {if (objectClass.cn) objectClass.cn.value = (givenName.length ? `${givenName} ${input.value}`.trim() : input.value);});
 }
+```
 
 
 2. Conrôle de saisie de l'attribut 'cn' (readOnly, puisque calculé)' :
@@ -135,6 +141,7 @@ function check(input, data, initialValue) {
 
 3. Conrôle de saisie de l'attribut 'givenName' :
 
+```
 function check(input, data, initialValue) {
  // Convertit la valeur saisie en majuscules
  input.value = input.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -145,6 +152,7 @@ function check(input, data, initialValue) {
  data.forEach(objectClass => {if (objectClass.sn && objectClass.sn.value) sn = objectClass.sn.value.trim();});
  data.forEach(objectClass => {if (objectClass.cn) objectClass.cn.value = (input.value ? `${input.value} ${sn}`.trim() : sn);});
 }
+```
 
 
 3. (à suivre) ...
