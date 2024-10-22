@@ -11,8 +11,8 @@ On peut le trouver ici en archive zip : https://github.com/peychart/libldapcppei
 
 Ce tout nouveau projet est lui, en quelque sorte, un début de ré-écrite en nodeJS, offrant ainsi un accès beaucoup plus immédiat puisqu'au format web ; mais les principes de fonctionnement restent similaires :
 
-- la lecture du schéma de la base permet la constitution dynamique des masques de saisie des informations stockées dans la base.
-- un principe de paramétrage de chacun des attributs (à personnaliser ici en JavaScript) permet de gérer à la fois les contraintes de saisie de chaque attribut de la base mais, également, les contraintes d'intégrité qui peuvent exister entre les attributs eux-mêmes.
+- la lecture du schéma de l'annuaire permet la constitution dynamique des masques de saisie des informations stockées dans la base.
+- un principe de paramétrage de chacun des attributs (à personnaliser ici en JavaScript) permet de gérer à la fois les contraintes de saisie de chaque attribut d'annuaire mais, également, les contraintes d'intégrité qui peuvent exister entre les attributs eux-mêmes.
 
 
 NOTICE : Ce projet n'est pas encore tout à fait opérationnel mais, dans son état actuel, il peut déjà être testé permettant ainsi d'envisager les principes visés.
