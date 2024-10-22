@@ -113,11 +113,11 @@ Ouvrir un navigateur et appeler le lien suivant : http://localhost:3000.
 
 ## Routes disponibles à ce jour
 
--GET / : Page d'accueil pour la recherche LDAP.
--POST /search : Effectue une recherche sur les entrées LDAP.
--GET /edit/:dn : Accède à la page d'édition d'une entrée LDAP.
--POST /update-attributeCtl : Met à jour le format des attributs d'une entrée LDAP.
--GET /logout : Déconnexion et réinitialisation de la connexion LDAP.
+* GET / : Page d'accueil pour la recherche LDAP.
+* POST /search : Effectue une recherche sur les entrées LDAP.
+* GET /edit/:dn : Accède à la page d'édition d'une entrée LDAP.
+* POST /update-attributeCtl : Met à jour le format des attributs d'une entrée LDAP.
+* GET /logout : Déconnexion et réinitialisation de la connexion LDAP.
 
 
 ## Fonctions utilitaires de contrôle des saisies d'attributs
