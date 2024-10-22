@@ -24,7 +24,7 @@ NOTICE : Ce projet n'est pas encore tout à fait opérationnel mais, dans son é
 * [Installation](#installation)
 * [Configuration](#configuration)
 * [Utilisation](#utilisation)
-* [Fonctions Utilitaires contrôle des saisies](#Fonctions utilitaires de contrôle des saisies d'attributs :)
+* [Fonctions Utilitaires contrôle des saisies](#Fonctions utilitaires de contrôle des saisies d'attributs)
 * [Contribuer](#contribuer)
 * [Licence](#licence)
 
@@ -108,7 +108,7 @@ node app.js (ce démarrage pourra être plus tard configuré en service).
 Ouvrir un navigateur et appeler le lien suivant : http://localhost:3000.
 
 
-## Routes disponibles à ce jour :
+## Routes disponibles à ce jour
 
 * GET / : Page d'accueil pour la recherche LDAP.
 * POST /search : Effectue une recherche sur les entrées LDAP.
@@ -117,7 +117,7 @@ Ouvrir un navigateur et appeler le lien suivant : http://localhost:3000.
 * GET /logout : Déconnexion et réinitialisation de la connexion LDAP.
 
 
-## Fonctions utilitaires de contrôle des saisies d'attributs :
+## Fonctions utilitaires de contrôle des saisies d'attributs
 
 1. Contrôle de saisie de l'attribut 'sn' :
 
