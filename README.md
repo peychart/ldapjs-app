@@ -24,7 +24,7 @@ NOTICE : Ce projet n'est pas encore tout à fait opérationnel mais, dans son é
 * [Installation](#installation)
 * [Configuration](#configuration)
 * [Utilisation](#utilisation)
-* [Fonctions Utilitaires contrôle des saisies](#Fonctions_utilitaires_de_contrôle_des_saisies_d'attributs)
+* [Fonctions Utilitaires contrôle des saisies](#Fonctions-utilitaires-de-contrôle-des-saisies-dattributs)
 * [Contribuer](#contribuer)
 * [Licence](#licence)
 
