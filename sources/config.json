@@ -1,0 +1,19 @@
+{
+    "ldap": {
+        "url": "ldap://localhost:389",
+        "base": {
+            "bindDN": "cn=admin,dc=example,dc=com",
+            "bindPassword": "secret",
+            "baseDN": "dc=example,dc=com"
+        },
+        "schema": {
+            "baseDN": "cn=schema",
+            "bindDN": "cn=admin,dc=example,dc=com",
+            "bindPassword": "schemaPassword"
+        }
+    },
+    "configDn": {
+        "root": "ou=carnetLDAP,ou=applications,dc=example,dc=com",
+        "attributs": "ou=attribut"
+    }
+}
