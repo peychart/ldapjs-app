@@ -175,7 +175,7 @@ Créez une nouvelle branche (git checkout -b feature/YourFeature).
 Commitez vos modifications (git commit -m 'Add some feature').
 Poussez votre branche (git push origin feature/YourFeature).
 Créez une nouvelle Pull Request.
-Licence
+
 
 Remarques :
 
