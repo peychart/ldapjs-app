@@ -20,24 +20,24 @@ NOTICE : Ce projet n'est pas encore opérationnel (exemple, la logique des class
 
 ## Table des matières
 
-* [Fonctionnalités](#fonctionnalités)
-* [Installation](#installation)
-* [Configuration](#configuration)
-* [Utilisation](#utilisation)
-* [Fonctions Utilitaires de contrôle des saisies](#Fonctions-utilitaires-de-contrôle-des-saisies-dattributs)
-* [Contribuer](#contribuer)
-* [Licence](#licence)
+- [Fonctionnalités](#fonctionnalités)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Utilisation](#utilisation)
+- [Fonctions Utilitaires de contrôle des saisies](#Fonctions-utilitaires-de-contrôle-des-saisies-dattributs)
+- [Contribuer](#contribuer)
+- [Licence](#licence)
 
 
 ## Fonctionnalités
 
-* Connexion à un serveur LDAP,
-* Recherche d'entrées LDAP par UID, CN, prénom, ou numéro d'employé (à terme, sera paramétrable au sein de l'interface),
-* Édition des attributs des entrées LDAP,
-* Gestion des formats et des contraintes d'intégrité entre champs de saisie,
-* ajout d'objectClass aux entrées existantes et création de nouvelles entrées,
-* importation de fichiers CSV pour création d'entrées en masse,
-* etc.
+- Connexion à un serveur LDAP,
+- Recherche d'entrées LDAP par UID, CN, prénom, ou numéro d'employé (à terme, sera paramétrable au sein de l'interface),
+- Édition des attributs des entrées LDAP,
+- Gestion des formats et des contraintes d'intégrité entre champs de saisie,
+- ajout d'objectClass aux entrées existantes et création de nouvelles entrées,
+- importation de fichiers CSV pour création d'entrées en masse,
+- etc.
 
 
 #  Installation
@@ -92,12 +92,12 @@ Un exemple de fichier config.json est présenté ici :
 ```
 
 Explications :
-* l'entrée "ldap" définie l'accès à la base ; il doit être read/write,
-* l'entrée "schema" définie l'accès à son schéma ; un readOnly est suffisant,
-* l'entrée définie le lieu de stockage dans la base du paramétrage de l'application :
- * définitions associées aux attributs,
- * logique des classes (associations métiers, attributs de recherche, etc.)
- * ...
+- l'entrée "ldap" définie l'accès à la base ; il doit être read/write,
+- l'entrée "schema" définie l'accès à son schéma ; un readOnly est suffisant,
+- l'entrée définie le lieu de stockage dans la base du paramétrage de l'application :
+ - définitions associées aux attributs,
+ - logique des classes (associations métiers, attributs de recherche, etc.)
+ - ...
 
 
 ## Utilisation
