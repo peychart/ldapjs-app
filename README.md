@@ -15,7 +15,7 @@ Ce tout nouveau projet est lui, en quelque sorte, un début de ré-écrite en no
 - un principe de paramétrage de chacun des attributs (à personnaliser ici en JavaScript) permet de gérer à la fois les contraintes de saisie de chaque attribut d'annuaire mais, également, les contraintes d'intégrité qui peuvent exister entre les attributs eux-mêmes.
 
 
-NOTICE : Ce projet n'est pas encore tout à fait opérationnel mais, dans son état actuel, il peut déjà être testé permettant ainsi d'envisager les principes visés.
+NOTICE : Ce projet n'est pas encore opérationnel (exemple, la logique des classes n'est pas encore fixée) mais, dans son état actuel, il peut déjà être testé permettant ainsi d'envisager les principes visés sur l'interface.
 
 
 ## Table des matières
