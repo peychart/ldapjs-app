@@ -24,7 +24,7 @@ NOTICE : Ce projet n'est pas encore tout à fait opérationel mais, dans son ét
 * [Installation](#installation)
 * [Configuration](#configuration)
 * [Utilisation](#utilisation)
-* [Fonctions Utilitaires](#fonctions-utilitaires)
+* [Fonctions Utilitaires contrôle des saisies](#Fonctions utilitaires de contrôle des saisies d'attributs :)
 * [Contribuer](#contribuer)
 * [Licence](#licence)
 
@@ -117,7 +117,7 @@ Ouvrir un navigateur et appeler le lien suivant : http://localhost:3000.
 * GET /logout : Déconnexion et réinitialisation de la connexion LDAP.
 
 
-## Exemple de fonctions utilitaires de contrôle des attributs :
+## Fonctions utilitaires de contrôle des saisies d'attributs :
 
 1. Conrôle de saisie de l'attribut 'sn' :
 
