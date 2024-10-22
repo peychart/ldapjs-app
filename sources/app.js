@@ -3,7 +3,6 @@ const ldap = require('ldapjs');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
-//const { getObjectClasses, enrichObjectClassesDetails } = require('./utils/ldapUtils');
 const {
     getObjectClasses,
     enrichObjectClassesDetails,
