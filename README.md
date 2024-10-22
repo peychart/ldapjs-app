@@ -174,11 +174,13 @@ Poussez votre branche (git push origin feature/YourFeature).
 Créez une nouvelle Pull Request.
 Licence
 
-Ce projet est sous licence GNU General Public Licence. Consultez le fichier LICENSE pour plus d'informations. ```
-
 Remarques :
 
 Remplacez l'URL de clonage du dépôt Git par celle de votre propre dépôt.
 Assurez-vous que le fichier config.json est mentionné correctement dans le README pour refléter votre configuration.
 Adaptez le contenu selon vos besoins ou ajoutez des informations supplémentaires qui pourraient être utiles aux utilisateurs de votre application.
+
+## Licence
+
+Ce projet est sous licence GNU General Public Licence. Consultez le fichier LICENSE pour plus d'informations. ```
 
