@@ -95,9 +95,9 @@ Explications :
 * l'entrée "ldap" définie l'accès à la base ; il doit être read/write,
 * l'entrée "schema" définie l'accès à son schéma ; un readOnly est suffisant,
 * l'entrée définie le lieu de stockage dans la base du paramétrage de l'application :
-*  * définitions associées aux attributs,
-*  * logique des classes (associations métiers, attributs de recherche, etc.)
-*  * ...
+   * définitions associées aux attributs,
+   * logique des classes (associations métiers, attributs de recherche, etc.)
+   * ...
 
 
 ## Utilisation
