@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carnet d'Annuaire</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #fff4b2; /* Jaune foncé clair pour le fond extérieur */
+        }
+        .nav-tabs .nav-link {
+            border: 1px solid #000000; /* Bordure noire */
+            background-color: #F5F5DC; /* Fond beige pour les onglets */
+        }
+        .nav-tabs .nav-link.active {
+            border-bottom-color: #fff4b2; /* Couleur de fond de l'onglet actif pour masquer la bordure */
+            background-color: #E0E0E0; /* Fond gris clair pour l'onglet actif */
+        }
+        .tab-content {
+            background-color: #ffffe0; /* Fond jaune clair pour le contenu des onglets */
+            padding: 15px; /* Ajout de padding pour l'intérieur des onglets */
+            border: 1px solid #000000; /* Bordure noire pour le contenu des onglets */
+            border-radius: 5px; /* Coins arrondis pour le contenu des onglets */
+            margin-top: -1px; /* Pour ajuster la superposition de la bordure avec les onglets */
+        }
+        .btn-save {
+            position: relative;
+            background-color: #F5F5DC; /* Couleur beige pour le bouton */
+            border: 1px solid #000; /* Bordure noire pour le bouton */
+            color: #000; /* Couleur du texte par défaut */
+        }
+        .btn-save:hover {
+            background-color: #E0E0E0; /* Couleur beige plus foncé au survol */
+        }
+	.btn-save.disabled:hover {
+	    background-color: #F5F5DC; /* Rétablir la couleur d'origine lorsqu'il est désactivé */
+	    cursor: not-allowed; /* Change le curseur pour indiquer que le bouton est désactivé */
+	}
+        .btn-save.enabled {
+            color: #9B111E; /* Rouge rubis lorsqu'il est activé */
+            background-color: #98FB98; /* Vert tendre lorsque activé */
+        }
+        .edit-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #007bff; /* Couleur du bouton d'édition */
+            padding: 0; /* Supprime le padding pour un bouton plus compact */
+            font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
+        }
+        .edit-btn i {
+            font-size: 0.8em; /* Réduit la taille de l'icône */
+        }
+        .modal-content {
+            background-color: #ffffe0; /* Fond jaune clair pour la modale */
+            border-radius: 15px; /* Arrondir les angles de la fenêtre modale */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ajoute une ombre douce autour de la modale */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5 position-relative">
+        <h1>Carnet d'Annuaire</h1>
+
+        <!-- Conteneur pour les boutons avec Flexbox -->
+        <div class="d-flex justify-content-end mb-3">
+            <button id="restoreButton" class="btn btn-secondary" onclick="restoreValues()">Restaurer les valeurs</button>
+            <form action="/update/<%= objectClassesDetails[0].objectClassName %>" method="POST" class="ml-2">
+                <button type="submit" id="saveButton" class="btn btn-save" disabled>Valider</button>
+            </form>
+        </div>
+
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <% objectClassesDetails.forEach((objectClass, index) => { %>
+                <li class="nav-item">
+                    <a class="nav-link <%= index === 0 ? 'active' : '' %>" id="<%= objectClass.objectClassName %>-tab" data-toggle="tab" href="#<%= objectClass.objectClassName %>" role="tab" aria-controls="<%= objectClass.objectClassName %>" aria-selected="<%= index === 0 %>"><%= objectClass.objectClassName %></a>
+                </li>
+            <% }) %>
+            <li class="nav-item">
+                <a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false">+</a>
+            </li>
+        </ul>
+
+        <!-- Tab panes -->
+        <div class="tab-content" id="myTabContent">
+            <% objectClassesDetails.forEach((objectClass, index) => { %>
+                <div class="tab-pane fade <%= index === 0 ? 'show active' : '' %>" id="<%= objectClass.objectClassName %>" role="tabpanel" aria-labelledby="<%= objectClass.objectClassName %>-tab">
+                    <h3></h3> <!-- Suppression de "Attributes" -->
+                    
+                    <form action="/update/<%= objectClass.objectClassName %>" method="POST">
+                        <h4 class="underline">Attributs obligatoires :</h4> <!-- Souligné avec ":" -->
+                        <ul>
+                            <% Object.keys(objectClass).forEach(attrName => { 
+                                if (objectClass[attrName].type === 'MUST') { // Affiche uniquement les attributs de type MUST  
+                                    const objectAttribute = objectClass[attrName];
+                                    const displayLabel = objectAttribute.customWording || attrName; // Utilise customWording ou le nom de l'attribut 
+                            %>
+                                <li>
+                                    <strong><%= displayLabel %>:</strong>
+				    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <input type="text"
+                                           name="<%= JSON.stringify(attrName) %>"
+                                           value="<%= objectAttribute.value %>"
+                                           class="form-control"
+					   onfocus="valueOnfocus(this)"
+					   oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                                </li>
+                            <% } }) %>
+                        </ul>
+                        
+                        <h4 class="underline">Attributs optionnels :</h4> <!-- Souligné avec ":" -->
+                        <ul>
+                            <% Object.keys(objectClass).forEach(attrName => { 
+                                if (objectClass[attrName].type === 'MAY') { // Affiche uniquement les attributs de type MAY  
+                                    const objectAttribute = objectClass[attrName];
+                                    const displayLabel = objectAttribute.customWording || attrName; // Utilise customWording ou le nom de l'attribut  
+                            %>
+                                <li>
+                                    <strong><%= displayLabel %>:</strong>
+				    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <input type="text"
+                                           name="<%= JSON.stringify(attrName) %>"
+                                           value="<%= objectAttribute.value %>"
+                                           class="form-control"
+					   onfocus="valueOnfocus(this)"
+					   oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                                </li>
+                            <% } }) %>
+                        </ul>
+                    </form>
+                </div>
+            <% }) %>
+
+            <!-- Tab pour ajouter une nouvelle objectClass -->
+            <div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
+                <h3>Ajouter une nouvelle objectClass</h3>
+                <form action="/add" method="POST">
+                    <div class="form-group">
+                        <label for="objectClassName">Nom de l'objectClass</label>
+                        <input type="text" id="objectClassName" name="objectClassName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="attributes">Attributs (JSON)</label>
+                        <textarea id="attributes" name="attributes" class="form-control" rows="5" placeholder='{"MUST": [], "MAY": []}' required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success">Ajouter</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modale pour l'édition d'attributs -->
+        <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document"> <!-- Classe par défaut -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Modifier le libellé d'attribut "<span id="attributeName"></span>"</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="newLabel">Libellé d'affichage de l'attribut :</label>
+                        <input type="text" class="form-control" id="newLabel" style='color:black;'>
+                    </div>
+                    <div class="form-group">
+                        <label for="jsValidation">Code JS de contrôle de saisie :</label>
+                        <textarea class="form-control" id="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <div>
+                        <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(false)" style="background-color: #ffffe0; border: none;;"> &gt;&lt; </button> <!-- Bouton pour diminuer la taille -->
+                        <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(true)" style="background-color: #ffffe0; border: none;;"> &lt;&gt; </button> <!-- Bouton pour augmenter la taille -->
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-primary" onclick="saveAttributNewLabel(<%= JSON.stringify(objectClassesDetails) %>)">Valider</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+	let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut
+	let initialValue = ''; // Mémorise les valeurs de  champs avant toute saisie pour utilisation dans checkInputFunction()
+
+	function valueOnfocus(input) {
+            // Stocker la valeur actuelle avant toute modification lors du focus
+            initialValue = input.value;
+        };
+
+	// Modal, for attribut definition
+        function openEditModal(attrName, objectAttribute) {
+	    defaultAttributeLabel = attrName;
+	    // Vérifier l'état du bouton "Valider"
+	    if (!document.getElementById('saveButton').disabled) {
+	        // Si le bouton "Valider" est activé, afficher une alerte  
+	        alert("Opération impossible : il y a des modifications d'attributs en cours !");
+		return;
+	    }
+
+	    // Affichage du libellé actuel dans son champ de saisie
+	    const newLabelInputField = document.getElementById('newLabel');
+	    newLabelInputField.value = objectAttribute.customWording || '';
+	    newLabelInputField.placeholder = defaultAttributeLabel;
+
+	    // Récupérer et restaurer le contenu de valueCheck dans le textarea  
+	    document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
+
+	    // Met à jour le nom de l'attribut dans le titre de la modale
+	    document.getElementById('attributeName').textContent = newLabelInputField.value || defaultAttributeLabel;
+
+	    // Affiche la modale
+	    $('#editModal').modal('show');
+	}
+
+	function checkInputFunction(input, attrName, objectAttribute, objectClassesDetails) {
+	    if (objectAttribute.valueCheck) {
+		eval(objectAttribute.valueCheck);
+		check(input, objectClassesDetails, initialValue);
+	    }
+	}
+
+	async function saveAttributNewLabel(objectClassesDetails) {
+	    const newLabel = document.getElementById('newLabel').value.trim();
+	    const newJsChecking = document.getElementById('jsValidation').value.trim();
+
+	    $('#editModal').modal('hide');
+
+	    // récupérer le dn de l'object édité via son URL d'édition 
+	    const dn = (() => {
+		const urlSegments = window.location.pathname.split('/'); // Diviser l'URL en segments
+		return urlSegments[urlSegments.length - 1]; // Récupérer et retourner le dernier segment comme DN
+	    })();
+
+	    // Formatage des données à envoyer au serveur pour mise à jour LDAP
+	    const dataToSend = {
+		dn: dn,
+	        [defaultAttributeLabel]: {
+	            customWording: newLabel,
+	            valueCheck: newJsChecking.trim() !== '' ? newJsChecking.trim() : null  
+	        }
+	    };
+
+	    try {
+		// Envoi au serveur
+	        const response = await fetch('/update-attributeCtl', {
+	            method: 'POST',
+	            headers: {
+	                'Content-Type': 'application/json',
+	            },
+	            body: JSON.stringify(dataToSend),
+	        });
+
+		if (response.ok) {
+		    // Mise à jour des paramètres d'attributs dans tous leurs objects d'appartenance
+		    let previousLabel = null;
+		    objectClassesDetails.forEach(objectClass => {
+			Object.keys(objectClass).forEach(attr => {
+			    if (attr === defaultAttributeLabel) {
+				previousLabel = objectClass[attr].customWording;
+				objectClass[attr].customWording = newLabel.length ? newLabel : null;
+				objectClass[attr].valueCheck = newJsChecking.length ? newJsChecking : null;
+			    }
+			});
+		    });
+
+		    // Mise à jour du libellé d'attribut dans tous les onglets
+	            const strongElement = Array.from(document.querySelectorAll('strong')).find(el => el.textContent === (previousLabel || defaultAttributeLabel)  + ':');
+	            if (strongElement) {
+	                strongElement.textContent = (newLabel.length ? newLabel : defaultAttributeLabel) + ':';
+	            }
+
+	        } else {
+	            console.error('Erreur lors de la mise à jour de l\'attribut');
+	            throw new Error('Erreur réseau, statut: ' + response.status);
+	        }
+
+	    } catch (error) {
+	        console.error('Erreur:', error);
+	        // Optionnel : Afficher un message d'erreur à l'utilisateur  
+	    }
+	}
+
+	function changeModalSize(increase) {
+	    const modalDialog = document.querySelector('#editModal .modal-dialog');
+            const currentClassList = modalDialog.classList;
+	    const jsValidationTextarea = document.getElementById('jsValidation'); 
+	    const greater = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(true)"]');
+	    const lower = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(false)"]');
+
+            // Déterminer la taille actuelle  
+            let currentSize = '';
+            if (currentClassList.contains('modal-sm')) {
+                currentSize = 'sm';
+            } else if (currentClassList.contains('modal-lg')) {
+                currentSize = 'lg';
+            } else if (currentClassList.contains('modal-xl')) {
+                currentSize = 'xl';
+            }
+
+            // Changer la taille selon l'argument increase  
+	    lower.style.color = greater.style.color = 'black';
+            if (increase) {
+                if (currentSize === 'sm') {
+                    currentClassList.remove('modal-sm');
+		    jsValidationTextarea.rows = 10;
+                } else if (currentSize === '') {
+                    currentClassList.remove('modal-sm');
+                    currentClassList.add('modal-lg');
+		    jsValidationTextarea.rows = 15;
+                } else if (currentSize === 'lg') {
+                    currentClassList.remove('modal-lg');
+                    currentClassList.add('modal-xl');
+		    jsValidationTextarea.rows = 20;
+		    greater.style.color = '#ffffe0'; // Effacer le bouton '<>'' 
+		    greater.blur(); // Retirer le focus
+                }
+            } else {
+                if (currentSize === 'xl') {
+                    currentClassList.remove('modal-xl');
+                    currentClassList.add('modal-lg');
+		    jsValidationTextarea.rows = 15;
+                } else if (currentSize === 'lg') {
+                    currentClassList.remove('modal-lg');
+		    jsValidationTextarea.rows = 10;
+                } else if (currentSize === '') {
+                    currentClassList.remove('modal-lg');
+                    currentClassList.add('modal-sm');
+		    jsValidationTextarea.rows = 5;
+		    lower.style.color = '#ffffe0'; // Effacer le bouton '><'' 
+		    lower.blur(); // Retirer le focus
+                }
+            }
+	}
+
+	function checkSaveButton() {
+	    // Récupérer tous les champs d'input dans tous les onglets  
+	    const inputs = document.querySelectorAll('.tab-pane input[type="text"]');
+    
+	    // Vérifier si au moins un input a été modifié  
+	    let isAnyInputChanged = false;
+
+	    inputs.forEach(input => {
+	        if (input.value !== input.defaultValue) { // Si la valeur actuelle est différente de la valeur par défaut  
+	            isAnyInputChanged = true; // Au moins un champ a été modifié  
+	        }
+	    });
+
+	    // Mettre à jour l'état du bouton "Valider"
+	    const saveButton = document.getElementById('saveButton');
+
+	    if (isAnyInputChanged) {
+	        saveButton.disabled = false; // Activer le bouton "Valider"
+	        saveButton.classList.add('enabled'); // Ajouter la classe "enabled"
+	        saveButton.classList.remove('disabled'); // S'assurer que la classe "disabled" est retirée  
+	    } else {
+	        saveButton.disabled = true; // Désactiver le bouton "Valider"
+	        saveButton.classList.remove('enabled'); // Retirer la classe "enabled"
+	        saveButton.classList.add('disabled'); // Ajouter la classe "disabled"
+	    }
+	}
+
+        function restoreValues() {
+            const activeTab = document.querySelector('.tab-pane.show'); // Récupère l'onglet actif  
+            activeTab.querySelectorAll('input').forEach((field) => {
+                const initialValue = field.defaultValue; // Récupère la valeur par défaut  
+                field.value = initialValue; // Restaure la valeur  
+                checkSaveButton(field, initialValue); // Vérifie si le bouton doit être activé/désactivé  
+            });
+        }
+
+        // Gestionnaire d'événements pour le changement d'onglet  
+        const tabs = document.querySelectorAll('#myTab .nav-link');
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                // Récupère l'onglet actuellement actif et vérifie ses champs  
+                const activeTab = document.querySelector('.tab-pane.show');
+                if (activeTab) {
+                    activeTab.querySelectorAll('input').forEach((field) => {
+                        checkSaveButton(field); // Rafraîchit l'état du bouton "Enregistrer" pour l'onglet précédent  
+                    });
+                }
+                
+                // Récupère l'onglet qui devient actif et vérifie ses champs  
+                const newActiveTab = document.querySelector(tab.getAttribute('href'));
+                if (newActiveTab) {
+                    newActiveTab.querySelectorAll('input').forEach((field) => {
+                        checkSaveButton(field); // Rafraîchit l'état du bouton "Enregistrer" pour le nouvel onglet  
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
