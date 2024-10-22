@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résultats de la Recherche LDAP</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .empty-message {
+            text-align: center;
+            color: gray;
+        }
+        .header-buttons {
+            display: flex; /* Utilisation de flexbox pour aligner les boutons */
+            justify-content: space-between; /* Espace entre les éléments pour les pousser aux extrémités */
+            margin-bottom: 20px; /* Ajoute de l'espace entre les boutons et le tableau */
+        }
+        .logout-button {
+            margin-left: 10px; /* Ajoute un espace entre le bouton de recherche et le bouton de déconnexion */
+        }
+    </style>
+</head>
+<body>
+    <h1>Résultats de la Recherche</h1>
+
+    <!-- Conteneur pour les boutons de recherche et de déconnexion -->
+    <div class="header-buttons">
+        <!-- Formulaire de recherche -->
+        <form action="/search" method="post">
+            <input type="text" name="searchTerm" placeholder="Recherche (caractère * autorisé) ..." required style='width: 250px;'>
+            <button type="submit">Rechercher</button>
+        </form>
+        
+        <!-- Bouton de déconnexion -->
+        <div class="logout-button">
+            <button onclick="location.href='/logout'">Déconnexion</button>
+        </div>
+    </div>
+
+    <% if (error) { %>
+        <p style="color: red;"><%= error %></p>
+    <% } %>
+
+    <h2>Résultats :</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Action</th>
+                <th>Identifiant</th>
+                <th>Login</th>
+                <th>Service</th>
+                <th>Téléphone</th>
+                <th>Mail</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (results && results.length > 0) { %>
+                <% results.forEach(user => { %>
+                    <tr>
+                        <td>
+                            <button onclick="location.href='/edit/<%= user.dn %>'">Éditer</button>
+                        </td>
+                        <td><%= user.cn %></td>
+                        <td><%= user.uid %></td>
+                        <td><%= user.o || 'N/A' %></td>
+                        <td><%= user.telephoneNumber || 'N/A' %></td>
+                        <td><%= user.mail || 'N/A' %></td>
+                    </tr>
+                <% }) %>
+            <% } else { %>
+                <tr>
+                    <td colspan="6" class="empty-message">Aucun résultat trouvé.</td>
+                </tr>
+            <% } %>
+        </tbody>
+    </table>
+</body>
+</html>
