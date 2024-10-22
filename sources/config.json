@@ -13,7 +13,7 @@
         }
     },
     "configDn": {
-        "root": "ou=carnetLDAP,ou=applications,dc=example,dc=com",
+        "root": "ou=carnetLDAP,ou=application,dc=example,dc=com",
         "attributs": "ou=attribut"
     }
 }
