@@ -7,9 +7,9 @@ Une application nodeJS simple, utilisant la bibliothèque `ldapjs` pour interagi
 
 Ce projet dérive d'un autre vieux projet écrit en Qt et C++ d'une application client-serveur qui permettait de gérer différents aspects de l'administration d'un réseau d'entreprise : users, groups, dns, serveurs, ressources partagés, crons, firewals, ...
 
-On peut le trouver ici : https://github.com/peychart/libldapcppei (archive zip : ldapEasyAdminFrontends-1.1.3.tgz), en exemple d'utilisation de la bibliothèque 'ldapcppei' qu'il utilise ; la documentation complète (français/anglais), au format http, se trouve dans le répertoire "webdoc" ...
+On peut le trouver ici : https://github.com/peychart/libldapcppei (archive : ldapEasyAdminFrontends-1.1.3.tgz), en exemple d'utilisation de la bibliothèque 'ldapcppei' qu'il utilise ; la documentation complète (français/anglais), au format http, se trouve dans le répertoire "webdoc" ...
 
-Ce tout nouveau projet est lui, en quelque sorte, un début de ré-écrite en nodeJS, offrant ainsi un accès beaucoup plus immédiat puisqu'au format web ; mais les principes de fonctionnement restent similaires :
+Ce tout nouveau projet est lui, en quelque sorte, un début de ré-écriture en nodeJS, offrant ainsi un accès beaucoup plus immédiat puisqu'au format web ; mais les principes de fonctionnement restent similaires :
 
 - la lecture du schéma de l'annuaire permet la constitution dynamique des masques de saisie des informations stockées dans la base,
 - Le principe d'association 'onglet-objectClass' permet une vision claire des propriétés, facilitant les ajouts et retraits contrôlés des objectClass structurant chacune des entrées créées ou éditées,
