@@ -4,19 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion LDAP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+        }
+        .footer {
+            font-size: 12px;
+            color: grey;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
-    <h1>Connexion à l'annuaire LDAP</h1>
-    <form action="/login" method="post">
-        <input type="text" name="uri" placeholder="URI de la base LDAP" value="<%= uri %>" required><br>
-        <input type="text" name="dn" placeholder="DN" value="<%= dn %>" required><br>
-        <input type="password" name="password" placeholder="Mot de passe" required><br>
-        <input type="text" name="dc" placeholder="Racine DC" value="<%= dc %>" required><br>
-        <button type="submit">Se connecter</button>
-    </form>
-    
-    <% if (error) { %>
-        <p style="color: red;"><%= error %></p>
-    <% } %>
+    <div class="container">
+        <h1>Connexion à l'annuaire LDAP</h1>
+        <form action="/login" method="post">
+            <label for="login">Login :</label>
+            <input type="text" name="dn" id="login" placeholder="Login" value="<%= dn %>" required><br>
+
+            <label for="password">Password :</label>
+            <input type="password" name="password" id="password" placeholder="Mot de passe" required><br>
+
+            <button type="submit">Connect</button>
+        </form>
+
+        <div class="footer">
+            <span>(Help in tooltips)</span>
+            <button type="button" onclick="window.close();">Exit</button>
+        </div>
+
+        <% if (error) { %>
+            <p style="color: red;"><%= error %></p>
+        <% } %>
+    </div>
 </body>
 </html>
