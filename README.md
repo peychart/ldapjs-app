@@ -123,7 +123,7 @@ Ouvrir un navigateur et appeler le lien suivant : http://localhost:3000.
 
 ## Fonctions utilitaires de contrôle des saisies d'attributs
 
-1. Contrôle de de la frappe sur l'attribut 'sn' et mise à jour du 'cn' effectuée en parallèle:
+1. Contrôle de la frappe sur l'attribut 'sn' et mise à jour du 'cn' effectuée en parallèle:
 
 ```
 function check(input, data, initialValue) {
@@ -139,12 +139,12 @@ function check(input, data, initialValue) {
 ```
 
 
-2. Blocage de de la frappe sur l'attribut 'cn' (readOnly, puisque calculé)' :
+2. Blocage de la frappe sur l'attribut 'cn' (readOnly, puisque calculé)' :
 
  ![](doc/images/attributsCheck.png)
 
 
-3. Contrôle de de la frappe sur l'attribut 'givenName' et mise à jour du 'cn' effectuée en parallèle :
+3. Contrôle de la frappe sur l'attribut 'givenName' et mise à jour du 'cn' effectuée en parallèle :
 
 ```
 function check(input, data, initialValue) {
