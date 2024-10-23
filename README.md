@@ -123,11 +123,11 @@ Ouvrir un navigateur et appeler le lien suivant : http://localhost:3000.
 
 ## Fonctions utilitaires de contrôle des saisies d'attributs
 
-1. Contrôle de saisie de l'attribut 'sn' :
+1. Contrôle de de la frappe sur l'attribut 'sn' et mise à jour du 'cn' effectuée en parallèle:
 
 ```
 function check(input, data, initialValue) {
- // Convertit la valeur saisie en majuscules  
+ // Convertit les frappes en majuscules  
  input.value = input.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
  input.value = input.value.toUpperCase();
 
@@ -139,16 +139,16 @@ function check(input, data, initialValue) {
 ```
 
 
-2. Contrôle de saisie de l'attribut 'cn' (readOnly, puisque calculé)' :
+2. Blocage de de la frappe sur l'attribut 'cn' (readOnly, puisque calculé)' :
 
  ![](doc/images/attributsCheck.png)
 
 
-3. Contrôle de saisie de l'attribut 'givenName' :
+3. Contrôle de de la frappe sur l'attribut 'givenName' et mise à jour du 'cn' effectuée en parallèle :
 
 ```
 function check(input, data, initialValue) {
- // Convertit la valeur saisie en majuscules
+ // Convertit les frappes en majuscules et minuscules non accentuées
  input.value = input.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
  input.value = input.value.charAt(0).toUpperCase() + input.value.slice(1).toLowerCase();
 
