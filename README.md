@@ -56,7 +56,8 @@ cd ldapjs-app
 2. Installer les dépendances :
 
 ```
-bash npm install
+bash npm install nodejs
+bash npm install cookie-parser
 ```
 
 
