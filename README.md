@@ -58,7 +58,7 @@ cd ldapjs-app
 ```
 bash npm install nodejs
 bash npm install cookie-parser
-bash npm install express-session
+bash npm install express-session passport passport-ldapauth
 bash npm install winston            // Journalisation en fichier log
 bash npm install winston-daily-rotate-file
 ```
