@@ -1,6 +1,62 @@
 const ldap = require('ldapjs');
 const config = require('../config.json'); // Assurez-vous d'importer votre fichier de configuration
 
+
+/**
+ * Récupération du rôle de l'utilisateur dans l'arborescence LDDAP: config.configDn
+ */
+function getUserRoleFromDatabase(dn) {
+
+    // A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE ...
+
+    return( { "dn": "", "role": "guest"} );
+}
+
+const bindClient = async (client, bindDN, bindPassword) => {
+    return new Promise((resolve, reject) => {
+        client.bind(bindDN, bindPassword, (err) => {
+            if (err) {
+                return reject(new Error('Erreur de liaison LDAP: ' + err.message));
+            }
+            resolve();
+        });
+    });
+};
+
+/**
+ * Effectue une recherche dans LDAP.
+ * @param {Object} client - Le client LDAP.
+ * @param {string} baseDN - Le DN de base pour la recherche.
+ * @param {Object} options - Les options de recherche, y compris le filtre et les attributs.
+ * @returns {Promise<Array>} - Une promesse qui résout un tableau d'entrées trouvées.
+ */
+async function searchLDAP(client, baseDN, options) {
+    return new Promise((resolve, reject) => {
+        const results = [];
+
+        client.search(baseDN, options, (err, search) => {
+            if (err) {
+                return reject(new Error(`Erreur de recherche: ${err.message}`));
+            }
+
+            search.on('searchEntry', (entry) => {
+                results.push(entry.pojo); // Ajoute l'entrée à la liste des résultats
+            });
+
+            search.on('end', (result) => {
+                if (result.status !== 0) {
+                    return reject(new Error(`Erreur lors de la recherche: Status ${result.status}`));
+                }
+                resolve(results); // Résoudre avec les résultats accumulés
+            });
+
+            search.on('error', (err) => {
+                return reject(new Error(`Erreur de recherche: ${err.message}`));
+            });
+        });
+    });
+}
+
 /**
  * Vérifie l'existence de la branche racine dans LDAP et la crée si elle n'existe pas.
  * @returns {Promise<void>}
@@ -28,7 +84,6 @@ async function checkAndCreateOrganizationalUnit(client, dn) {
 	if (await checkAndCreateOrganizationalUnit(client, root) && await createOrganizationalUnit(client, dn)) {
 	    return true;
 	}
-	
 	return false;
 
     } catch (err) {
@@ -67,17 +122,6 @@ async function checkDNExists(client, dn) {
             res.on('error', (error) => {
                 resolve(false); // Résoudre avec false en cas d'erreur  
             });
-        });
-    });
-}
-
-async function bindClient(client) {
-    return new Promise((resolve, reject) => {
-        client.bind(config.ldap.base.bindDN, config.ldap.base.bindPassword, (err) => {
-            if (err) {
-                return reject(`Erreur lors de la liaison: ${err}`);
-            }
-            resolve();
         });
     });
 }
@@ -215,102 +259,73 @@ function enrichObjectClassesDetails(objectClassesDetails, objectData) {
 }
 
 // Fonction pour récupérer les attributs de chaque objectClass dans le schéma  
-const getObjectClasses = (config, objectClassesNameList, callback) => {
-    // Vérification de la configuration  
-    if (!config.ldap || 
-        !config.ldap.url || 
-        !config.ldap.schema.baseDN || 
-        !config.ldap.schema.bindDN || 
-        !config.ldap.schema.bindPassword) {
-        return callback(new Error('Vous devez configurer les informations LDAP.'),null);
-    }
-
+const getObjectClasses = async (config, objectClassesNameList) => {
     const schemaClient = ldap.createClient({ url: config.ldap.url }); // Créer un client pour interroger le schéma
 
-    // Effectuer le bind avec le DN et le mot de passe pour le client du schéma  
-    schemaClient.bind(config.ldap.schema.bindDN, config.ldap.schema.bindPassword, (err) => {
-        if (err) {
-            console.error('Erreur de connexion au client du schéma:', err);
-            return callback(new Error('Erreur de connexion au schéma LDAP.'),null);
+    try {
+        // Effectuer le bind avec le DN et le mot de passe pour le client du schéma  
+        await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
+
+        if (objectClassesNameList.length === 0) {
+	    throw new Error(`Objet non trouvé`); // Lancer une erreur vers le catch
         }
 
-        let pendingRequests = objectClassesNameList.length; // Compteur pour gérer les requêtes asynchrones
-	const objectClassesDetails = []; // Tableau pour stocker les résultats
+        const objectClassesDetails = []; // Tableau pour stocker les résultats
 
-        if (pendingRequests === 0) {
-            schemaClient.unbind(); // Fermer la connexion au client du schéma  
-            return callback(null,objectClassesDetails); // Si aucun objectClass, appelez le callback immédiatement  
-        }
+        // Utilisation de map pour lancer des recherches asynchrones pour chaque objectClass  
+        const searchPromises = objectClassesNameList.map(async objectClass => {
+            if (objectClass === 'top') {
+                return; // Ignorer 'top'
+            }
 
-        objectClassesNameList.forEach(objectClass => {
-	    if (objectClass === 'top') {
-                        pendingRequests -= 1;
-	    }else{
-		const options = {
-		    filter: "(olcObjectClasses=* NAME '" + objectClass + "' *)",
-		    scope: 'sub',
-		    attributes: ['olcObjectClasses'] // Récupérer tous les attributs  
-		};
+            const options = {
+                filter: `(olcObjectClasses=* NAME '${objectClass}' *)`,
+                scope: 'sub',
+                attributes: ['olcObjectClasses']
+            };
 
-		let attributes = {};
-
-		schemaClient.search(config.ldap.schema.baseDN, options, (err, search) => {
-                    if (err) {
-                        console.error(`Erreur lors de la recherche du schéma pour ${objectClass}:`, err);
-                        pendingRequests -= 1;
-                        if (pendingRequests === 0) {
-                            schemaClient.unbind(); // Fermer la connexion au client du schéma  
-                            callback(null,null); // Terminer le callback même en cas d'erreur  
-                        }
-                        return;
-                    }
-
-                    search.on('searchEntry', (entry) => {
-                        attributes = entry.pojo.attributes.reduce((acc, attr) => {
-                            acc[attr.type] = attr.values; // Stocke toutes les valeurs pour chaque type d'attribut  
-                            return acc;
-                        }, {});
-
-		        attributes = attributes.olcObjectClasses.filter(line => line.includes("NAME '" + objectClass + "'"));
-		        if(attributes){
-			    const mustMatch = attributes[0].match(/MUST\s*\(\s*([^)]*)\s*\)/);
-			    const mayMatch = attributes[0].match(/MAY\s*\(\s*([^)]*)\s*\)/);
-
-			    // Étape 3: Nettoyer et formater les résultats
-			    const mustAttributes = mustMatch ? mustMatch[1].split('$').map(attr => attr.trim()).filter(Boolean) : [];
-			    const mayAttributes = mayMatch ? mayMatch[1].split('$').map(attr => attr.trim()).filter(Boolean) : [];
-			    attributes = {MUST: mustAttributes, MAY: mayAttributes};
-
-                            objectClassesDetails.push({ objectClassName: objectClass, attributes}); // Ajouter au tableau des résultats  
-		        }
-                    });
-
-                    search.on('end', () => {
-                        pendingRequests -= 1;
-                        //objectClassesDetails.push({ objectClassName: objectClass, attributes: attributes.olcAttributeTypes}); // Ajouter au tableau des résultats  
-
-                        if (pendingRequests === 0) {
-			    schemaClient.unbind(); // Fermer la connexion au client du schéma  
-                    	    return callback(null, objectClassesDetails); // Appeler le callback une fois toutes les requêtes terminées  
-		        }
-                    });
-
-                    search.on('error', (err) => {
-                        console.error('Erreur de recherche dans le schéma:', err);
-                        pendingRequests -= 1;
-                        if (pendingRequests === 0) {
-                            schemaClient.unbind(); // Fermer la connexion au client du schéma  
-                            return callback(null,objectClassesDetails); // Terminer le callback même en cas d'erreur  
-                        }
-                    });
-		});
+	    try {
+                // Appel à searchLDAP pour effectuer la recherche  
+                const searchResults = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
+    
+	        // Pas besoin de reduce ici, on peut directement traiter les résultats  
+                const matchedAttributes = searchResults.filter(entry => 
+                    entry.attributes.some(attr => attr.type === 'olcObjectClasses' && attr.values.some(value => value.includes(`NAME '${objectClass}'`)))
+                );
+    
+                if (matchedAttributes.length > 0) {
+                    const olcObjectClasses = matchedAttributes[0].attributes.find(attr => attr.type === 'olcObjectClasses').values[0];
+                    const mustMatch = olcObjectClasses.match(/MUST\s*\(\s*([^)]*)\s*\)/);
+                    const mayMatch = olcObjectClasses.match(/MAY\s*\(\s*([^)]*)\s*\)/);
+    
+                    // Nettoyer et formater les résultats  
+                    const mustAttributes = mustMatch ? mustMatch[1].split('$').map(attr => attr.trim()).filter(Boolean) : [];
+                    const mayAttributes = mayMatch ? mayMatch[1].split('$').map(attr => attr.trim()).filter(Boolean) : [];
+                    
+                    objectClassesDetails.push({ objectClassName: objectClass, attributes: { MUST: mustAttributes, MAY: mayAttributes } });
+                }
+            } catch (err) {
+                console.error(`Erreur de recherche pour ${objectClass}:`, err);
+                throw new Error(`Erreur lors de la récupération des attributs pour l'objectClass: ${objectClass}`); // Relancer l'erreur  
             }
         });
-    });
+    
+	// Attendre la résolution de toutes les promesses de recherche  
+	await Promise.all(searchPromises);
+    
+	return objectClassesDetails; // Retourner le tableau des résultats  
+    
+    } catch (error) {
+        console.error('Erreur de recherche pour', err);
+	throw error; // Relancer l'erreur pour que l'appelant puisse la gérer 
+    } finally {
+	schemaClient.unbind(); // Fermer la connexion au client du schéma, même en cas d'erreur  
+    }
 };
 
 
 module.exports = {
+    getUserRoleFromDatabase,
     getObjectClasses,
     enrichObjectClassesDetails,
     updateAttributeConfigInLDAP
