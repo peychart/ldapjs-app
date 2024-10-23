@@ -1,4 +1,5 @@
 {
+    "nodeJsPort": 3000,
     "ldap": {
         "url": "ldap://localhost:389",
         "base": {
@@ -15,5 +16,7 @@
     "configDn": {
         "root": "ou=carnetLDAP,ou=application,dc=example,dc=com",
         "attributs": "ou=attribut"
-    }
+    },
+    "logFile": "logs/application.log",
+    "sessionSecret": "votre_secret_complexe"
 }
