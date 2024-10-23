@@ -58,6 +58,7 @@ cd ldapjs-app
 ```
 bash npm install nodejs
 bash npm install cookie-parser
+bash npm install express-session
 ```
 
 
