@@ -60,6 +60,7 @@ bash npm install nodejs
 bash npm install cookie-parser
 bash npm install express-session
 bash npm install winston            // Journalisation en fichier log
+bash npm install winston-daily-rotate-file
 ```
 
 
