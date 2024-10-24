@@ -95,8 +95,8 @@ Un exemple de fichier config.json est présenté ici :
         "root": "ou=carnetLDAP,ou=applications,dc=example,dc=com",
         "attributs": "ou=attribut"
     },
-"logFile": "log/application.log",
-"sessionSecret": "votre_secret_complexe"
+    "logFile": "log/application.log",
+    "sessionSecret": "votre_secret_complexe"
 }
 ```
 
