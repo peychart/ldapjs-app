@@ -49,7 +49,7 @@ Pour exécuter cette application, suivre ces étapes :
 
 ```
 bash
-git clone https://github.com/votre-utilisateur/ldapjs-app.git
+git clone https://github.com/peychart/ldapjs-app.git
 cd ldapjs-app
 ```
 
