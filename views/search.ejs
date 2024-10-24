@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Résultats de la Recherche LDAP</title>
     <style>
+        body {
+            background: linear-gradient(to bottom, #ffffe0, #ffeb3b); /* Fond identique à login.ejs */
+            font-family: Arial, sans-serif;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -23,29 +27,46 @@
             color: gray;
         }
         .header-buttons {
-            display: flex; /* Utilisation de flexbox pour aligner les boutons */
-            justify-content: space-between; /* Espace entre les éléments pour les pousser aux extrémités */
-            margin-bottom: 20px; /* Ajoute de l'espace entre les boutons et le tableau */
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Aligner le contenu verticalement */
+            margin-bottom: 20px;
         }
-        .logout-button {
-            margin-left: 10px; /* Ajoute un espace entre le bouton de recherche et le bouton de déconnexion */
+        .reset-button {
+            margin-left: 10px;
+        }
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            background-color: #D3D3D3; /* Couleur gris clair */
+            color: black; /* Texte noir pour un meilleur contraste */
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #C0C0C0; /* Teinte légèrement plus foncée au survol */
+        }
+        input[type="text"] {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 270px; /* Largeur du champ de recherche */
         }
     </style>
 </head>
 <body>
     <h1>Résultats de la Recherche</h1>
 
-    <!-- Conteneur pour les boutons de recherche et de déconnexion -->
     <div class="header-buttons">
-        <!-- Formulaire de recherche -->
         <form action="/search" method="post">
-            <input type="text" name="searchTerm" placeholder="Recherche (caractère * autorisé) ..." required style='width: 250px;'>
+            <input type="text" name="searchTerm" placeholder="Recherche : ( including * ) ..." required value="<%= searchTerm || '' %>">
             <button type="submit">Rechercher</button>
         </form>
         
-        <!-- Bouton de déconnexion -->
-        <div class="logout-button">
-            <button onclick="location.href='/logout'">Déconnexion</button>
+        <div class="reset-button">
+            <form action="/search-reset" method="post">
+                <button type="submit">Reset</button>
+            </form>
         </div>
     </div>
 
