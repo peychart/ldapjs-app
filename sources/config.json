@@ -1,8 +1,9 @@
 {
     "nodeJsPort": 3000,
     "ldap": {
-        "url": "ldap://localhost:389",
-        "base": {
+        "url": "ldap://localhost",
+	    "port": 389,
+        "data": {
             "bindDN": "cn=admin,dc=example,dc=com",
             "bindPassword": "secret",
             "baseDN": "dc=example,dc=com"
