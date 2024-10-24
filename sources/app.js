@@ -234,9 +234,9 @@ app.get('/logout', (req, res) => {
 // ***********************************************************
 // Routes de recherche  
 // Route de recherche (GET)  
-app.get('/search', (req, res) => {
+app.get('/search', async (req, res) => {
     // Rendre la vue de recherche
-    res.render('search', { results: null, searchTerm: null, error: null });
+    res.render('search', { results: null, searchTerm: req.body.searchTerm, error: null });
 });
 
 // Route de recherche (POST)  
@@ -260,7 +260,7 @@ app.post('/search', async (req, res) => {
 
         client.unbind();
 	// Passer le searchTerm à la vue  
-	return res.render('search', { results, searchTerm: null, error: null });
+	return res.render('search', { results, searchTerm: searchTerm, error: null });
 
     } catch (error) {
 	console.error('Erreur:', error);
@@ -274,7 +274,7 @@ app.post('/search', async (req, res) => {
 // Nouvelle route pour le Reset du formulaire search (POST)
 app.post('/search-reset', (req, res) => {
     // Renvoyer la vue de recherche avec des résultats vides
-    res.render('search', { results: null, searchTerm: null, error: null });
+    res.render('search', { results: null, searchTerm: req.body.searchTerm, error: null });
 });
 
 // ***********************************************************
