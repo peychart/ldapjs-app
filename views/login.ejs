@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -71,7 +71,7 @@
         <h1>Connexion à l'annuaire LDAP</h1>
         <form action="/login" method="post">
             <label for="login">Login :</label>
-            <input type="text" name="login" id="login" placeholder="Login (uid, mail, employeeNumber, sn, givenName, cn -- with *)" value="<%= login %>" required>
+            <input type="text" name="login" id="login" placeholder="Login (uid, mail, employeeNumber, sn, givenName, cn -- including * )" value="<%= login %>" required>
 
             <label for="password">Password :</label>
             <input type="password" name="password" id="password" placeholder="Mot de passe" required>
@@ -87,7 +87,14 @@
     </div>
 
     <script>
-        // Écoute l'événement focus sur le champ de mot de passe  
+        // Écoute l'événement focus sur le champ login ou de mot de passe  
+        document.getElementById('login').addEventListener('focus', function() {
+            // Efface le message d'erreur  
+            const errorMessage = document.getElementById('error-message');
+            if (errorMessage) {
+                errorMessage.innerText = '';
+            }
+        });
         document.getElementById('password').addEventListener('focus', function() {
             // Efface le message d'erreur  
             const errorMessage = document.getElementById('error-message');
