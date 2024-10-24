@@ -167,6 +167,7 @@ function check(input, data, initialValue) {
 3. (à suivre) ...
 
 
+ ![](doc/images/login.png)
  ![](doc/images/edit.png)
 
 
