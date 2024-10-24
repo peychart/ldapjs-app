@@ -9,6 +9,9 @@ const winston = require('winston');
 const fs = require('fs');
 const path = require('path');
 const {
+    bindClient,
+    searchLDAP,
+    rawSearchLDAP,
     getUserRoleFromDatabase,
     getObjectClasses,
     enrichObjectClassesDetails,
@@ -115,59 +118,92 @@ logger.info('Application démarrée avec succès.');
 // Route pour le masque de connexion
 app.get('/', (req, res) => {
     // Lire les cookies pour obtenir les données précédentes
-    const dn = req.cookies.dn || ''; // Lire le DN du cookie, s'il existe
+    const login = req.cookies.login || ''; // Lire le DN du cookie, s'il existe
 
     // Rendre la vue de connexion avec le login précédent
-    res.render('login', { dn, error: null });
+    res.render('login', { login, error: null });
 });
 
 
 // ***********************************************************
 // Route pour traiter la soumission du formulaire de connexion  
-app.post('/login', (req, res) => {
-    const { dn, password } = req.body;
-
-    // Créer un client LDAP  
-    const client = ldap.createClient({ url: config.ldap.url });
+app.post('/login', async (req, res) => {
+    const { login, password } = req.body; // Récupération du login et du mot de passe
+    const appClient = ldap.createClient({ url: config.ldap.url });
+    let client;
 
     try {
-	// Tenter de se connecter au serveur LDAP avec les identifiants de l'utilisateur  
-        await bindClient(client, dn, password);
+	// Créer un client LDAP  
+	await bindClient(appClient, config.ldap.base.bindDN, config.ldap.base.bindPassword);
 
-        // Authentification réussie  
-        // Maintenant, établir une nouvelle connexion avec le bindDN et le bindPassword de la configuration  
+        // Définir les attributs à rechercher  
+        const attributesToSearch = ['uid', 'mail', 'employeeNumber', 'sn', 'givenName',  'cn'];
 
-	// Authentification réussie, maintenant récupérer le rôle de l'utilisateur 
-        client.unbind();
+        const searchPromises = attributesToSearch.map(attr => {
+            const searchOptions = {
+                filter: `(${attr}=${login})`, // Filtrer par chaque attribut  
+                scope: 'sub',
+                attributes: ['dn'], // N'inclure que le DN dans le résultat  
+		sizeLimit: 15
+            };
 
-	// Récupérer le rôle de l'utilisateur  
-        const role = await getUserRoleFromDatabase(dn);
+            return rawSearchLDAP(appClient, config.ldap.base.baseDN, searchOptions).catch(err => {
+		return []; // Retourner un tableau vide en cas d'erreur  
+	    });;
+        });
+
+        // Attendre que toutes les recherches soient terminées  
+        const searchResults = await Promise.all(searchPromises);
         
+        // Filtrer les résultats pour obtenir le DN  : extraire objectName pour le dn ...
+        const validResults = searchResults.flat().map(result => result.objectName).filter(dn => dn);
+
+        // Vérifier si une entrée a été trouvée  
+        if (validResults.length === 0) {
+            throw new Error('Nom d\'utilisateur ou mot de passe incorrect.'); // Gérer l'erreur ici  
+        } else if (validResults.length > 1) {
+	  const allEqual = validResults.every(dn => dn === validResults[0]);
+            if (!allEqual) {
+                throw new Error('Plusieurs utilisateurs trouvés, veuillez spécifier davantage d\'informations.'); // Gérer l'erreur ici  
+            }
+	}
+
+        // Extraire le DN de l'utilisateur à partir du résultat de la recherche  
+        const bindDN = validResults[0]; // Récupérer le DN de la première entrée
+
+        // Tenter de se connecter au serveur LDAP avec le DN récupéré  
+	client = ldap.createClient({ url: config.ldap.url });
+        await bindClient(client, bindDN, password);
+
+        // Authentification réussie, récupérer le rôle de l'utilisateur 
+        const role = await getUserRoleFromDatabase(bindDN); // Utiliser le DN récupéré
+
         // Stocker les informations de l'utilisateur dans la session  
         req.session.user = {
-            dn,
+            dn: bindDN,
             role  
         };
 
-        // Créer un nouveau client LDAP avec les informations de configuration  
-        const appClient = ldap.createClient({ url: config.ldap.url });
-
-        // Tenter de se lier avec le DN et le mot de passe de l'application  
-        await bindClient(appClient, config.ldap.base.bindDN, config.ldap.base.bindPassword);
-
         // Authentification de l'application réussie  
-        // Vous pouvez stocker le client de l'application dans la session, si nécessaire  
         req.session.appClient = appClient;
 
         // Mémoriser le dernier login dans un cookie  
-        res.cookie('dn', dn, { maxAge: 24 * 60 * 60 * 1000 }); // Expire dans 1 jour
+        res.cookie('login', login, { maxAge: 24 * 60 * 60 * 1000 }); // Expire dans 1 jour
 
         // Rediriger vers la page d'accueil ou une autre page de votre application  
-        res.redirect('/home'); // Remplacez '/home' par votre route principale  
+        res.redirect('/search');
 
     } catch (err) {
-        console.error('Erreur de connexion LDAP:', err);
-        return res.render('login', { dn, error: 'Nom d\'utilisateur ou mot de passe incorrect.' });
+        // Gestion des erreurs : ne pas afficher d'erreur dans la console  
+        return res.render('login', {
+            login: login, // Garder la valeur du login pré-rempli  
+            error: err.message || 'Nom d\'utilisateur ou mot de passe incorrect.'
+        });
+    } finally {
+        // S'assurer que le client LDAP est déconnecté  
+	if (client)
+	    client.unbind();
+        appClient.unbind();
     }
 });
 
@@ -192,7 +228,14 @@ app.get('/logout', (req, res) => {
 });
 
 // ***********************************************************
-// Route de recherche  
+// Routes de recherche  
+// Route de recherche (GET)  
+app.get('/search', (req, res) => {
+    // Rendre la vue de recherche
+    res.render('search', { results: null, error: null });
+});
+
+// Route de recherche (POST)  
 app.post('/search', async (req, res) => {
     const searchTerm = req.body.searchTerm;
 
@@ -208,16 +251,10 @@ app.post('/search', async (req, res) => {
     try {
         await bindClient(client, config.ldap.base.bindDN, config.ldap.base.bindPassword);
 
-	const rawResults = await searchLDAP(client, config.ldap.base.baseDN, opts);
-
-	const results = rawResults.map(entry => {
-            const attributes = entry.attributes.reduce((acc, attr) => {
-                acc[attr.type] = attr.values[0]; // Prendre la première valeur pour chaque attribut  
-                return acc;
-            }, {});
-            attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs  
-            return attributes; // Retourner l'objet d'attributs formaté  
-        });
+	// *************************
+	    // ATTENTION: les valeurs d'attributs sont devenues des tableaux !!! (à corriger dans la suite)
+	const results = await searchLDAP(client, config.ldap.base.baseDN, opts);
+	// *************************
 
         client.unbind();
 	return res.render('search', { results, error: null });
@@ -247,8 +284,8 @@ app.get('/edit/:dn', async (req, res) => {
 	// Liaison au client LDAP  
         await bindClient(client, config.ldap.base.bindDN, config.ldap.base.bindPassword);
 
-        const objectData = await searchLDAP(client, dn, options);;
-	if (rawResults.length === 0) {
+        const objectData = await rawSearchLDAP(client, dn, options);;
+	if (objectData.length === 0) {
              throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
         }
 
@@ -272,7 +309,7 @@ app.get('/edit/:dn', async (req, res) => {
             attributes: ['*']
         };
 
-	const attrDefResults = await searchLDAP(client, attrDefDN, attrDefOptions);
+	const attrDefResults = await rawSearchLDAP(client, attrDefDN, attrDefOptions);
 	if (!attrDefResults.length) {
 	    throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
 	}
