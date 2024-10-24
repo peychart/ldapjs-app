@@ -24,7 +24,8 @@ const configPath = path.join(__dirname, 'config.json');
 let config = {};
 
 const app = express();
-const defaultPort = 3000;
+const defaultNodePort = 3000;
+const defaultLdapPort = 3000;
 
 // Fonction pour charger et vérifier la config  
 const loadConfig = () => {
@@ -32,10 +33,11 @@ const loadConfig = () => {
         const data = fs.readFileSync(configPath);
         config = JSON.parse(data);
 
-	config.nodeJsPort ||= defaultPort;
-	config.ldap.url ||= "ldap://localhost:389";
+	config.nodeJsPort ||= defaultNodePort;
+	config.ldap.url ||= "ldap://localhost";
+	config.ldap.port ||= 389;
 	if (config.configDn.root.indexOf(',') == -1 )
-	    config.configDn.root = "ou=carnetLDAP,ou=applications," + config.ldap.base.baseDN;
+	    config.configDn.root = "ou=carnetLDAP,ou=applications," + config.ldap.data.baseDN;
 	config.configDn.root = 'ou' + config.configDn.root.substring(config.configDn.root.indexOf('='));
 	config.configDn.attributs = 'ou=' + config.configDn.attributs.substring(config.configDn.attributs.indexOf('=')!==-1 ?config.configDn.attributs.indexOf('=')+1 :0);
 	config.logFile ||= "logs/application.log";
@@ -48,8 +50,9 @@ const loadConfig = () => {
 	const defaultConfig = {
 	    nodeJsPort: defaultPort,				// Port du serveur http nodeJs
 	    ldap: {
-		url: "ldap://localhost:389",			// URL du serveur LDAP
-		base: {
+		url: "ldap://localhost",			// URL du serveur LDAP
+		port: 389,					// URL du serveur LDAP
+		data: {
 		    bindDN: "cn=admin," + baseDN,		// DN pour l'authentification
 		    bindPassword: "password",			// Mot de passe pour l'authentification 
 		    baseDN: baseDN				// DN de base pour les recherches
@@ -121,7 +124,7 @@ app.get('/', (req, res) => {
     const login = req.cookies.login || ''; // Lire le DN du cookie, s'il existe
 
     // Rendre la vue de connexion avec le login précédent
-    res.render('login', { login, error: null });
+    res.render('login', { login, error: null, ldapUrl: `${config.ldap.url}:${config.ldap.port}` });
 });
 
 
@@ -129,12 +132,12 @@ app.get('/', (req, res) => {
 // Route pour traiter la soumission du formulaire de connexion  
 app.post('/login', async (req, res) => {
     const { login, password } = req.body; // Récupération du login et du mot de passe
-    const appClient = ldap.createClient({ url: config.ldap.url });
+    const appClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
     let client;
 
     try {
 	// Créer un client LDAP  
-	await bindClient(appClient, config.ldap.base.bindDN, config.ldap.base.bindPassword);
+	await bindClient(appClient, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
         // Définir les attributs à rechercher  
         const attributesToSearch = ['uid', 'mail', 'employeeNumber', 'sn', 'givenName',  'cn'];
@@ -147,7 +150,7 @@ app.post('/login', async (req, res) => {
 		sizeLimit: 15
             };
 
-            return rawSearchLDAP(appClient, config.ldap.base.baseDN, searchOptions).catch(err => {
+            return rawSearchLDAP(appClient, config.ldap.data.baseDN, searchOptions).catch(err => {
 		return []; // Retourner un tableau vide en cas d'erreur  
 	    });;
         });
@@ -164,7 +167,7 @@ app.post('/login', async (req, res) => {
         } else if (validResults.length > 1) {
 	  const allEqual = validResults.every(dn => dn === validResults[0]);
             if (!allEqual) {
-                throw new Error('Plusieurs utilisateurs trouvés, veuillez spécifier davantage d\'informations.'); // Gérer l'erreur ici  
+                throw new Error('Plus d\'une occurrence d\'identifiant trouvée ! Veuillez préciser davantage votre login.'); // Gérer l'erreur ici  
             }
 	}
 
@@ -172,7 +175,7 @@ app.post('/login', async (req, res) => {
         const bindDN = validResults[0]; // Récupérer le DN de la première entrée
 
         // Tenter de se connecter au serveur LDAP avec le DN récupéré  
-	client = ldap.createClient({ url: config.ldap.url });
+	client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
         await bindClient(client, bindDN, password);
 
         // Authentification réussie, récupérer le rôle de l'utilisateur 
@@ -197,7 +200,8 @@ app.post('/login', async (req, res) => {
         // Gestion des erreurs : ne pas afficher d'erreur dans la console  
         return res.render('login', {
             login: login, // Garder la valeur du login pré-rempli  
-            error: err.message || 'Nom d\'utilisateur ou mot de passe incorrect.'
+            error: err.message || 'Nom d\'utilisateur ou mot de passe incorrect.',
+	    ldapUrl: `${config.ldap.url}:${config.ldap.port}`
         });
     } finally {
         // S'assurer que le client LDAP est déconnecté  
@@ -232,7 +236,7 @@ app.get('/logout', (req, res) => {
 // Route de recherche (GET)  
 app.get('/search', (req, res) => {
     // Rendre la vue de recherche
-    res.render('search', { results: null, error: null });
+    res.render('search', { results: null, searchTerm: null, error: null });
 });
 
 // Route de recherche (POST)  
@@ -240,39 +244,44 @@ app.post('/search', async (req, res) => {
     const searchTerm = req.body.searchTerm;
 
     // Créer un client LDAP  
-    const client = ldap.createClient({ url: config.ldap.url });
+    const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
     const opts = {
 	filter: `(&(objectClass=person)(|(uid=${searchTerm})(cn=${searchTerm})(sn=${searchTerm})(givenName=${searchTerm})(employeeNumber=${searchTerm})))`,
 	scope: 'sub',
-	attributes: ['dn', 'uid', 'cn', 'sn', 'o', 'telephoneNumber', 'mail']
+	attributes: ['dn', 'uid', 'cn', 'sn', 'telephoneNumber', 'mail', 'employeeNumber']
     };
 
     try {
-        await bindClient(client, config.ldap.base.bindDN, config.ldap.base.bindPassword);
+        await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-	// *************************
-	    // ATTENTION: les valeurs d'attributs sont devenues des tableaux !!! (à corriger dans la suite)
-	const results = await searchLDAP(client, config.ldap.base.baseDN, opts);
-	// *************************
+	// Récupérer les résultats de la recherche LDAP
+	const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
         client.unbind();
-	return res.render('search', { results, error: null });
+	// Passer le searchTerm à la vue  
+	return res.render('search', { results, searchTerm: null, error: null });
 
     } catch (error) {
 	console.error('Erreur:', error);
 	if (client) {
             client.unbind(); // Assurez-vous que le client est délié  
 	}
-	return res.render('search', { results: null, error: error.message });
+	return res.render('search', { results: null, searchTerm: null, error: error.message });
     }
+});
+
+// Nouvelle route pour le Reset du formulaire search (POST)
+app.post('/search-reset', (req, res) => {
+    // Renvoyer la vue de recherche avec des résultats vides
+    res.render('search', { results: null, searchTerm: null, error: null });
 });
 
 // ***********************************************************
 // Route pour éditer un objet  
 app.get('/edit/:dn', async (req, res) => {
     const dn = req.params.dn; // Récupérer le DN des paramètres de l'URL
-    const client = ldap.createClient({ url: config.ldap.url });
+    const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
 
     const options = {
@@ -282,7 +291,7 @@ app.get('/edit/:dn', async (req, res) => {
 
     try {
 	// Liaison au client LDAP  
-        await bindClient(client, config.ldap.base.bindDN, config.ldap.base.bindPassword);
+        await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
         const objectData = await rawSearchLDAP(client, dn, options);;
 	if (objectData.length === 0) {
@@ -347,14 +356,14 @@ console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails,null, 
 // ***********************************************************
 // Route pour valider les contrôle d'attribut édités dans la modale
 app.post('/update-attributeCtl', async (req, res) => {
-    const client = ldap.createClient({ url: config.ldap.url }); // Déclaration du client de connexion
+    const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` }); // Déclaration du client de connexion
     let dn;
 
     try {
         // Connexion au serveur LDAP 
-        await bindClient(client, config.ldap.base.bindDN, config.ldap.base.bindPassword);
+        await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-        // Mettez à jour l'attribut dans LDAP
+        // Mettre à jour l'attribut dans LDAP
 	const keys = Object.keys(req.body);
 	for (let key of keys) {
 	    if( key === 'dn') {
