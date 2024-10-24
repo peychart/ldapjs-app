@@ -76,8 +76,10 @@ Un exemple de fichier config.json est présenté ici :
 
 ```
 {
+    "nodeJsPort: 3000,
     "ldap": {
         "url": "ldap://localhost:389",
+        "port": 389,
         "base": {
             "bindDN": "cn=admin,dc=example,dc=com",
             "bindPassword": "secret",
@@ -92,7 +94,9 @@ Un exemple de fichier config.json est présenté ici :
     "configDn": {
         "root": "ou=carnetLDAP,ou=applications,dc=example,dc=com",
         "attributs": "ou=attribut"
-    }
+    },
+"logFile": "log/application.log",
+"sessionSecret": "votre_secret_complexe"
 }
 ```
 
