@@ -7,18 +7,62 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #ffffe0, #ffeb3b); /* Dégradé de couleur de fond */
+            display: flex; /* Utilisation de flexbox pour centrer le contenu */
+            justify-content: center; /* Centrage horizontal */
+            align-items: center; /* Centrage vertical */
+            height: 100vh; /* Prend toute la hauteur de la fenêtre */
         }
         .container {
-            max-width: 400px;
+            max-width: 600px; /* Largeur maximale */
             margin: auto;
+            padding: 20px; /* Ajout de padding pour un espacement intérieur */
+            background-color: #fffacd; /* Fond jaune plus foncé */
+            border: 2px solid #ccc; /* Bordure grise */
+            border-radius: 12px; /* Arrondir les coins */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ombre pour le conteneur */
+            text-align: center; /* Centrer le texte à l'intérieur du conteneur */
+        }
+        label {
+            display: block; /* Affiche les labels comme des blocs */
+            margin-bottom: 5px; /* Espacement en bas des labels */
+            text-align: left; /* Aligne les textes des labels à gauche */
+        }
+        input {
+            width: calc(100% - 20px); /* Prend toute la largeur disponible moins le padding */
+            padding: 10px; /* Ajoute du padding à l'intérieur des champs de saisie */
+            margin: 0 10px; /* Ajoute une marge à gauche et à droite pour l'espacement */
+            border: 1px solid #ccc; /* Bordure grise */
+            border-radius: 4px; /* Coins arrondis pour les champs de saisie */
+            display: inline-block; /* Permet de garder la largeur correcte */
         }
         .footer {
-            font-size: 12px;
-            color: grey;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin-top: 20px; /* Espacement au-dessus de la div footer */
+            display: flex; /* Utilisation de flexbox pour aligner les éléments */
+            justify-content: space-between; /* Espacement entre les éléments */
+            align-items: center; /* Alignement vertical centré */
+        }
+        button {
+            padding: 10px; /* Ajout de padding pour les boutons */
+            border: none; /* Retire la bordure par défaut */
+            cursor: pointer; /* Change le curseur au survol */
+	    border-radius: 8px; /* Bords arrondis pour les boutons */
+        }
+        button.help {
+            /*background-color: #ffeb3b; /* Couleur de fond jaune pour le bouton de connexion */
+            background-color: #fffacd; /* Couleur de fond jaune pour le bouton de connexion */
+        }
+        button.submit {
+            background-color: #d3d3d3; /* Couleur de fond gris pour le bouton d'aide */
+	    border: 2px solid transparent; /* Bordure transparente par défaut */
+        }
+        #error-message {
+            color: red; /* Couleur du message d'erreur */
+            margin-top: 10px; /* Espacement au-dessus du message d'erreur */
+            text-align: center; /* Centrer le texte pour le message d'erreur */
+            width: 100%; /* Prendre toute la largeur de la div */
         }
     </style>
 </head>
@@ -27,22 +71,30 @@
         <h1>Connexion à l'annuaire LDAP</h1>
         <form action="/login" method="post">
             <label for="login">Login :</label>
-            <input type="text" name="dn" id="login" placeholder="Login" value="<%= dn %>" required><br>
+            <input type="text" name="login" id="login" placeholder="Login (uid, mail, employeeNumber, sn, givenName, cn -- with *)" value="<%= login %>" required>
 
             <label for="password">Password :</label>
-            <input type="password" name="password" id="password" placeholder="Mot de passe" required><br>
+            <input type="password" name="password" id="password" placeholder="Mot de passe" required>
 
-            <button type="submit">Connect</button>
+            <div class="footer">
+                <button type="button" class="help" onclick="alert('Aide sur la connexion')">?</button> <!-- Bouton d'aide -->
+                <button type="submit" class="submit">Connect</button> <!-- Bouton Connect -->
+            </div>
+            <% if (error) { %>
+                <p id="error-message"><%= error %></p> <!-- Message d'erreur -->
+            <% } %>
         </form>
-
-        <div class="footer">
-            <span>(Help in tooltips)</span>
-            <button type="button" onclick="window.close();">Exit</button>
-        </div>
-
-        <% if (error) { %>
-            <p style="color: red;"><%= error %></p>
-        <% } %>
     </div>
+
+    <script>
+        // Écoute l'événement focus sur le champ de mot de passe  
+        document.getElementById('password').addEventListener('focus', function() {
+            // Efface le message d'erreur  
+            const errorMessage = document.getElementById('error-message');
+            if (errorMessage) {
+                errorMessage.innerText = '';
+            }
+        });
+    </script>
 </body>
 </html>
