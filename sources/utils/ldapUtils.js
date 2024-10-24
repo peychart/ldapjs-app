@@ -12,16 +12,15 @@ function getUserRoleFromDatabase(dn) {
     return( { "dn": "", "role": "guest"} );
 }
 
-const bindClient = async (client, bindDN, bindPassword) => {
+async function bindClient(client, bindDN, bindPassword) {
     return new Promise((resolve, reject) => {
         client.bind(bindDN, bindPassword, (err) => {
-            if (err) {
-                return reject(new Error('Erreur de liaison LDAP: ' + err.message));
-            }
-            resolve();
+            if (err)
+                return reject(err.message);
+	    resolve();
         });
     });
-};
+}
 
 /**
  * Effectue une recherche dans LDAP.
@@ -30,11 +29,27 @@ const bindClient = async (client, bindDN, bindPassword) => {
  * @param {Object} options - Les options de recherche, y compris le filtre et les attributs.
  * @returns {Promise<Array>} - Une promesse qui résout un tableau d'entrées trouvées.
  */
-async function searchLDAP(client, baseDN, options) {
+async function searchLDAP(client, baseDN, searchOptions) {
+    try {
+        const rawResults = await rawSearchLDAP(client, baseDN, searchOptions); // Utilisez await ici
+
+        return rawResults.map(entry => {
+            const attributes = entry.attributes.reduce((acc, attr) => {
+                acc[attr.type] = attr.values;
+                return acc;
+            }, {});
+            attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs  
+            return attributes; // Retourner l'objet d'attributs formaté  
+        });
+    } catch(err) {
+        throw new Error(`Erreur de recherche: ${err.message}`); // Laissez l'erreur remonter  
+    }
+}
+
+async function rawSearchLDAP(client, baseDN, searchOptions) {
     return new Promise((resolve, reject) => {
         const results = [];
-
-        client.search(baseDN, options, (err, search) => {
+        client.search(baseDN, searchOptions, (err, search) => {
             if (err) {
                 return reject(new Error(`Erreur de recherche: ${err.message}`));
             }
@@ -286,7 +301,7 @@ const getObjectClasses = async (config, objectClassesNameList) => {
 
 	    try {
                 // Appel à searchLDAP pour effectuer la recherche  
-                const searchResults = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
+                const searchResults = await rawSearchLDAP(schemaClient, config.ldap.schema.baseDN, options);
     
 	        // Pas besoin de reduce ici, on peut directement traiter les résultats  
                 const matchedAttributes = searchResults.filter(entry => 
@@ -325,6 +340,9 @@ const getObjectClasses = async (config, objectClassesNameList) => {
 
 
 module.exports = {
+    bindClient,
+    searchLDAP,
+    rawSearchLDAP,
     getUserRoleFromDatabase,
     getObjectClasses,
     enrichObjectClassesDetails,
