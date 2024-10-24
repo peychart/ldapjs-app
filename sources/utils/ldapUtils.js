@@ -275,7 +275,7 @@ function enrichObjectClassesDetails(objectClassesDetails, objectData) {
 
 // Fonction pour récupérer les attributs de chaque objectClass dans le schéma  
 const getObjectClasses = async (config, objectClassesNameList) => {
-    const schemaClient = ldap.createClient({ url: config.ldap.url }); // Créer un client pour interroger le schéma
+    const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` }); // Créer un client pour interroger le schéma
 
     try {
         // Effectuer le bind avec le DN et le mot de passe pour le client du schéma  
