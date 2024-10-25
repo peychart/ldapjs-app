@@ -318,10 +318,9 @@ app.get('/edit/:dn', async (req, res) => {
             attributes: [ 'cn', 'l', 'description' ]
         };
 
-	const attributes = await searchLDAP(client, attrDefDN, attrDefOptions);
-	if (!attributes.length) {
-	    throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
-	}
+	const attributes = await searchLDAP(client, attrDefDN, attrDefOptions)).catch (err => {
+            return [];
+        });
 
 	// Ajout les values d'attributs de l'entry dn dans les objectClasses contenus:
 	objectClassesDetails.forEach(objectClass => {
