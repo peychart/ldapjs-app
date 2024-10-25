@@ -42,7 +42,7 @@ async function searchLDAP(client, baseDN, searchOptions) {
             return attributes; // Retourner l'objet d'attributs formaté  
         });
     } catch(err) {
-        throw new Error(`Erreur de recherche: ${err.message}, dans la base LDAP.`); // Laissez l'erreur remonter  
+        throw new Error(err.message); // Laissez l'erreur remonter  
     }
 }
 
@@ -287,6 +287,48 @@ async function objectClassDefToJson(inputString) {
 }
 
 /**
+ * Fonction pour récupérer les attributs MUST des objectClasses SUP
+ */
+const getAllMustAttributes = async (config, objectClass) => {
+	// Vérifier que objectClass est valide
+	if (!objectClass || typeof objectClass !== 'object') {
+		console.error('Invalid objectClass provided');
+		return {};
+	}
+
+	const supAttributes = {};
+
+	try {
+		// Vérifier si MUST est un objet et l'ajouter au supAttributes
+		if (objectClass.MUST && typeof objectClass.MUST === 'object') {
+			Object.keys(objectClass.MUST).forEach(attr => {
+				supAttributes[attr] = objectClass.MUST[attr]; // Sauvegarder les détails de l'attribut
+			});
+		}
+
+		if (!objectClass.SUP || objectClass.SUP === 'top') {
+			return supAttributes;
+		}
+
+		// Récupérer la classe supérieure
+		const supClass = await getObjectClass(config, objectClass.SUP).catch(() => (null));
+
+		// Ajouter les attributs de MUST de la classe supérieure
+		if (supClass) {
+			const supSupAttributes = await getAllMustAttributes(config, supClass);
+			// Fusionner les attributs retournés par la sous-classe
+			Object.keys(supSupAttributes).forEach(attr => {
+				supAttributes[attr] = supSupAttributes[attr]; // Sauvegarder les détails de l'attribut
+			});
+		}
+	} catch (error) {
+		console.error(`Erreur lors de la récupération des attributs de la super classe de ${JSON.stringify(objectClass)} :`, error);
+	}
+
+	return supAttributes; // Retourner l'objet contenant les attributs obligatoires
+}
+
+/**
  * Fonction pour récupérer les attributs de chaque objectClass dans le schéma  
  */
 const getObjectClass = async (config, objectClassName) => {
@@ -297,12 +339,8 @@ const getObjectClass = async (config, objectClassName) => {
         // Effectuer le bind avec le DN et le mot de passe d'accès au schéma LDAP
         await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
 
-        if (objectClassName.length === 0) {
-	    throw new Error(`Objet non trouvé`); // Lancer une erreur vers le catch
-        }
-
         if (!objectClassName || objectClassName.length === 0) {
-            throw new Error(`Objet non trouvé`); // Lancer une erreur vers le catch  
+            throw new Error(`ObjetClass non trouvé`); // Lancer une erreur vers le catch  
         }
 
         // Utilisation de map pour lancer des recherches asynchrones pour chaque objectClass  
@@ -313,11 +351,10 @@ const getObjectClass = async (config, objectClassName) => {
         };
 
         // Appel à searchLDAP pour effectuer la recherche  
-	const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
-    
-	if (result.length === 0) {
-            throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`);
-        }
+	const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
+	    .catch(() => {
+        	throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`)
+        });
 
         // Convertir le résultat brut en JSON  
         const objectClass = objectClassDefToJson(result[0].olcObjectClasses.find(str => {
@@ -342,5 +379,6 @@ module.exports = {
     rawSearchLDAP,
     getUserRoleFromDatabase,
     getObjectClass,
+	getAllMustAttributes,
     updateAttributeConfigInLDAP
 };
