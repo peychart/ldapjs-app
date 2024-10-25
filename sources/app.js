@@ -14,6 +14,7 @@ const {
     rawSearchLDAP,
     getUserRoleFromDatabase,
     getObjectClass,
+	getAllMustAttributes,
     updateAttributeConfigInLDAP,
 } = require('./utils/ldapUtils');
 const createLogger = require('./utils/log');
@@ -293,34 +294,41 @@ app.get('/edit/:dn', async (req, res) => {
         await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
 	// Récupration de l'entrée à éditer
-        const objectData = (await searchLDAP(client, dn, options))[0];
-
-	if (objectData.length === 0) {
-             throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
-        }
+        const objectData = (await searchLDAP(client, dn, options)
+	    .catch(() => {
+        	throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
+            })
+	)[0];
 
 	// On élimie l'objectClass 'top'
 	const objectClassesToSearch = objectData.objectClass.filter(element => element !== 'top');
 
-	const searchPromises = objectClassesToSearch.map(objectClassName => {
-	    // Récupérer la définition de chaque objectClass
-	    return getObjectClass(config, objectClassName);
-	});
+	// Récupérer la définition de chaque objectClass
+	const searchPromises = await Promise.all(objectClassesToSearch.map(async objectClassName => {
+    	try {
+        	const objectClass = await getObjectClass(config, objectClassName);
+        	objectClass.MUST = await getAllMustAttributes(config, objectClass);
+        	return objectClass;
+    	} catch (error) {
+        	console.error(`Erreur lors de la récupération de ${objectClassName} :`, error);
+        	return {}; // Ou une valeur par défaut, si nécessaire  
+    	}
+	}));
 
-	// Attendre que toutes les recherches soient terminées
-	const objectClassesDetails = await Promise.all(searchPromises);
+	// Filtrer les résultats pour enlever les valeurs nulles  
+	const objectClassesDetails = searchPromises.filter(classDetails => classDetails !== {});
 
 	// Rechercher des contrôles d'attributs dans l'arborescence LDAP config.configDn.attributs+root
 	const attrDefDN = config.configDn.attributs + ',' + config.configDn.root;
 	const attrDefOptions = {
-	    //filter: '(cn=*)',
-            scope: 'one',
-            attributes: [ 'cn', 'l', 'description' ]
-        };
+		//filter: '(cn=*)',
+		scope: 'one',
+		attributes: [ 'cn', 'l', 'description' ]
+	};
 
-	const attributes = await searchLDAP(client, attrDefDN, attrDefOptions)).catch (err => {
-            return [];
-        });
+	const attributes = await searchLDAP(client, attrDefDN, attrDefOptions).catch (err => {
+	    return [];
+	});
 
 	// Ajout les values d'attributs de l'entry dn dans les objectClasses contenus:
 	objectClassesDetails.forEach(objectClass => {
@@ -336,11 +344,13 @@ app.get('/edit/:dn', async (req, res) => {
 	    });
 	});
 
+console.log('objectClassesDetails: ', objectClassesDetails);
+
 //console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 	return res.render('edit', { dn, objectClassesDetails: objectClassesDetails });
 
     } catch (error) {
-        console.error('Erreur de recherche de l\'entrée dans la base:', error);
+        console.error('Fiche non trouvée:', error);
         return res.status(500).send(error.message); // Renvoyer le message d'erreur  
     } finally {
 	if (client) {
