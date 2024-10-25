@@ -67,7 +67,7 @@
         <!-- Conteneur pour les boutons avec Flexbox -->
         <div class="d-flex justify-content-end mb-3">
             <button id="restoreButton" class="btn btn-secondary" onclick="restoreValues()">Restaurer les valeurs</button>
-            <form action="/update/<%= objectClassesDetails[0].objectClassName %>" method="POST" class="ml-2">
+            <form action="/update/<%= dn %>" method="POST" class="ml-2">
                 <button type="submit" id="saveButton" class="btn btn-save" disabled>Valider</button>
             </form>
         </div>
@@ -76,7 +76,7 @@
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <% objectClassesDetails.forEach((objectClass, index) => { %>
                 <li class="nav-item">
-                    <a class="nav-link <%= index === 0 ? 'active' : '' %>" id="<%= objectClass.objectClassName %>-tab" data-toggle="tab" href="#<%= objectClass.objectClassName %>" role="tab" aria-controls="<%= objectClass.objectClassName %>" aria-selected="<%= index === 0 %>"><%= objectClass.objectClassName %></a>
+                    <a class="nav-link <%= index === 0 ? 'active' : '' %>" id="<%= objectClass.NAME %>-tab" data-toggle="tab" href="#<%= objectClass.NAME %>" role="tab" aria-controls="<%= objectClass.NAME %>" aria-selected="<%= index === 0 %>"><%= objectClass.NAME %></a>
                 </li>
             <% }) %>
             <li class="nav-item">
@@ -84,55 +84,57 @@
             </li>
         </ul>
 
-        <!-- Tab panes -->
+	       <!-- Tab panes -->
         <div class="tab-content" id="myTabContent">
             <% objectClassesDetails.forEach((objectClass, index) => { %>
-                <div class="tab-pane fade <%= index === 0 ? 'show active' : '' %>" id="<%= objectClass.objectClassName %>" role="tabpanel" aria-labelledby="<%= objectClass.objectClassName %>-tab">
+                <div class="tab-pane fade <%= index === 0 ? 'show active' : '' %>" id="<%= objectClass.NAME %>" role="tabpanel" aria-labelledby="<%= objectClass.NAME %>-tab">
                     <h3></h3> <!-- Suppression de "Attributes" -->
-                    
-                    <form action="/update/<%= objectClass.objectClassName %>" method="POST">
-                        <h4 class="underline">Attributs obligatoires :</h4> <!-- Souligné avec ":" -->
+
+                    <form action="/update/<%= objectClass.NAME %>" method="POST">
+                        <h4 class="underline">Attributs obligatoires :</h4>
                         <ul>
-                            <% Object.keys(objectClass).forEach(attrName => { 
-                                if (objectClass[attrName].type === 'MUST') { // Affiche uniquement les attributs de type MUST  
-                                    const objectAttribute = objectClass[attrName];
-                                    const displayLabel = objectAttribute.customWording || attrName; // Utilise customWording ou le nom de l'attribut 
+                            <% if (objectClass.MUST) {
+                                Object.keys(objectClass.MUST).forEach(attrName => {
+                                    const objectAttribute = objectClass.MUST[attrName];
+                                    const displayLabel = objectAttribute.customWording || attrName;
                             %>
                                 <li>
                                     <strong><%= displayLabel %>:</strong>
-				    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
                                     <input type="text"
                                            name="<%= JSON.stringify(attrName) %>"
-                                           value="<%= objectAttribute.value %>"
+                                           value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
                                            class="form-control"
-					   onfocus="valueOnfocus(this)"
-					   oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                                           onfocus="valueOnfocus(this)"
+                                           oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
                                 </li>
-                            <% } }) %>
+                            <% })
+                            } %>
                         </ul>
-                        
-                        <h4 class="underline">Attributs optionnels :</h4> <!-- Souligné avec ":" -->
+
+                        <h4 class="underline">Attributs optionnels :</h4>
                         <ul>
-                            <% Object.keys(objectClass).forEach(attrName => { 
-                                if (objectClass[attrName].type === 'MAY') { // Affiche uniquement les attributs de type MAY  
-                                    const objectAttribute = objectClass[attrName];
-                                    const displayLabel = objectAttribute.customWording || attrName; // Utilise customWording ou le nom de l'attribut  
+                            <% if (objectClass.MAY) {
+                                Object.keys(objectClass.MAY).forEach(attrName => {
+                                    const objectAttribute = objectClass.MAY[attrName];
+                                    const displayLabel = objectAttribute.customWording || attrName;
                             %>
                                 <li>
                                     <strong><%= displayLabel %>:</strong>
-				    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
                                     <input type="text"
                                            name="<%= JSON.stringify(attrName) %>"
-                                           value="<%= objectAttribute.value %>"
+                                           value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
                                            class="form-control"
-					   onfocus="valueOnfocus(this)"
-					   oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                                           onfocus="valueOnfocus(this)"
+                                           oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
                                 </li>
-                            <% } }) %>
+                            <% })
+                            } %>
                         </ul>
                     </form>
                 </div>
@@ -157,252 +159,230 @@
 
         <!-- Modale pour l'édition d'attributs -->
         <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document"> <!-- Classe par défaut -->
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editModalLabel">Modifier le libellé d'attribut "<span id="attributeName"></span>"</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="newLabel">Libellé d'affichage de l'attribut :</label>
-                        <input type="text" class="form-control" id="newLabel" style='color:black;'>
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">Modifier le libellé d'attribut "<span id="attributeName"></span>"</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label for="jsValidation">Code JS de contrôle de saisie :</label>
-                        <textarea class="form-control" id="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="newLabel">Libellé d'affichage de l'attribut :</label>
+                            <input type="text" class="form-control" id="newLabel" style='color:black;'>
+                        </div>
+                        <div class="form-group">
+                            <label for="jsValidation">Code JS de contrôle de saisie :</label>
+                            <textarea class="form-control" id="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer d-flex justify-content-between">
-                    <div>
-                        <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(false)" style="background-color: #ffffe0; border: none;;"> &gt;&lt; </button> <!-- Bouton pour diminuer la taille -->
-                        <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(true)" style="background-color: #ffffe0; border: none;;"> &lt;&gt; </button> <!-- Bouton pour augmenter la taille -->
-                    </div>
-                    <div>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                        <button type="button" class="btn btn-primary" onclick="saveAttributNewLabel(<%= JSON.stringify(objectClassesDetails) %>)">Valider</button>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <div>
+                            <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(false)" style="background-color: #ffffe0; border: none;"> &gt;&lt; </button>
+                            <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(true)" style="background-color: #ffffe0; border: none;"> &lt;&gt; </button>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-primary" onclick="saveAttributNewLabel(<%= JSON.stringify(objectClassesDetails) %>)">Valider</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script>
-	let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut
-	let initialValue = ''; // Mémorise les valeurs de  champs avant toute saisie pour utilisation dans checkInputFunction()
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script>
+            let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut  
+            let initialValue = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
 
-	function valueOnfocus(input) {
-            // Stocker la valeur actuelle avant toute modification lors du focus
-            initialValue = input.value;
-        };
+            function valueOnfocus(input) {
+                initialValue = input.value;
+            };
 
-	// Modal, for attribut definition
-        function openEditModal(attrName, objectAttribute) {
-	    defaultAttributeLabel = attrName;
-	    // Vérifier l'état du bouton "Valider"
-	    if (!document.getElementById('saveButton').disabled) {
-	        // Si le bouton "Valider" est activé, afficher une alerte  
-	        alert("Opération impossible : il y a des modifications d'attributs en cours !");
-		return;
-	    }
+            function openEditModal(attrName, objectAttribute) {
+                defaultAttributeLabel = attrName;
+                if (!document.getElementById('saveButton').disabled) {
+                    alert("Opération impossible : il y a des modifications d'attributs en cours !");
+                    return;
+                }
 
-	    // Affichage du libellé actuel dans son champ de saisie
-	    const newLabelInputField = document.getElementById('newLabel');
-	    newLabelInputField.value = objectAttribute.customWording || '';
-	    newLabelInputField.placeholder = defaultAttributeLabel;
+                const newLabelInputField = document.getElementById('newLabel');
+                newLabelInputField.value = objectAttribute.customWording || '';
+                newLabelInputField.placeholder = defaultAttributeLabel;
 
-	    // Récupérer et restaurer le contenu de valueCheck dans le textarea  
-	    document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
+                document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
-	    // Met à jour le nom de l'attribut dans le titre de la modale
-	    document.getElementById('attributeName').textContent = newLabelInputField.value || defaultAttributeLabel;
+                document.getElementById('attributeName').textContent = newLabelInputField.value || defaultAttributeLabel;
 
-	    // Affiche la modale
-	    $('#editModal').modal('show');
-	}
-
-	function checkInputFunction(input, attrName, objectAttribute, objectClassesDetails) {
-	    if (objectAttribute.valueCheck) {
-		eval(objectAttribute.valueCheck);
-		check(input, objectClassesDetails, initialValue);
-	    }
-	}
-
-	async function saveAttributNewLabel(objectClassesDetails) {
-	    const newLabel = document.getElementById('newLabel').value.trim();
-	    const newJsChecking = document.getElementById('jsValidation').value.trim();
-
-	    $('#editModal').modal('hide');
-
-	    // récupérer le dn de l'object édité via son URL d'édition 
-	    const dn = (() => {
-		const urlSegments = window.location.pathname.split('/'); // Diviser l'URL en segments
-		return urlSegments[urlSegments.length - 1]; // Récupérer et retourner le dernier segment comme DN
-	    })();
-
-	    // Formatage des données à envoyer au serveur pour mise à jour LDAP
-	    const dataToSend = {
-		dn: dn,
-	        [defaultAttributeLabel]: {
-	            customWording: newLabel,
-	            valueCheck: newJsChecking.trim() !== '' ? newJsChecking.trim() : null  
-	        }
-	    };
-
-	    try {
-		// Envoi au serveur
-	        const response = await fetch('/update-attributeCtl', {
-	            method: 'POST',
-	            headers: {
-	                'Content-Type': 'application/json',
-	            },
-	            body: JSON.stringify(dataToSend),
-	        });
-
-		if (response.ok) {
-		    // Mise à jour des paramètres d'attributs dans tous leurs objects d'appartenance
-		    let previousLabel = null;
-		    objectClassesDetails.forEach(objectClass => {
-			Object.keys(objectClass).forEach(attr => {
-			    if (attr === defaultAttributeLabel) {
-				previousLabel = objectClass[attr].customWording;
-				objectClass[attr].customWording = newLabel.length ? newLabel : null;
-				objectClass[attr].valueCheck = newJsChecking.length ? newJsChecking : null;
-			    }
-			});
-		    });
-
-		    // Mise à jour du libellé d'attribut dans tous les onglets
-	            const strongElement = Array.from(document.querySelectorAll('strong')).find(el => el.textContent === (previousLabel || defaultAttributeLabel)  + ':');
-	            if (strongElement) {
-	                strongElement.textContent = (newLabel.length ? newLabel : defaultAttributeLabel) + ':';
-	            }
-
-	        } else {
-	            console.error('Erreur lors de la mise à jour de l\'attribut');
-	            throw new Error('Erreur réseau, statut: ' + response.status);
-	        }
-
-	    } catch (error) {
-	        console.error('Erreur:', error);
-	        // Optionnel : Afficher un message d'erreur à l'utilisateur  
-	    }
-	}
-
-	function changeModalSize(increase) {
-	    const modalDialog = document.querySelector('#editModal .modal-dialog');
-            const currentClassList = modalDialog.classList;
-	    const jsValidationTextarea = document.getElementById('jsValidation'); 
-	    const greater = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(true)"]');
-	    const lower = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(false)"]');
-
-            // Déterminer la taille actuelle  
-            let currentSize = '';
-            if (currentClassList.contains('modal-sm')) {
-                currentSize = 'sm';
-            } else if (currentClassList.contains('modal-lg')) {
-                currentSize = 'lg';
-            } else if (currentClassList.contains('modal-xl')) {
-                currentSize = 'xl';
+                $('#editModal').modal('show');
             }
 
-            // Changer la taille selon l'argument increase  
-	    lower.style.color = greater.style.color = 'black';
-            if (increase) {
-                if (currentSize === 'sm') {
-                    currentClassList.remove('modal-sm');
-		    jsValidationTextarea.rows = 10;
-                } else if (currentSize === '') {
-                    currentClassList.remove('modal-sm');
-                    currentClassList.add('modal-lg');
-		    jsValidationTextarea.rows = 15;
-                } else if (currentSize === 'lg') {
-                    currentClassList.remove('modal-lg');
-                    currentClassList.add('modal-xl');
-		    jsValidationTextarea.rows = 20;
-		    greater.style.color = '#ffffe0'; // Effacer le bouton '<>'' 
-		    greater.blur(); // Retirer le focus
-                }
-            } else {
-                if (currentSize === 'xl') {
-                    currentClassList.remove('modal-xl');
-                    currentClassList.add('modal-lg');
-		    jsValidationTextarea.rows = 15;
-                } else if (currentSize === 'lg') {
-                    currentClassList.remove('modal-lg');
-		    jsValidationTextarea.rows = 10;
-                } else if (currentSize === '') {
-                    currentClassList.remove('modal-lg');
-                    currentClassList.add('modal-sm');
-		    jsValidationTextarea.rows = 5;
-		    lower.style.color = '#ffffe0'; // Effacer le bouton '><'' 
-		    lower.blur(); // Retirer le focus
+            function checkInputFunction(input, attrName, objectAttribute, objectClassesDetails) {
+                if (objectAttribute.valueCheck) {
+                    eval(objectAttribute.valueCheck);
+                    check(input, objectClassesDetails, initialValue);
                 }
             }
-	}
 
-	function checkSaveButton() {
-	    // Récupérer tous les champs d'input dans tous les onglets  
-	    const inputs = document.querySelectorAll('.tab-pane input[type="text"]');
-    
-	    // Vérifier si au moins un input a été modifié  
-	    let isAnyInputChanged = false;
+            async function saveAttributNewLabel(objectClassesDetails) {
+                const newLabel = document.getElementById('newLabel').value.trim();
+                const newJsChecking = document.getElementById('jsValidation').value.trim();
 
-	    inputs.forEach(input => {
-	        if (input.value !== input.defaultValue) { // Si la valeur actuelle est différente de la valeur par défaut  
-	            isAnyInputChanged = true; // Au moins un champ a été modifié  
-	        }
-	    });
+                $('#editModal').modal('hide');
 
-	    // Mettre à jour l'état du bouton "Valider"
-	    const saveButton = document.getElementById('saveButton');
+                const dn = (() => {
+                    const urlSegments = window.location.pathname.split('/');
+                    return urlSegments[urlSegments.length - 1];
+                })();
 
-	    if (isAnyInputChanged) {
-	        saveButton.disabled = false; // Activer le bouton "Valider"
-	        saveButton.classList.add('enabled'); // Ajouter la classe "enabled"
-	        saveButton.classList.remove('disabled'); // S'assurer que la classe "disabled" est retirée  
-	    } else {
-	        saveButton.disabled = true; // Désactiver le bouton "Valider"
-	        saveButton.classList.remove('enabled'); // Retirer la classe "enabled"
-	        saveButton.classList.add('disabled'); // Ajouter la classe "disabled"
-	    }
-	}
+                const dataToSend = {
+                    dn: dn,
+                    [defaultAttributeLabel]: {
+                        customWording: newLabel,
+                        valueCheck: newJsChecking.trim() !== '' ? newJsChecking.trim() : null  
+                    }
+                };
 
-        function restoreValues() {
-            const activeTab = document.querySelector('.tab-pane.show'); // Récupère l'onglet actif  
-            activeTab.querySelectorAll('input').forEach((field) => {
-                const initialValue = field.defaultValue; // Récupère la valeur par défaut  
-                field.value = initialValue; // Restaure la valeur  
-                checkSaveButton(field, initialValue); // Vérifie si le bouton doit être activé/désactivé  
-            });
-        }
+                try {
+                    const response = await fetch('/update-attributeCtl', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(dataToSend),
+                    });
 
-        // Gestionnaire d'événements pour le changement d'onglet  
-        const tabs = document.querySelectorAll('#myTab .nav-link');
-        tabs.forEach((tab) => {
-            tab.addEventListener('click', () => {
-                // Récupère l'onglet actuellement actif et vérifie ses champs  
+                    if (response.ok) {
+                        let previousLabel = null;
+                        objectClassesDetails.forEach(objectClass => {
+                            Object.keys(objectClass).forEach(attr => {
+                                if (attr === defaultAttributeLabel) {
+                                    previousLabel = objectClass[attr].customWording;
+                                    objectClass[attr].customWording = newLabel.length ? newLabel : null;
+                                    objectClass[attr].valueCheck = newJsChecking.length ? newJsChecking : null;
+                                }
+                            });
+                        });
+
+                        const strongElement = Array.from(document.querySelectorAll('strong')).find(el => el.textContent === (previousLabel || defaultAttributeLabel) + ':');
+                        if (strongElement) {
+                            strongElement.textContent = (newLabel.length ? newLabel : defaultAttributeLabel) + ':';
+                        }
+
+                    } else {
+                        console.error('Erreur lors de la mise à jour de l\'attribut');
+                        throw new Error('Erreur réseau, statut: ' + response.status);
+                    }
+
+                } catch (error) {
+                    console.error('Erreur:', error);
+                }
+            }
+
+             function changeModalSize(increase) {
+                const modalDialog = document.querySelector('#editModal .modal-dialog');
+                const currentClassList = modalDialog.classList;
+                const jsValidationTextarea = document.getElementById('jsValidation');
+                const greater = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(true)"]');
+                const lower = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(false)"]');
+
+                let currentSize = '';
+                if (currentClassList.contains('modal-sm')) {
+                    currentSize = 'sm';
+                } else if (currentClassList.contains('modal-lg')) {
+                    currentSize = 'lg';
+                } else if (currentClassList.contains('modal-xl')) {
+                    currentSize = 'xl';
+                }
+
+                lower.style.color = greater.style.color = 'black';
+                if (increase) {
+                    if (currentSize === 'sm') {
+                        currentClassList.remove('modal-sm');
+                        jsValidationTextarea.rows = 10;
+                    } else if (currentSize === '') {
+                        currentClassList.remove('modal-sm');
+                        currentClassList.add('modal-lg');
+                        jsValidationTextarea.rows = 15;
+                    } else if (currentSize === 'lg') {
+                        currentClassList.remove('modal-lg');
+                        currentClassList.add('modal-xl');
+                        jsValidationTextarea.rows = 20;
+                        greater.style.color = '#ffffe0'; 
+                        greater.blur(); 
+                    }
+                } else {
+                    if (currentSize === 'xl') {
+                        currentClassList.remove('modal-xl');
+                        currentClassList.add('modal-lg');
+                        jsValidationTextarea.rows = 15;
+                    } else if (currentSize === 'lg') {
+                        currentClassList.remove('modal-lg');
+                        jsValidationTextarea.rows = 10;
+                    } else if (currentSize === '') {
+                        currentClassList.remove('modal-lg');
+                        currentClassList.add('modal-sm');
+                        jsValidationTextarea.rows = 5;
+                        lower.style.color = '#ffffe0'; 
+                        lower.blur(); 
+                    }
+                }
+            }
+
+            function checkSaveButton() {
+                const inputs = document.querySelectorAll('.tab-pane input[type="text"]');
+                let isAnyInputChanged = false;
+
+                inputs.forEach(input => {
+                    if (input.value !== input.defaultValue) {
+                        isAnyInputChanged = true;
+                    }
+                });
+
+                const saveButton = document.getElementById('saveButton');
+
+                if (isAnyInputChanged) {
+                    saveButton.disabled = false;
+                    saveButton.classList.add('enabled');
+                    saveButton.classList.remove('disabled');
+                } else {
+                    saveButton.disabled = true;
+                    saveButton.classList.remove('enabled');
+                    saveButton.classList.add('disabled');
+                }
+            }
+
+            function restoreValues() {
                 const activeTab = document.querySelector('.tab-pane.show');
-                if (activeTab) {
-                    activeTab.querySelectorAll('input').forEach((field) => {
-                        checkSaveButton(field); // Rafraîchit l'état du bouton "Enregistrer" pour l'onglet précédent  
-                    });
-                }
-                
-                // Récupère l'onglet qui devient actif et vérifie ses champs  
-                const newActiveTab = document.querySelector(tab.getAttribute('href'));
-                if (newActiveTab) {
-                    newActiveTab.querySelectorAll('input').forEach((field) => {
-                        checkSaveButton(field); // Rafraîchit l'état du bouton "Enregistrer" pour le nouvel onglet  
-                    });
-                }
+                activeTab.querySelectorAll('input').forEach((field) => {
+                    const initialValue = field.defaultValue;
+                    field.value = initialValue;
+                    checkSaveButton(field, initialValue);
+                });
+            }
+
+            const tabs = document.querySelectorAll('#myTab .nav-link');
+            tabs.forEach((tab) => {
+                tab.addEventListener('click', () => {
+                    const activeTab = document.querySelector('.tab-pane.show');
+                    if (activeTab) {
+                        activeTab.querySelectorAll('input').forEach((field) => {
+                            checkSaveButton(field);
+                        });
+                    }
+
+                    const newActiveTab = document.querySelector(tab.getAttribute('href'));
+                    if (newActiveTab) {
+                        newActiveTab.querySelectorAll('input').forEach((field) => {
+                            checkSaveButton(field);
+                        });
+                    }
+                });
             });
-        });
-    </script>
+        </script>
+    </div>
 </body>
 </html>
