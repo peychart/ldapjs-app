@@ -13,8 +13,7 @@ const {
     searchLDAP,
     rawSearchLDAP,
     getUserRoleFromDatabase,
-    getObjectClasses,
-    enrichObjectClassesDetails,
+    getObjectClass,
     updateAttributeConfigInLDAP,
 } = require('./utils/ldapUtils');
 const createLogger = require('./utils/log');
@@ -249,7 +248,7 @@ app.post('/search', async (req, res) => {
     const opts = {
 	filter: `(&(objectClass=person)(|(uid=${searchTerm})(cn=${searchTerm})(sn=${searchTerm})(givenName=${searchTerm})(employeeNumber=${searchTerm})))`,
 	scope: 'sub',
-	attributes: ['dn', 'uid', 'cn', 'sn', 'telephoneNumber', 'mail', 'employeeNumber']
+	attributes: ['dn', 'uid', 'cn', 'sn', 'telephoneNumber', 'o', 'mail', 'employeeNumber']
     };
 
     try {
@@ -259,6 +258,7 @@ app.post('/search', async (req, res) => {
 	const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
         client.unbind();
+
 	// Passer le searchTerm à la vue  
 	return res.render('search', { results, searchTerm: searchTerm, error: null });
 
@@ -283,7 +283,6 @@ app.get('/edit/:dn', async (req, res) => {
     const dn = req.params.dn; // Récupérer le DN des paramètres de l'URL
     const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
-
     const options = {
 	scope: 'base', // Recherche unique sur le DN spécifié  
 	attributes: ['*'] // Attributs à récupérer  
@@ -293,63 +292,61 @@ app.get('/edit/:dn', async (req, res) => {
 	// Liaison au client LDAP  
         await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-        const objectData = await rawSearchLDAP(client, dn, options);;
+	// Récupration de l'entrée à éditer
+        const objectData = (await searchLDAP(client, dn, options))[0];
+
 	if (objectData.length === 0) {
              throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
         }
 
-	// Extraire les noms des objetClass de l'entrée trouvée
-	const objectClassesNameList = objectData.attributes.find(attr => attr.type === 'objectClass')?.values || [];
+	// On élimie l'objectClass 'top'
+	const objectClassesToSearch = objectData.objectClass.filter(element => element !== 'top');
 
-	// Appel de la fonction pour récupérer les attributs des objectClasses
-	const objectClassesDetails = await getObjectClasses(config, objectClassesNameList);
+	const searchPromises = objectClassesToSearch.map(objectClassName => {
+	    // Récupérer la définition de chaque objectClass
+	    return getObjectClass(config, objectClassName);
+	});
 
-	// Ajout à objectClassesDetails des values d'attributs contenues dans objectData, recherche de l'entry dn:
-	const enrichedObjectClassesDetails = enrichObjectClassesDetails(objectClassesDetails, objectData);
+	// Attendre que toutes les recherches soient terminées
+	const objectClassesDetails = await Promise.all(searchPromises);
 
-//console.log('objectData', objectData); // Pour débogage
-//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails,null, 2) ); // Pour débogage
-
-	// Rechercher des définitions des contrôles d'attributs dans l'arborescence LDAP config.configDn.attributs
+	// Rechercher des contrôles d'attributs dans l'arborescence LDAP config.configDn.attributs+root
 	const attrDefDN = config.configDn.attributs + ',' + config.configDn.root;
 	const attrDefOptions = {
 	    //filter: '(cn=*)',
             scope: 'one',
-            attributes: ['*']
+            attributes: [ 'cn', 'l', 'description' ]
         };
 
-	const attrDefResults = await rawSearchLDAP(client, attrDefDN, attrDefOptions);
-	if (!attrDefResults.length) {
+	const attributes = await searchLDAP(client, attrDefDN, attrDefOptions);
+	if (!attributes.length) {
 	    throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
 	}
 
-	const attributes = attrDefResults.attributes.reduce((acc, attr) => {
-	    acc[attr.type] = attr.values[0]; // Ajoute la première valeur pour chaque type d'attribut  
-	    return acc;
-	}, {});
+	// Ajout les values d'attributs de l'entry dn dans les objectClasses contenus:
+	objectClassesDetails.forEach(objectClass => {
+	    ['MUST', 'MAY'].forEach(key => {
+		Object.keys(objectClass[key]).forEach(attr => {
+		    // Ajour des valeurs de l'entrée à éditer
+        	    objectClass[key][attr] = { type: key, values: objectData[attr] || null };
 
-//console.log('attrDefDN: ', attrDefDN); // Pour débogage
-//console.log('attrDefOptions: ', attrDefOptions); // Pour débogage
-//console.log('objectData: ', objectData); // Pour débogage
-
-	// Ajout de la propriété customType à chaque attribut
-	enrichedObjectClassesDetails.forEach(objectClass => {
-	    Object.keys(objectClass).forEach(attr => {
-		objectClass[attr].customWording = attributes.find(item => item.cn === attr)?.l || null;
-		objectClass[attr].valueCheck = attributes.find(item => item.cn === attr)?.description || null;
-    	    });
+		    // Ajout de la propriété customType à chaque attribut
+		    objectClass[key][attr].customWording = attributes.find(item => item.cn.includes(attr))?.l || null;
+		    objectClass[key][attr].valueCheck = attributes.find(item => item.cn.includes(attr))?.description || null;
+		});
+	    });
 	});
-console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails,null, 2) ); // Pour débogage
 
-	client.unbind(); // Fermer la connexion si aucun objet n'est trouvé
-	return res.render('edit', { dn, objectClassesDetails: objectClassesDetailsArray });
+//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+	return res.render('edit', { dn, objectClassesDetails: objectClassesDetails });
 
     } catch (error) {
         console.error('Erreur de recherche de l\'entrée dans la base:', error);
+        return res.status(500).send(error.message); // Renvoyer le message d'erreur  
+    } finally {
 	if (client) {
             client.unbind(); // Assurez-vous que le client est délié  
 	}
-        return res.status(500).send(error.message); // Renvoyer le message d'erreur  
     }
 });
 
