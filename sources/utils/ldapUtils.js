@@ -38,11 +38,11 @@ async function searchLDAP(client, baseDN, searchOptions) {
                 acc[attr.type] = attr.values;
                 return acc;
             }, {});
-            attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs  
+	    attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs  
             return attributes; // Retourner l'objet d'attributs formaté  
         });
     } catch(err) {
-        throw new Error(`Erreur de recherche: ${err.message}`); // Laissez l'erreur remonter  
+        throw new Error(`Erreur de recherche: ${err.message}, dans la base LDAP.`); // Laissez l'erreur remonter  
     }
 }
 
@@ -234,104 +234,101 @@ async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
 }
 
 /**
- * Fonction pour enrichir les détails des classes d'objets avec les valeurs d'une entrée LDAP.
- * @param {Array} objectClassesDetails - Tableau des détails des classes d'objets à enrichir.
- * @param {Object} entryPojo - L'objet contenant les attributs de l'entrée LDAP.
- * @returns {Array} - Tableau des détails des classes d'objets enrichis.
+ * Fonction pour convertir la définition text d'un objectClass en object JS
  */
-function enrichObjectClassesDetails(objectClassesDetails, objectData) {
-    // Convertir le tableau d'attributs de objectData en un objet d'accès facile  
-    const attributesMap = objectData.attributes.reduce((acc, attr) => {
-        acc[attr.type] = attr.values.length > 0 ? attr.values[0] : null; // Prendre la première valeur ou null  
-        return acc;
-    }, {});
+async function objectClassDefToJson(inputString) {
+    return new Promise((resolve, reject) => {
+        if (typeof inputString !== 'string') {
+            reject(new Error("inputString doit être une chaîne de caractères."));
+            return;
+        }
 
-    // Parcourir chaque classe d'objet dans objectClassesDetails  
-    objectClassesDetails.forEach(objectClass => {
-        // Pour chaque attribut MUST  
-        objectClass.attributes.MUST.forEach(attr => {
-            // Remplacement par un objet avec "type" (MUST) et "value"
-            objectClass[attr] = {
-                type: "MUST", // Mettre "MUST" comme type  
-                value: attributesMap[attr] || null // Valeur trouvée ou null  
-            };
-        });
+        const cleanedInput = inputString.replace(/^.*?(\(\s*[\d.]+.*)/, '$1').trim();
 
-        // Pour chaque attribut MAY  
-        objectClass.attributes.MAY.forEach(attr => {
-            // Remplacement par un objet avec "type" (MAY) et "value"
-            objectClass[attr] = {
-                type: "MAY", // Mettre "MAY" comme type  
-                value: attributesMap[attr] || null // Valeur trouvée ou null  
-            };
-        });
+        const oidRegex = /\(\s*([\d.]+)/;                                
+        const nameRegex = /NAME\s+'([^']+)'/;                           
+        const descRegex = /DESC '([^']+)'/;                            
+        const supRegex = /SUP\s+([^ ]+)/;
+        const auxiliaryRegex = /AUXILIARY/;                            
+        const structuralRegex = /STRUCTURAL/;                          
+        const abstractRegex = /ABSTRACT/;                                
+        const mustRegex = /MUST \((.*?)\)/;                            
+        const mayRegex = /MAY \((.*?)\)/;                              
 
-        // Optionnel : Vous pouvez supprimer les anciennes clés MAY et MUST si nécessaire  
-        delete objectClass.attributes; // Pour supprimer les attributs d'origine  
+        const oid = cleanedInput.match(oidRegex)?.[1] || null;         
+        const nameMatches = cleanedInput.match(nameRegex);
+        const name = nameMatches ? nameMatches[1] : null;               
+        const desc = cleanedInput.match(descRegex)?.[1] || null;       
+        const supMatches = cleanedInput.match(supRegex);
+        const sup = supMatches ? supMatches[1] : null;
+        const isAuxiliary = auxiliaryRegex.test(cleanedInput);          
+        const isStructural = structuralRegex.test(cleanedInput);         
+        const isAbstract = abstractRegex.test(cleanedInput);             
+        const must = cleanedInput.match(mustRegex)?.[1] || null;       
+        const may = cleanedInput.match(mayRegex)?.[1] || null;         
+
+        const mustAttributes = must ? Object.fromEntries(must.split(' $ ').map(attr => [attr.trim(), null])) : {};
+        const mayAttributes = may ? Object.fromEntries(may.split(' $ ').map(attr => [attr.trim(), null])) : {};
+
+        const objectClass = {
+            OID: oid,
+            NAME: name,
+            DESCRIPTION: desc,
+            SUP: sup,
+            AUXILIARY: isAuxiliary,
+            STRUCTURAL: isStructural,
+            ABSTRACT: isAbstract,
+            MUST: mustAttributes,
+            MAY: mayAttributes  
+        };
+
+        resolve(objectClass);
     });
-
-    return objectClassesDetails; // Retourner le tableau mis à jour  
 }
 
-// Fonction pour récupérer les attributs de chaque objectClass dans le schéma  
-const getObjectClasses = async (config, objectClassesNameList) => {
-    const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` }); // Créer un client pour interroger le schéma
+/**
+ * Fonction pour récupérer les attributs de chaque objectClass dans le schéma  
+ */
+const getObjectClass = async (config, objectClassName) => {
+    // Créer un client pour interroger le schéma
+    const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
     try {
-        // Effectuer le bind avec le DN et le mot de passe pour le client du schéma  
+        // Effectuer le bind avec le DN et le mot de passe d'accès au schéma LDAP
         await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
 
-        if (objectClassesNameList.length === 0) {
+        if (objectClassName.length === 0) {
 	    throw new Error(`Objet non trouvé`); // Lancer une erreur vers le catch
         }
 
-        const objectClassesDetails = []; // Tableau pour stocker les résultats
+        if (!objectClassName || objectClassName.length === 0) {
+            throw new Error(`Objet non trouvé`); // Lancer une erreur vers le catch  
+        }
 
         // Utilisation de map pour lancer des recherches asynchrones pour chaque objectClass  
-        const searchPromises = objectClassesNameList.map(async objectClass => {
-            if (objectClass === 'top') {
-                return; // Ignorer 'top'
-            }
+        const options = {
+            filter: `(olcObjectClasses=* NAME '${objectClassName}' *)`,
+            scope: 'sub',
+            attributes: ['olcObjectClasses']
+        };
 
-            const options = {
-                filter: `(olcObjectClasses=* NAME '${objectClass}' *)`,
-                scope: 'sub',
-                attributes: ['olcObjectClasses']
-            };
+        // Appel à searchLDAP pour effectuer la recherche  
+	const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
+    
+	if (result.length === 0) {
+            throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`);
+        }
 
-	    try {
-                // Appel à searchLDAP pour effectuer la recherche  
-                const searchResults = await rawSearchLDAP(schemaClient, config.ldap.schema.baseDN, options);
-    
-	        // Pas besoin de reduce ici, on peut directement traiter les résultats  
-                const matchedAttributes = searchResults.filter(entry => 
-                    entry.attributes.some(attr => attr.type === 'olcObjectClasses' && attr.values.some(value => value.includes(`NAME '${objectClass}'`)))
-                );
-    
-                if (matchedAttributes.length > 0) {
-                    const olcObjectClasses = matchedAttributes[0].attributes.find(attr => attr.type === 'olcObjectClasses').values[0];
-                    const mustMatch = olcObjectClasses.match(/MUST\s*\(\s*([^)]*)\s*\)/);
-                    const mayMatch = olcObjectClasses.match(/MAY\s*\(\s*([^)]*)\s*\)/);
-    
-                    // Nettoyer et formater les résultats  
-                    const mustAttributes = mustMatch ? mustMatch[1].split('$').map(attr => attr.trim()).filter(Boolean) : [];
-                    const mayAttributes = mayMatch ? mayMatch[1].split('$').map(attr => attr.trim()).filter(Boolean) : [];
-                    
-                    objectClassesDetails.push({ objectClassName: objectClass, attributes: { MUST: mustAttributes, MAY: mayAttributes } });
-                }
-            } catch (err) {
-                console.error(`Erreur de recherche pour ${objectClass}:`, err);
-                throw new Error(`Erreur lors de la récupération des attributs pour l'objectClass: ${objectClass}`); // Relancer l'erreur  
-            }
-        });
-    
-	// Attendre la résolution de toutes les promesses de recherche  
-	await Promise.all(searchPromises);
-    
-	return objectClassesDetails; // Retourner le tableau des résultats  
+        // Convertir le résultat brut en JSON  
+        const objectClass = objectClassDefToJson(result[0].olcObjectClasses.find(str => {
+		const regex = new RegExp(`\\s*NAME\\s+'${objectClassName}'\\s+`);
+		return regex.test(str);
+	    })
+	);
+	return objectClass; // Retourner l'objet résultat
     
     } catch (error) {
-        console.error('Erreur de recherche pour', err);
+        console.error('Erreur de recherche pour', objectClassName, ':', error);
 	throw error; // Relancer l'erreur pour que l'appelant puisse la gérer 
     } finally {
 	schemaClient.unbind(); // Fermer la connexion au client du schéma, même en cas d'erreur  
@@ -344,7 +341,6 @@ module.exports = {
     searchLDAP,
     rawSearchLDAP,
     getUserRoleFromDatabase,
-    getObjectClasses,
-    enrichObjectClassesDetails,
+    getObjectClass,
     updateAttributeConfigInLDAP
 };
