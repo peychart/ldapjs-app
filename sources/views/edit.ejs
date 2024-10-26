@@ -25,10 +25,37 @@
             border-radius: 5px; /* Coins arrondis pour le contenu des onglets */
             margin-top: -1px; /* Pour ajuster la superposition de la bordure avec les onglets */
         }
+        .edit-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #007bff; /* Couleur du bouton d'édition */
+            padding: 0; /* Supprime le padding pour un bouton plus compact */
+            font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
+        }
+        .edit-btn i {
+            font-size: 0.8em; /* Réduit la taille de l'icône */
+        }
+	.btn-restore {
+            background-color: #FFE0B2; /* Couleur orange plus clair */
+            border: 1px solid #E67E22; /* Bordure d'une teinte légèrement plus foncée */
+            color: black; /* Couleur du texte en noir */
+        }
+        .btn-restore:hover {
+            background-color: #FFA726; /* Couleur plus foncée au survol */
+        }
+	.btn-exit {
+            background-color: #FFCC80; /* Couleur orange pastel */
+            border: 1px solid #E67E22; /* Bordure d'une teinte légèrement plus foncée */
+            color: black; /* Couleur du texte en black */
+        }
+        .btn-exit:hover {
+            background-color: #FFA726; /* Couleur plus foncée au survol */
+        }
         .btn-save {
             position: relative;
             background-color: #F5F5DC; /* Couleur beige pour le bouton */
-            border: 1px solid #000; /* Bordure noire pour le bouton */
+            border: 1px solid #3A6A2A; /* Bordure vert foncé pour un meilleur contraste */
             color: #000; /* Couleur du texte par défaut */
         }
         .btn-save:hover {
@@ -41,17 +68,6 @@
         .btn-save.enabled {
             color: #9B111E; /* Rouge rubis lorsqu'il est activé */
             background-color: #98FB98; /* Vert tendre lorsque activé */
-        }
-        .edit-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #007bff; /* Couleur du bouton d'édition */
-            padding: 0; /* Supprime le padding pour un bouton plus compact */
-            font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
-        }
-        .edit-btn i {
-            font-size: 0.8em; /* Réduit la taille de l'icône */
         }
         .modal-content {
             background-color: #ffffe0; /* Fond jaune clair pour la modale */
@@ -66,9 +82,10 @@
 
         <!-- Conteneur pour les boutons avec Flexbox -->
         <div class="d-flex justify-content-end mb-3">
-            <button id="restoreButton" class="btn btn-secondary" onclick="restoreValues()">Restaurer les valeurs</button>
+            <button id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
+	    <button id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Exit</button> <!-- Nouveau bouton 'Exit' -->
             <form action="/update/<%= dn %>" method="POST" class="ml-2">
-                <button type="submit" id="saveButton" class="btn btn-save" disabled>Valider</button>
+                <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
             </form>
         </div>
 
@@ -362,6 +379,10 @@
                     field.value = initialValue;
                     checkSaveButton(field, initialValue);
                 });
+            }
+
+	    function exit() {
+                window.location.href = '/search'; // Redirection vers la route '/search'
             }
 
             const tabs = document.querySelectorAll('#myTab .nav-link');
