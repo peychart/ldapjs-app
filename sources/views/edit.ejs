@@ -7,16 +7,35 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        html, body {
+            height: 100%; /* S'assure que html et body prennent toute la hauteur */
+            margin: 0; /* Enlève les marges par défaut */
+        }
         body {
-            background-color: #fff4b2; /* Jaune foncé clair pour le fond extérieur */
+            /* background-color: #FFFCC4; */ /* Commenté, vous avez déjà un dégradé */
+            background: linear-gradient(to bottom, #fff4b2, #d1c93b); /* Dégradé du jaune clair vers un jaune plus doux */
+            min-height: 100vh; /* La hauteur minimale du corps est de 100% de la fenêtre */
         }
-        .nav-tabs .nav-link {
-            border: 1px solid #000000; /* Bordure noire */
-            background-color: #F5F5DC; /* Fond beige pour les onglets */
+	.nav-tabs .nav-item .nav-link {
+            border: 1px solid #fff4b2; /* Bordure pour tous les onglets */
+            border-bottom: none; /* Enlève la bordure inférieure pour tous les onglets */
+            background-color: #B19F8C; /* Fond beige pour les onglets */
+            border-radius: 5px 5px 0 0; /* Arrondir uniquement le haut des onglets */
+            margin-right: -1px; /* Pour éviter que les bordures se chevauchent */
+            color: #000000; /* Couleur du texte en noir */
         }
-        .nav-tabs .nav-link.active {
-            border-bottom-color: #fff4b2; /* Couleur de fond de l'onglet actif pour masquer la bordure */
-            background-color: #E0E0E0; /* Fond gris clair pour l'onglet actif */
+        .nav-tabs .nav-item .nav-link.active {
+            border: 1px solid #000000; /* Bordure noire pour l'onglet actif */
+            border-bottom: none; /* Retire la bordure inférieure de l'onglet actif */
+	    border-right: 2px solid #000000; /* Assure que la bordure droite est visible */
+            background-color: #ffffe0; /* Fond clair pour l'onglet actif */
+            color: #000000; /* Couleur du texte de l'onglet actif en noir */
+	    padding-top: 9px; /* Ajustez selon vos besoins */
+        }
+        .nav-tabs .nav-item .nav-link:not(.active) { /* Cibler spécifiquement les onglets non actifs */
+            background-color: #D1C6A9; /* Fond beige clair pour l'onglet non actif */
+	    border-bottom: 1px solid #000000; /* Ajoute une bordure inférieure noire pour les onglets non actifs */
+            color: #000000; /* Couleur du texte en noir */
         }
         .tab-content {
             background-color: #ffffe0; /* Fond jaune clair pour le contenu des onglets */
@@ -38,7 +57,7 @@
         }
 	.btn-restore {
             background-color: #FFE0B2; /* Couleur orange plus clair */
-            border: 1px solid #E67E22; /* Bordure d'une teinte légèrement plus foncée */
+            border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
             color: black; /* Couleur du texte en noir */
         }
         .btn-restore:hover {
@@ -46,7 +65,7 @@
         }
 	.btn-exit {
             background-color: #FFCC80; /* Couleur orange pastel */
-            border: 1px solid #E67E22; /* Bordure d'une teinte légèrement plus foncée */
+            border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
             color: black; /* Couleur du texte en black */
         }
         .btn-exit:hover {
@@ -54,8 +73,8 @@
         }
         .btn-save {
             position: relative;
-            background-color: #F5F5DC; /* Couleur beige pour le bouton */
-            border: 1px solid #3A6A2A; /* Bordure vert foncé pour un meilleur contraste */
+            background-color: #FFFFF0; /* Couleur beige pour le bouton */
+            border: 0px solid #3A6A2A; /* Bordure vert foncé pour un meilleur contraste */
             color: #000; /* Couleur du texte par défaut */
         }
         .btn-save:hover {
