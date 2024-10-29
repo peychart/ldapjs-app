@@ -129,48 +129,46 @@
                     <form action="/update/<%= objectClass.NAME %>" method="POST">
                         <h4 class="underline">Attributs obligatoires :</h4>
                         <ul>
-                            <% if (objectClass.MUST) {
-                                Object.keys(objectClass.MUST).forEach(attrName => {
-                                    const objectAttribute = objectClass.MUST[attrName];
+							<% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => { 
+                                if (objectClass.ATTRIBUTE[attrName].type === 'MUST') { // Affiche uniquement les attributs de type MUST
+                                    const objectAttribute = objectClass.ATTRIBUTE[attrName];
                                     const displayLabel = objectAttribute.customWording || attrName;
                             %>
-                                <li>
-                                    <strong><%= displayLabel %>:</strong>
-                                    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </button>
-                                    <input type="text"
-                                           name="<%= JSON.stringify(attrName) %>"
-                                           value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
-                                           class="form-control"
-                                           onfocus="valueOnfocus(this)"
-                                           oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
-                                </li>
-                            <% })
-                            } %>
+                            <li>
+                            <strong><%= displayLabel %>:</strong>
+                            <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                            <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            <input type="text"
+                                name="<%= JSON.stringify(attrName) %>"
+                                value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
+                                class="form-control"
+                                onfocus="valueOnfocus(this)"
+                                oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                           </li>
+			               <% } }) %>
                         </ul>
 
                         <h4 class="underline">Attributs optionnels :</h4>
                         <ul>
-                            <% if (objectClass.MAY) {
-                                Object.keys(objectClass.MAY).forEach(attrName => {
-                                    const objectAttribute = objectClass.MAY[attrName];
+                            <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
+                                if (objectClass.ATTRIBUTE[attrName].type === 'MAY') { // Affiche uniquement les attributs de type MAY
+                                    const objectAttribute = objectClass.ATTRIBUTE[attrName];
                                     const displayLabel = objectAttribute.customWording || attrName;
                             %>
-                                <li>
-                                    <strong><%= displayLabel %>:</strong>
-                                    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </button>
-                                    <input type="text"
-                                           name="<%= JSON.stringify(attrName) %>"
-                                           value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
-                                           class="form-control"
-                                           onfocus="valueOnfocus(this)"
-                                           oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
-                                </li>
-                            <% })
-                            } %>
+                            <li>
+                                <strong><%= displayLabel %>:</strong>
+                                <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                <i class="fas fa-pencil-alt"></i>
+                                </button>
+                                <input type="text"
+                                    name="<%= JSON.stringify(attrName) %>"
+                                    value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
+                                    class="form-control"
+                                    onfocus="valueOnfocus(this)"
+                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                            </li>
+			                <% } }) %>
                         </ul>
                     </form>
                 </div>
@@ -231,9 +229,17 @@
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script>
+	    const dn = '<%= dn %>';
             let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut  
             let initialValueOnCurrentInput = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
 			const currentTabInputValues = {};
+
+            function checkInputFunction(input, attrName, objectAttribute, objectClassesDetails) {
+                if (objectAttribute.valueCheck[0]) {
+                    eval(objectAttribute.valueCheck[0]);
+                    check(input, objectClassesDetails, initialValueOnCurrentInput);
+                }
+            }
 
 			function valueOnfocus(input) {
                 initialValueOnCurrentInput = input.value;
@@ -279,23 +285,11 @@
                 $('#editModal').modal('show');
             }
 
-            function checkInputFunction(input, attrName, objectAttribute, objectClassesDetails) {
-                if (objectAttribute.valueCheck[0]) {
-                    eval(objectAttribute.valueCheck[0]);
-                    check(input, objectClassesDetails, initialValueOnCurrentInput);
-                }
-            }
-
             async function saveAttributNewLabel(objectClassesDetails) {
                 const newLabel = document.getElementById('newLabel').value.trim();
                 const newJsChecking = document.getElementById('jsValidation').value.trim();
 
                 $('#editModal').modal('hide');
-
-                const dn = (() => {
-                    const urlSegments = window.location.pathname.split('/');
-                    return urlSegments[urlSegments.length - 1];
-                })();
 
                 const dataToSend = {
                     dn: dn,
@@ -307,6 +301,7 @@
                 };
 
                 try {
+					// Envoi pour mise à jour des paramètres d'attribut au serveur
                     const response = await fetch('/update-attributeCtl', {
                         method: 'POST',
                         headers: {
@@ -316,26 +311,15 @@
                     });
 
                     if (response.ok) {
-                        let previousLabel = null;
-                        objectClassesDetails.forEach(objectClass => {
-                            Object.keys(objectClass).forEach(attr => {
-                                if (attr === defaultAttributeLabel) {
-                                    previousLabel = objectClass[attr].customWording;
-                                    objectClass[attr].customWording = newLabel.length ? newLabel : null;
-                                    objectClass[attr].valueCheck = newJsChecking.length ? newJsChecking : null;
-                                }
-                            });
-                        });
+                        // Rafraichir la page et se repositionner sur l'onglet courant
+                        const activeTab = document.querySelector('.nav-link.active');
+                        const activeTabId = activeTab ? activeTab.id : null;
+                        if (activeTabId) {
+                            localStorage.setItem('activeTab', activeTabId);
+                        }
 
-						// Rafraichir la page et se repositionner sur l'onglet courant
-						const activeTab = document.querySelector('.nav-link.active');
-						const activeTabId = activeTab ? activeTab.id : null;
-						if (activeTabId) {
-							localStorage.setItem('activeTab', activeTabId);
-						}
-
-						// Rafraichir la page
-						window.location.reload();
+                        // Rafraichir la page
+                        window.location.reload();
 
                     } else {
                         console.error('Erreur lors de la mise à jour de l\'attribut');
