@@ -332,21 +332,21 @@ app.get('/edit/:dn', async (req, res) => {
 
 	// Ajout les values d'attributs de l'entry dn dans les objectClasses contenus:
 	objectClassesDetails.forEach(objectClass => {
-		objectClass['ATTRIBUTES'] = {};
+		objectClass['ATTRIBUTE'] = {};
 	    ['MUST', 'MAY'].forEach(key => {
 			Object.keys(objectClass[key]).forEach(attr => {
 				// Ajour des valeurs de l'entrée à éditer
-				objectClass['ATTRIBUTES'][attr] = { type: key, values: objectData[attr] || null };
+				objectClass['ATTRIBUTE'][attr] = { type: key, values: objectData[attr] || null };
 
 				// Ajout de la propriété customType à chaque attribut
-				objectClass['ATTRIBUTES'][attr].customWording = attributes.find(item => item.cn.includes(attr))?.l || null;
-				objectClass['ATTRIBUTES'][attr].valueCheck = attributes.find(item => item.cn.includes(attr))?.description || null;
+				objectClass['ATTRIBUTE'][attr].customWording = attributes.find(item => item.cn.includes(attr))?.l || null;
+				objectClass['ATTRIBUTE'][attr].valueCheck = attributes.find(item => item.cn.includes(attr))?.description || null;
 			});
 			delete objectClass[key];
 	    });
 	});
 
-console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
     } catch (error) {
@@ -364,7 +364,7 @@ console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null,
 app.post('/update-attributeCtl', async (req, res) => {
     const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` }); // Déclaration du client de connexion
     let dn;
-	let objectClassesDetails;
+    let objectClassesDetails;
 
     try {
         // Connexion au serveur LDAP 
@@ -388,13 +388,9 @@ app.post('/update-attributeCtl', async (req, res) => {
 		if (confKey) { // Mise à jour de objectClassesDetails (pour le render)
 			let attrConf = req.body[confKey];
 			objectClassesDetails.forEach(objectClass => {
-				['MUST', 'MAY'].forEach(type => {
-					Object.keys(objectClass[type]).forEach(attr => {
-						if (attr === confKey) {
-							Object.entries(attrConf).forEach(([confName,conf]) => {
-								objectClass[type][confKey][confName] = conf;
-							});
-						}
+				if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attr => {
+					if (attr === confKey) Object.entries(attrConf).forEach(([confName,conf]) => {
+						objectClass.ATTRIBUTE[confKey][confName] = conf;
 					});
 				});
 			});
@@ -403,7 +399,7 @@ app.post('/update-attributeCtl', async (req, res) => {
         // Répondre avec succès
         //res.status(200).send('Attribut mis à jour avec succès');
 
-//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
     } catch (error) {
