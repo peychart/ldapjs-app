@@ -332,22 +332,22 @@ app.get('/edit/:dn', async (req, res) => {
 
 	// Ajout les values d'attributs de l'entry dn dans les objectClasses contenus:
 	objectClassesDetails.forEach(objectClass => {
+		objectClass['ATTRIBUTES'] = {};
 	    ['MUST', 'MAY'].forEach(key => {
-		Object.keys(objectClass[key]).forEach(attr => {
-		    // Ajour des valeurs de l'entrée à éditer
-        	    objectClass[key][attr] = { type: key, values: objectData[attr] || null };
+			Object.keys(objectClass[key]).forEach(attr => {
+				// Ajour des valeurs de l'entrée à éditer
+				objectClass['ATTRIBUTES'][attr] = { type: key, values: objectData[attr] || null };
 
-		    // Ajout de la propriété customType à chaque attribut
-		    objectClass[key][attr].customWording = attributes.find(item => item.cn.includes(attr))?.l || null;
-		    objectClass[key][attr].valueCheck = attributes.find(item => item.cn.includes(attr))?.description || null;
-		});
+				// Ajout de la propriété customType à chaque attribut
+				objectClass['ATTRIBUTES'][attr].customWording = attributes.find(item => item.cn.includes(attr))?.l || null;
+				objectClass['ATTRIBUTES'][attr].valueCheck = attributes.find(item => item.cn.includes(attr))?.description || null;
+			});
+			delete objectClass[key];
 	    });
 	});
 
-console.log('objectClassesDetails: ', objectClassesDetails);
-
-//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
-	return res.render('edit', { dn, objectClassesDetails: objectClassesDetails });
+console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
     } catch (error) {
         console.error('Fiche non trouvée:', error);
@@ -355,7 +355,7 @@ console.log('objectClassesDetails: ', objectClassesDetails);
     } finally {
 	if (client) {
             client.unbind(); // Assurez-vous que le client est délié  
-	}
+		}
     }
 });
 
@@ -364,36 +364,56 @@ console.log('objectClassesDetails: ', objectClassesDetails);
 app.post('/update-attributeCtl', async (req, res) => {
     const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` }); // Déclaration du client de connexion
     let dn;
+	let objectClassesDetails;
 
     try {
         // Connexion au serveur LDAP 
         await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
         // Mettre à jour l'attribut dans LDAP
-	const keys = Object.keys(req.body);
-	for (let key of keys) {
-	    if( key === 'dn') {
-		dn = req.body[key];
-	    } else {
-         	let attrConf = req.body[key];
-         	await updateAttributeConfigInLDAP(client, key, attrConf);
-        }   }
+		let confKey = null;
+		const keys = Object.keys(req.body);
+		for (let key of keys) {
+			if (key === 'dn') {
+				dn = req.body[key];
+			} else if (key === 'objectClassesDetails') {
+				objectClassesDetails = req.body[key];
+			} else {
+				let attrConf = req.body[key];
+
+				// Mise à jour dans la base LDAP
+				if (await updateAttributeConfigInLDAP(client, key, attrConf))
+					confKey = key;
+		}	}
+		if (confKey) { // Mise à jour de objectClassesDetails (pour le render)
+			let attrConf = req.body[confKey];
+			objectClassesDetails.forEach(objectClass => {
+				['MUST', 'MAY'].forEach(type => {
+					Object.keys(objectClass[type]).forEach(attr => {
+						if (attr === confKey) {
+							Object.entries(attrConf).forEach(([confName,conf]) => {
+								objectClass[type][confKey][confName] = conf;
+							});
+						}
+					});
+				});
+			});
+		}
 
         // Répondre avec succès
         //res.status(200).send('Attribut mis à jour avec succès');
 
-        // Redirigez vers la page d'édition
-        //return res.redirect(`/edit/${encodeURIComponent(dn)}`);
-        return res.redirect(`/edit/${dn}`);
+//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
     } catch (error) {
         console.error('Erreur:', error);
         res.status(500).send(error.message);
     } finally {
         // Déconnexion du client LDAP  
-	if (client) {
-	    client.unbind();
-	}
+		if (client) {
+	    	client.unbind();
+		}
     }
 });
 
