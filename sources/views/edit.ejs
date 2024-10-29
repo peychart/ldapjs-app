@@ -232,11 +232,34 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script>
             let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut  
-            let initialValue = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
+            let initialValueOnCurrentInput = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
+			const currentTabInputValues = {};
 
-            function valueOnfocus(input) {
-                initialValue = input.value;
+			function valueOnfocus(input) {
+                initialValueOnCurrentInput = input.value;
             };
+
+			// Fonction pour sauvegarder les valeurs des inputs de l'onglet actif
+			function saveInputValues(tabId) {
+				const inputs = document.querySelectorAll(`#${tabId} input[type="text"]`);
+
+				inputs.forEach(input => {
+					// Stocker la valeur de chaque input
+					currentTabInputValues[input.name] = input.value;
+				});
+			}
+
+			// Fonction pour restaurer les valeurs des inputs dans l'onglet actif
+			function restoreInputValues(tabId) {
+				const inputs = document.querySelectorAll(`#${tabId} input[type="text"]`);
+
+				inputs.forEach(input => {
+					if (currentTabInputValues[input.name] !== undefined) {
+						input.value = currentTabInputValues[input.name]; // Restaurer la valeur si elle existe  
+					}
+				});
+			}
+
 
             function openEditModal(attrName, objectAttribute) {
                 defaultAttributeLabel = attrName;
@@ -251,15 +274,15 @@
 
                 document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
-                document.getElementById('attributeName').textContent = newLabelInputField.value || defaultAttributeLabel;
+                document.getElementById('attributeName').textContent = defaultAttributeLabel;
 
                 $('#editModal').modal('show');
             }
 
             function checkInputFunction(input, attrName, objectAttribute, objectClassesDetails) {
-                if (objectAttribute.valueCheck) {
-                    eval(objectAttribute.valueCheck);
-                    check(input, objectClassesDetails, initialValue);
+                if (objectAttribute.valueCheck[0]) {
+                    eval(objectAttribute.valueCheck[0]);
+                    check(input, objectClassesDetails, initialValueOnCurrentInput);
                 }
             }
 
@@ -276,6 +299,7 @@
 
                 const dataToSend = {
                     dn: dn,
+                    objectClassesDetails: objectClassesDetails,
                     [defaultAttributeLabel]: {
                         customWording: newLabel,
                         valueCheck: newJsChecking.trim() !== '' ? newJsChecking.trim() : null  
@@ -303,10 +327,15 @@
                             });
                         });
 
-                        const strongElement = Array.from(document.querySelectorAll('strong')).find(el => el.textContent === (previousLabel || defaultAttributeLabel) + ':');
-                        if (strongElement) {
-                            strongElement.textContent = (newLabel.length ? newLabel : defaultAttributeLabel) + ':';
-                        }
+						// Rafraichir la page et se repositionner sur l'onglet courant
+						const activeTab = document.querySelector('.nav-link.active');
+						const activeTabId = activeTab ? activeTab.id : null;
+						if (activeTabId) {
+							localStorage.setItem('activeTab', activeTabId);
+						}
+
+						// Rafraichir la page
+						window.location.reload();
 
                     } else {
                         console.error('Erreur lors de la mise à jour de l\'attribut');
@@ -316,9 +345,10 @@
                 } catch (error) {
                     console.error('Erreur:', error);
                 }
+
             }
 
-             function changeModalSize(increase) {
+            function changeModalSize(increase) {
                 const modalDialog = document.querySelector('#editModal .modal-dialog');
                 const currentClassList = modalDialog.classList;
                 const jsValidationTextarea = document.getElementById('jsValidation');
@@ -394,13 +424,13 @@
             function restoreValues() {
                 const activeTab = document.querySelector('.tab-pane.show');
                 activeTab.querySelectorAll('input').forEach((field) => {
-                    const initialValue = field.defaultValue;
-                    field.value = initialValue;
-                    checkSaveButton(field, initialValue);
+                    const initialValueOnCurrentInput = field.defaultValue;
+                    field.value = initialValueOnCurrentInput;
+                    checkSaveButton(field, initialValueOnCurrentInput);
                 });
             }
 
-	    function exit() {
+			function exit() {
                 window.location.href = '/search'; // Redirection vers la route '/search'
             }
 
@@ -422,6 +452,35 @@
                     }
                 });
             });
+
+			// Gestion des événements de changement d'onglet  
+			const navLinks = document.querySelectorAll('#myTab .nav-link');
+				navLinks.forEach(link => {
+				link.addEventListener('click', () => {
+					// Récupérer l'onglet actif actuel  
+					const currentTabId = document.querySelector('.tab-pane.show').id;
+					// Sauvegarder les valeurs de l'onglet actuel
+					saveInputValues(currentTabId);
+
+					// Récupérer l'ID de l'onglet nouvellement sélectionné  
+					const newTabId = link.getAttribute('href').substring(1);
+					// Restaurer les valeurs dans le nouvel onglet  
+					restoreInputValues(newTabId);
+				});
+			});
+
+			// Fonction pour restaurer l'onglet actif après le rechargement
+			window.onload = function() {
+				const activeTabId = localStorage.getItem('activeTab');
+
+				if (activeTabId) {
+					const targetTab = document.getElementById(activeTabId);
+					if (targetTab) {
+						targetTab.click(); // Simule le clic sur l'onglet actif
+					}
+				}
+			};
+
         </script>
     </div>
 </body>
