@@ -385,6 +385,7 @@ app.post('/update-attributeCtl', async (req, res) => {
 				if (await updateAttributeConfigInLDAP(client, key, attrConf))
 					confKey = key;
 		}	}
+
 		if (confKey) { // Mise à jour de objectClassesDetails (pour le render)
 			let attrConf = req.body[confKey];
 			objectClassesDetails.forEach(objectClass => {
@@ -399,7 +400,7 @@ app.post('/update-attributeCtl', async (req, res) => {
         // Répondre avec succès
         //res.status(200).send('Attribut mis à jour avec succès');
 
-console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
     } catch (error) {
