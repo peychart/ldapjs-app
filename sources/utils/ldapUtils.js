@@ -237,53 +237,60 @@ async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
  * Fonction pour convertir la définition text d'un objectClass en object JS
  */
 async function objectClassDefToJson(inputString) {
-    return new Promise((resolve, reject) => {
-        if (typeof inputString !== 'string') {
-            reject(new Error("inputString doit être une chaîne de caractères."));
-            return;
-        }
+	return new Promise((resolve, reject) => {
+		if (typeof inputString !== 'string') {
+			reject(new Error("inputString doit être une chaîne de caractères."));
+			return;
+		}
 
-        const cleanedInput = inputString.replace(/^.*?(\(\s*[\d.]+.*)/, '$1').trim();
+		const cleanedInput = inputString.replace(/^.*?(\(\s*[\d.]+.*)/, '$1').trim();
 
-        const oidRegex = /\(\s*([\d.]+)/;                                
-        const nameRegex = /NAME\s+'([^']+)'/;                           
-        const descRegex = /DESC '([^']+)'/;                            
-        const supRegex = /SUP\s+([^ ]+)/;
-        const auxiliaryRegex = /AUXILIARY/;                            
-        const structuralRegex = /STRUCTURAL/;                          
-        const abstractRegex = /ABSTRACT/;                                
-        const mustRegex = /MUST \((.*?)\)/;                            
-        const mayRegex = /MAY \((.*?)\)/;                              
+		const oidRegex = /\(\s*([\d.]+)/;
+		const nameRegex = /NAME\s+'([^']+)'/;
+		const descRegex = /DESC '([^']+)'/;
+		const supRegex = /SUP\s+([^ ]+)/;
+		const auxiliaryRegex = /AUXILIARY/;
+		const structuralRegex = /STRUCTURAL/;
+		const abstractRegex = /ABSTRACT/;
+		const mustRegex = /MUST \((.*?)\)/;
+		const mayRegex = /MAY \((.*?)\)/;
 
-        const oid = cleanedInput.match(oidRegex)?.[1] || null;         
-        const nameMatches = cleanedInput.match(nameRegex);
-        const name = nameMatches ? nameMatches[1] : null;               
-        const desc = cleanedInput.match(descRegex)?.[1] || null;       
-        const supMatches = cleanedInput.match(supRegex);
-        const sup = supMatches ? supMatches[1] : null;
-        const isAuxiliary = auxiliaryRegex.test(cleanedInput);          
-        const isStructural = structuralRegex.test(cleanedInput);         
-        const isAbstract = abstractRegex.test(cleanedInput);             
-        const must = cleanedInput.match(mustRegex)?.[1] || null;       
-        const may = cleanedInput.match(mayRegex)?.[1] || null;         
+		const oid = cleanedInput.match(oidRegex)?.[1] || null;
+		const nameMatches = cleanedInput.match(nameRegex);
+		const name = nameMatches ? nameMatches[1] : null;
+		const desc = cleanedInput.match(descRegex)?.[1] || null;
+		const supMatches = cleanedInput.match(supRegex);
+		const sup = supMatches ? supMatches[1] : null;
+		const isAuxiliary = auxiliaryRegex.test(cleanedInput);
+		const isStructural = structuralRegex.test(cleanedInput);
+		const isAbstract = abstractRegex.test(cleanedInput);
+		const must = cleanedInput.match(mustRegex)?.[1] || null;
+		const may = cleanedInput.match(mayRegex)?.[1] || null;
 
-        const mustAttributes = must ? Object.fromEntries(must.split(' $ ').map(attr => [attr.trim(), null])) : {};
-        const mayAttributes = may ? Object.fromEntries(may.split(' $ ').map(attr => [attr.trim(), null])) : {};
+		const mustAttributes = must ? Object.fromEntries(must.split(' $ ').map(attr => [attr.trim(), null])) : {};
+		const mayAttributes = may ? Object.fromEntries(may.split(' $ ').map(attr => [attr.trim(), null])) : {};
 
-        const objectClass = {
-            OID: oid,
-            NAME: name,
-            DESCRIPTION: desc,
-            SUP: sup,
-            AUXILIARY: isAuxiliary,
-            STRUCTURAL: isStructural,
-            ABSTRACT: isAbstract,
-            MUST: mustAttributes,
-            MAY: mayAttributes  
-        };
+		const objectClass = {
+			OID: oid,
+			NAME: name,
+			DESCRIPTION: desc,
+			SUP: sup,
+			AUXILIARY: isAuxiliary,
+			STRUCTURAL: isStructural,
+			ABSTRACT: isAbstract,
+			MUST: mustAttributes,
+			MAY: mayAttributes
+		};
 
-        resolve(objectClass);
-    });
+		// Ajout des attributs MUST et MAY directement dans l'objet
+/*		[must, may].forEach((type) => {
+			if (type) type.split(' $ ').forEach(attr => {
+				objectClass[attr.trim()] = null; // Ajouter chaque attribut avec une valeur initiale de null
+			});
+		});
+*/
+		resolve(objectClass);
+	});
 }
 
 /**
@@ -351,17 +358,18 @@ const getObjectClass = async (config, objectClassName) => {
         };
 
         // Appel à searchLDAP pour effectuer la recherche  
-	const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
-	    .catch(() => {
-        	throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`)
-        });
+		const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
+	    	.catch(() => {
+        		throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`)
+        	});
 
         // Convertir le résultat brut en JSON  
-        const objectClass = objectClassDefToJson(result[0].olcObjectClasses.find(str => {
-		const regex = new RegExp(`\\s*NAME\\s+'${objectClassName}'\\s+`);
-		return regex.test(str);
-	    })
-	);
+        const objectClass = await objectClassDefToJson(result[0].olcObjectClasses.find(str => {
+				const regex = new RegExp(`\\s*NAME\\s+'${objectClassName}'\\s+`);
+				return regex.test(str);
+	    	})
+		);
+
 	return objectClass; // Retourner l'objet résultat
     
     } catch (error) {
