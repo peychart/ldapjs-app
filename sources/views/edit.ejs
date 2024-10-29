@@ -406,15 +406,25 @@
             }
 
             function restoreValues() {
-                const activeTab = document.querySelector('.tab-pane.show');
+/*              const activeTab = document.querySelector('.tab-pane.show');
                 activeTab.querySelectorAll('input').forEach((field) => {
                     const initialValueOnCurrentInput = field.defaultValue;
                     field.value = initialValueOnCurrentInput;
                     checkSaveButton(field, initialValueOnCurrentInput);
                 });
+*/
+                // Rafraichir la page et se repositionner sur l'onglet courant
+                const activeTab = document.querySelector('.nav-link.active');
+                const activeTabId = activeTab ? activeTab.id : null;
+                if (activeTabId) {
+                    localStorage.setItem('activeTab', activeTabId);
+                }
+
+                // Rafraichir la page
+                window.location.reload();
             }
 
-			function exit() {
+	    function exit() {
                 window.location.href = '/search'; // Redirection vers la route '/search'
             }
 
