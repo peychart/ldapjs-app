@@ -136,7 +136,7 @@
                             %>
                             <li>
                             <strong><%= displayLabel %>:</strong>
-                            <button type="button" class="edit-btn" onclick="openEditModal(<%= attrName %>, <%= JSON.stringify(objectAttribute) %>)">
+                            <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
                             <i class="fas fa-pencil-alt"></i>
                             </button>
                             <input type="text"
@@ -144,7 +144,7 @@
                                 value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
                                 class="form-control"
                                 onfocus="valueOnfocus(this)"
-                                oninput="checkSaveButton(); checkInputFunction(this, <%= attrName %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                                oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
                            </li>
 			               <% } }) %>
                         </ul>
@@ -158,7 +158,7 @@
                             %>
                             <li>
                                 <strong><%= displayLabel %>:</strong>
-                                <button type="button" class="edit-btn" onclick="openEditModal(<%= attrName %>, <%= JSON.stringify(objectAttribute) %>)">
+                                <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
                                 <i class="fas fa-pencil-alt"></i>
                                 </button>
                                 <input type="text"
@@ -166,7 +166,7 @@
                                     value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
                                     class="form-control"
                                     onfocus="valueOnfocus(this)"
-                                    oninput="checkSaveButton(); checkInputFunction(this, <%= attrName %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
                             </li>
 			                <% } }) %>
                         </ul>
@@ -293,11 +293,11 @@
 
                 const dataToSend = {
                     dn: dn,
-                    objectClassesDetails: objectClassesDetails,
                     [defaultAttributeLabel]: {
                         customWording: newLabel,
                         valueCheck: newJsChecking.trim() !== '' ? newJsChecking.trim() : null  
-                    }
+                    },
+                    objectClassesDetails: objectClassesDetails
                 };
 
                 try {
