@@ -140,9 +140,8 @@ function check(input, data, initialValue) {
  input.value = input.value.toUpperCase();
 
  // Calcul automatique du 'cn' à partir de (givenName+' '+input.value)
- let givenName = '';
- data.forEach(objectClass => {if (objectClass.givenName && objectClass.givenName.value) givenName = objectClass.givenName.value.trim();});
- data.forEach(objectClass => {if (objectClass.cn) objectClass.cn.value = (givenName.length ? `${givenName} ${input.value}`.trim() : input.value);});
+ const givenName = document.getElementsByName("givenName")[0];
+ document.getElementsByName('cn').forEach(el => {el.value = (givenName.value + ' ' + input.value).trim();});
 }
 ```
 
@@ -161,9 +160,8 @@ function check(input, data, initialValue) {
  input.value = input.value.charAt(0).toUpperCase() + input.value.slice(1).toLowerCase();
 
  // Calcul automatique de 'cn' à partir de ${input.value+' '+sn}
- let sn='';
- data.forEach(objectClass => {if (objectClass.sn && objectClass.sn.value) sn = objectClass.sn.value.trim();});
- data.forEach(objectClass => {if (objectClass.cn) objectClass.cn.value = (input.value ? `${input.value} ${sn}`.trim() : sn);});
+ const sn = document.getElementsByName("sn")[0];
+ document.getElementsByName('cn').forEach(el => {el.value = (input.value + ' ' + sn.value).trim();});
 }
 ```
 
