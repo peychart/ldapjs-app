@@ -99,128 +99,127 @@
     <div class="container mt-5 position-relative">
         <h1>Carnet d'Annuaire</h1>
 
-        <!-- Conteneur pour les boutons avec Flexbox -->
-        <div class="d-flex justify-content-end mb-3">
-            <button id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
-	    <button id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Exit</button> <!-- Nouveau bouton 'Exit' -->
-            <form action="/update/<%= dn %>" method="POST" class="ml-2">
-                <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
-            </form>
-        </div>
+        <!-- Formulaire principal -->
+        <form id="mainForm" action="/update/<%= dn %>" method="POST" onsubmit="return validateForm()">
 
-        <!-- Nav tabs -->
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <% objectClassesDetails.forEach((objectClass, index) => { %>
+            <!-- Conteneur pour les boutons avec Flexbox -->
+            <div class="d-flex justify-content-end mb-3">
+                <button id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
+                <button id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Exit</button>
+                <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;">Valider</button>
+            </div>
+
+            <!-- Nav tabs -->
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <% objectClassesDetails.forEach((objectClass, index) => { %>
+                    <li class="nav-item">
+                        <a class="nav-link <%= index === 0 ? 'active' : '' %>" id="<%= objectClass.NAME %>-tab" data-toggle="tab" href="#<%= objectClass.NAME %>" role="tab" aria-controls="<%= objectClass.NAME %>" aria-selected="<%= index === 0 %>"><%= objectClass.NAME %></a>
+                    </li>
+                <% }) %>
                 <li class="nav-item">
-                    <a class="nav-link <%= index === 0 ? 'active' : '' %>" id="<%= objectClass.NAME %>-tab" data-toggle="tab" href="#<%= objectClass.NAME %>" role="tab" aria-controls="<%= objectClass.NAME %>" aria-selected="<%= index === 0 %>"><%= objectClass.NAME %></a>
+                    <a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false">+</a>
                 </li>
-            <% }) %>
-            <li class="nav-item">
-                <a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false">+</a>
-            </li>
-        </ul>
+            </ul>
 
-	       <!-- Tab panes -->
-        <div class="tab-content" id="myTabContent">
-            <% objectClassesDetails.forEach((objectClass, index) => { %>
-                <div class="tab-pane fade <%= index === 0 ? 'show active' : '' %>" id="<%= objectClass.NAME %>" role="tabpanel" aria-labelledby="<%= objectClass.NAME %>-tab">
-                    <h3></h3> <!-- Suppression de "Attributes" -->
-
-                    <form action="/update/<%= objectClass.NAME %>" method="POST">
+            <!-- Tab panes -->
+            <div class="tab-content" id="myTabContent">
+                <% objectClassesDetails.forEach((objectClass, index) => { %>
+                    <div class="tab-pane fade <%= index === 0 ? 'show active' : '' %>" id="<%= objectClass.NAME %>" role="tabpanel" aria-labelledby="<%= objectClass.NAME %>-tab">
+                        <h3></h3> <!-- Suppression de "Attributes" -->
                         <h4 class="underline">Attributs obligatoires :</h4>
                         <ul>
-							<% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => { 
-                                if (objectClass.ATTRIBUTE[attrName].type === 'MUST') { // Affiche uniquement les attributs de type MUST
-                                    const objectAttribute = objectClass.ATTRIBUTE[attrName];
-                                    const displayLabel = objectAttribute.customWording || attrName;
-                            %>
-                            <li>
-                            <strong><%= displayLabel %>:</strong>
-                            <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
-                            <i class="fas fa-pencil-alt"></i>
-                            </button>
-                            <input type="text"
-                                name="<%= attrName %>"
-                                value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
-                                class="form-control"
-                                onfocus="valueOnfocus(this)"
-                                oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
-                           </li>
-			               <% } }) %>
-                        </ul>
-
-                        <h4 class="underline">Attributs optionnels :</h4>
-                        <ul>
                             <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
-                                if (objectClass.ATTRIBUTE[attrName].type === 'MAY') { // Affiche uniquement les attributs de type MAY
+                                if (objectClass.ATTRIBUTE[attrName].type === 'MUST') {
                                     const objectAttribute = objectClass.ATTRIBUTE[attrName];
                                     const displayLabel = objectAttribute.customWording || attrName;
                             %>
                             <li>
                                 <strong><%= displayLabel %>:</strong>
                                 <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
-                                <i class="fas fa-pencil-alt"></i>
+                                    <i class="fas fa-pencil-alt"></i>
                                 </button>
                                 <input type="text"
                                     name="<%= attrName %>"
                                     value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
                                     class="form-control"
                                     onfocus="valueOnfocus(this)"
-                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" \>
+                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
                             </li>
-			                <% } }) %>
+                            <% } }) %>
                         </ul>
-                    </form>
-                </div>
-            <% }) %>
+    
+                        <h4 class="underline">Attributs optionnels :</h4>
+                        <ul>
+                            <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
+                                if (objectClass.ATTRIBUTE[attrName].type === 'MAY') {
+                                    const objectAttribute = objectClass.ATTRIBUTE[attrName];
+                                    const displayLabel = objectAttribute.customWording || attrName;
+                            %>
+                            <li>
+                                <strong><%= displayLabel %>:</strong>
+                                <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                                <input type="text"
+                                    name="<%= attrName %>"
+                                    value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
+                                    class="form-control"
+                                    onfocus="valueOnfocus(this)"
+                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
+                            </li>
+                            <% } }) %>
+                        </ul>
+                    </div>
+                <% }) %>
 
-            <!-- Tab pour ajouter une nouvelle objectClass -->
-            <div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
-                <h3>Ajouter une nouvelle objectClass</h3>
-                <form action="/add" method="POST">
+                <!-- Tab pour ajouter une nouvelle objectClass -->
+                <div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
+                    <h3>Ajouter une nouvelle objectClass</h3>
                     <div class="form-group">
                         <label for="objectClassName">Nom de l'objectClass</label>
-                        <input type="text" id="objectClassName" name="objectClassName" class="form-control" required>
+                        <input type="text" id="objectClassName" name="objectClassName" class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="attributes">Attributs (JSON)</label>
-                        <textarea id="attributes" name="attributes" class="form-control" rows="5" placeholder='{"MUST": [], "MAY": []}' required></textarea>
+                        <textarea id="attributes" name="attributes" class="form-control" rows="5" placeholder='{"MUST": [], "MAY": []}'></textarea>
                     </div>
-                    <button type="submit" class="btn btn-success">Ajouter</button>
-                </form>
+                </div>
             </div>
-        </div>
+        </form>
 
         <!-- Modale pour l'édition d'attributs -->
         <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editModalLabel">Modifier le libellé d'attribut "<span id="attributeName"></span>"</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="newLabel">Libellé d'affichage de l'attribut :</label>
-                            <input type="text" class="form-control" id="newLabel" style='color:black;'>
+				    <form id="attrForm" action="/update-attributeCtl/<%= dn  %>" method="POST">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editModalLabel">Modifier le libellé d'attribut "<span id="attributeName"></span>"</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
                         </div>
-                        <div class="form-group">
-                            <label for="jsValidation">Code JS de contrôle de saisie :</label>
-                            <textarea class="form-control" id="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="newLabel">Libellé d'affichage de l'attribut :</label>
+                                <input type="text" class="form-control" id="newLabel" name="newLabel" style='color:black;'>
+                            </div>
+                            <div class="form-group">
+                                <label for="jsValidation">Code JS de contrôle de saisie :</label>
+                                <textarea class="form-control" id="jsValidation" name="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
+                            </div>
+                            <input type="hidden" id="attributeId" name="attributeId"> <!-- Champ caché pour l'attributeName -->
                         </div>
-                    </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <div>
-                            <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(false)" style="background-color: #ffffe0; border: none;"> &gt;&lt; </button>
-                            <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(true)" style="background-color: #ffffe0; border: none;"> &lt;&gt; </button>
+                        <div class="modal-footer d-flex justify-content-between">
+                            <div>
+                                <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(false)" style="background-color: #ffffe0; border: none;"> &gt;&lt; </button>
+                                <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(true)" style="background-color: #ffffe0; border: none;"> &lt;&gt; </button>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                                <button type="submit" class="btn btn-primary">Valider</button>
+                            </div>
                         </div>
-                        <div>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                            <button type="button" class="btn btn-primary" onclick="saveAttributNewLabel(<%= JSON.stringify(objectClassesDetails) %>)">Valider</button>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -229,7 +228,6 @@
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script>
-	    const dn = '<%= dn %>';
             let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut  
             let initialValueOnCurrentInput = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
 			const currentTabInputValues = {};
@@ -266,6 +264,18 @@
 				});
 			}
 
+			function validateForm() {
+				alert ("Désolé : fonction en cours d'implémentation ...");
+				return false;
+
+/*				// Exemple de validation : vérifier si l'email est valide
+				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
+				if (!emailPattern.test(email)) {
+					errorMessage.innerText = 'Veuillez entrer une adresse email valide.';
+					return false; // Empêche l'envoi du formulaire
+				}
+*/
+			}
 
             function openEditModal(attrName, objectAttribute) {
                 defaultAttributeLabel = attrName;
@@ -281,55 +291,9 @@
                 document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
                 document.getElementById('attributeName').textContent = defaultAttributeLabel;
+				document.getElementById('attributeId').value = defaultAttributeLabel; // Pour envoi par le formulaire
 
                 $('#editModal').modal('show');
-            }
-
-            async function saveAttributNewLabel(objectClassesDetails) {
-                const newLabel = document.getElementById('newLabel').value.trim();
-                const newJsChecking = document.getElementById('jsValidation').value.trim();
-
-                $('#editModal').modal('hide');
-
-                const dataToSend = {
-                    dn: dn,
-                    [defaultAttributeLabel]: {
-                        customWording: newLabel,
-                        valueCheck: newJsChecking.trim() !== '' ? newJsChecking.trim() : null  
-                    },
-                    objectClassesDetails: objectClassesDetails
-                };
-
-                try {
-					// Envoi pour mise à jour des paramètres d'attribut au serveur
-                    const response = await fetch('/update-attributeCtl', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(dataToSend),
-                    });
-
-                    if (response.ok) {
-                        // Rafraichir la page et se repositionner sur l'onglet courant
-                        const activeTab = document.querySelector('.nav-link.active');
-                        const activeTabId = activeTab ? activeTab.id : null;
-                        if (activeTabId) {
-                            localStorage.setItem('activeTab', activeTabId);
-                        }
-
-                        // Rafraichir la page
-                        window.location.reload();
-
-                    } else {
-                        console.error('Erreur lors de la mise à jour de l\'attribut');
-                        throw new Error('Erreur réseau, statut: ' + response.status);
-                    }
-
-                } catch (error) {
-                    console.error('Erreur:', error);
-                }
-
             }
 
             function changeModalSize(increase) {
@@ -406,28 +370,28 @@
             }
 
             function restoreValues() {
-/*              const activeTab = document.querySelector('.tab-pane.show');
-                activeTab.querySelectorAll('input').forEach((field) => {
-                    const initialValueOnCurrentInput = field.defaultValue;
-                    field.value = initialValueOnCurrentInput;
-                    checkSaveButton(field, initialValueOnCurrentInput);
-                });
-*/
-                // Rafraichir la page et se repositionner sur l'onglet courant
-                const activeTab = document.querySelector('.nav-link.active');
-                const activeTabId = activeTab ? activeTab.id : null;
-                if (activeTabId) {
-                    localStorage.setItem('activeTab', activeTabId);
-                }
+				// Empêche la soumission du formulaire
+				event.preventDefault();
 
-                // Rafraichir la page
-                window.location.reload();
+				// Rafraichir la page et se repositionner sur l'onglet courant
+				const activeTab = document.querySelector('.nav-link.active');
+				const activeTabId = activeTab ? activeTab.id : null;
+				if (activeTabId) {
+					localStorage.setItem('activeTab', activeTabId);
+				}
+
+				// Rafraichir la page
+				window.location.reload();
             }
 
-	    function exit() {
+			function exit() {
+				// Empêche la soumission du formulaire
+				event.preventDefault();
+
                 window.location.href = '/search'; // Redirection vers la route '/search'
             }
 
+			// 
             const tabs = document.querySelectorAll('#myTab .nav-link');
             tabs.forEach((tab) => {
                 tab.addEventListener('click', () => {
