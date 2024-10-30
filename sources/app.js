@@ -361,51 +361,44 @@ app.get('/edit/:dn', async (req, res) => {
 
 // ***********************************************************
 // Route pour valider les contrôle d'attribut édités dans la modale
-app.post('/update-attributeCtl', async (req, res) => {
-    const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` }); // Déclaration du client de connexion
-    let dn;
-    let objectClassesDetails;
+app.post('/update-attributeCtl/:dn', async (req, res) => {
+	// Déclaration du client de connexion
+    const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+
+    let dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
+	let attrName = null; // Initialisation pour le nom de l'attribut
+	let attrConf = {}; // Initialisation d'un objet pour stocker les configurations de l'attribut
 
     try {
         // Connexion au serveur LDAP 
         await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-        // Mettre à jour l'attribut dans LDAP
-		let confKey = null;
+        // Récupérer les clés du corps de la requête
 		const keys = Object.keys(req.body);
+
 		for (let key of keys) {
-			if (key === 'dn') {
-				dn = req.body[key];
-			} else if (key === 'objectClassesDetails') {
-				objectClassesDetails = req.body[key];
-			} else {
-				let attrConf = req.body[key];
+			if (key === 'attributeId') {
+				attrName = req.body[key];
+			} else if (key === 'newLabel') {
+				attrConf.customWording = req.body[key];
+			} else if (key === 'jsValidation') {
+				attrConf.valueCheck = req.body[key];
+			}
+		}  
 
-				// Mise à jour dans la base LDAP
-				if (await updateAttributeConfigInLDAP(client, key, attrConf))
-					confKey = key;
-		}	}
+        // Validation des données  
+        if (!attrName || !attrConf.customWording || !attrConf.valueCheck) {
+            return res.status(400).send('Données manquantes');
+        }
 
-		if (confKey) { // Mise à jour de objectClassesDetails (pour le render)
-			let attrConf = req.body[confKey];
-			objectClassesDetails.forEach(objectClass => {
-				if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attr => {
-					if (attr === confKey) Object.entries(attrConf).forEach(([confName,conf]) => {
-						objectClass.ATTRIBUTE[confKey][confName] = conf;
-					});
-				});
-			});
-		}
+		// Mise à jour dans la base LDAP
+		await updateAttributeConfigInLDAP(client, attrName, attrConf);
 
-        // Répondre avec succès
-        //res.status(200).send('Attribut mis à jour avec succès');
-
-//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
-		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
+		return res.redirect(`/edit/${dn}`);
 
     } catch (error) {
         console.error('Erreur:', error);
-        res.status(500).send(error.message);
+        res.status(500).send({ message: 'Erreur lors de la mise à jour de l\'attribut', error: error.message });
     } finally {
         // Déconnexion du client LDAP  
 		if (client) {
