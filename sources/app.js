@@ -11,6 +11,7 @@ const path = require('path');
 const {
     bindClient,
     searchLDAP,
+	updateLDAP,
     rawSearchLDAP,
     getUserRoleFromDatabase,
     getObjectClass,
@@ -359,6 +360,46 @@ app.get('/edit/:dn', async (req, res) => {
     }
 });
 
+app.post('/edit/:dn', async (req, res) => {
+	// Déclaration du client de connexion
+    const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+    let dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
+
+	try {
+        // Connexion au serveur LDAP 
+        await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
+
+        // Récupérer les clés du corps de la requête
+		const results = {};
+		const keys = Object.keys(req.body);
+
+		// 
+		keys.forEach(key => {
+			if (Array.isArray(req.body[key])) {
+				results[key] = [...new Set(req.body[key])];
+				if (results[key].length === 1 )
+					results[key] = results[key][0];
+			} else {
+				results[key] = req.body[key];
+			}
+		});
+
+		// Mise à jour de la base LDAP
+		await updateLDAP(client, dn, results);
+
+		return res.redirect(`/edit/${dn}`);
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        res.status(500).send({ error: error.message });
+    } finally {
+        // Déconnexion du client LDAP  
+		if (client) {
+	    	client.unbind();
+		}
+    }
+});
+
 // ***********************************************************
 // Route pour valider les contrôle d'attribut édités dans la modale
 app.post('/update-attributeCtl/:dn', async (req, res) => {
@@ -379,16 +420,16 @@ app.post('/update-attributeCtl/:dn', async (req, res) => {
 		for (let key of keys) {
 			if (key === 'attributeId') {
 				attrName = req.body[key];
-			} else if (key === 'newLabel') {
+			} else if (key === 'newLabel' && req.body[key]) {
 				attrConf.customWording = req.body[key];
-			} else if (key === 'jsValidation') {
+			} else if (key === 'jsValidation' && req.body[key]) {
 				attrConf.valueCheck = req.body[key];
 			}
 		}  
 
         // Validation des données  
-        if (!attrName || !attrConf.customWording || !attrConf.valueCheck) {
-            return res.status(400).send('Données manquantes');
+        if (!attrName) {
+            return res.status(400).send('Données manquantes dans \'/update-attributeCtl/:dn\'.');
         }
 
 		// Mise à jour dans la base LDAP
