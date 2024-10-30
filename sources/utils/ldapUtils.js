@@ -7,19 +7,19 @@ const config = require('../config.json'); // Assurez-vous d'importer votre fichi
  */
 function getUserRoleFromDatabase(dn) {
 
-    // A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE ...
+	// A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE A FAIRE ...
 
-    return( { "dn": "", "role": "guest"} );
+	return( { "dn": "", "role": "guest"} );
 }
 
 async function bindClient(client, bindDN, bindPassword) {
-    return new Promise((resolve, reject) => {
-        client.bind(bindDN, bindPassword, (err) => {
-            if (err)
-                return reject(err.message);
-	    resolve();
-        });
-    });
+	return new Promise((resolve, reject) => {
+		client.bind(bindDN, bindPassword, (err) => {
+			if (err)
+				return reject(err.message);
+		resolve();
+		});
+	});
 }
 
 /**
@@ -30,156 +30,184 @@ async function bindClient(client, bindDN, bindPassword) {
  * @returns {Promise<Array>} - Une promesse qui résout un tableau d'entrées trouvées.
  */
 async function searchLDAP(client, baseDN, searchOptions) {
-    try {
-        const rawResults = await rawSearchLDAP(client, baseDN, searchOptions); // Utilisez await ici
+	try {
+		const rawResults = await rawSearchLDAP(client, baseDN, searchOptions); // Utilisez await ici
 
-        return rawResults.map(entry => {
-            const attributes = entry.attributes.reduce((acc, attr) => {
-                acc[attr.type] = attr.values;
-                return acc;
-            }, {});
-	    attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs  
-            return attributes; // Retourner l'objet d'attributs formaté  
-        });
-    } catch(err) {
-        throw new Error(err.message); // Laissez l'erreur remonter  
-    }
+		return rawResults.map(entry => {
+			const attributes = entry.attributes.reduce((acc, attr) => {
+				acc[attr.type] = attr.values;
+				return acc;
+			}, {});
+		attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs
+			return attributes; // Retourner l'objet d'attributs formaté
+		});
+	} catch(err) {
+		throw new Error(err.message); // Laissez l'erreur remonter
+	}
 }
 
 async function rawSearchLDAP(client, baseDN, searchOptions) {
-    return new Promise((resolve, reject) => {
-        const results = [];
-        client.search(baseDN, searchOptions, (err, search) => {
-            if (err) {
-                return reject(new Error(`Erreur de recherche: ${err.message}`));
-            }
+	return new Promise((resolve, reject) => {
+		const results = [];
+		client.search(baseDN, searchOptions, (err, search) => {
+			if (err) {
+				return reject(new Error(`Erreur de recherche: ${err.message}`));
+			}
 
-            search.on('searchEntry', (entry) => {
-                results.push(entry.pojo); // Ajoute l'entrée à la liste des résultats
-            });
+			search.on('searchEntry', (entry) => {
+				results.push(entry.pojo); // Ajoute l'entrée à la liste des résultats
+			});
 
-            search.on('end', (result) => {
-                if (result.status !== 0) {
-                    return reject(new Error(`Erreur lors de la recherche: Status ${result.status}`));
-                }
-                resolve(results); // Résoudre avec les résultats accumulés
-            });
+			search.on('end', (result) => {
+				if (result.status !== 0) {
+					return reject(new Error(`Erreur lors de la recherche: Status ${result.status}`));
+				}
+				resolve(results); // Résoudre avec les résultats accumulés
+			});
 
-            search.on('error', (err) => {
-                return reject(new Error(`Erreur de recherche: ${err.message}`));
-            });
-        });
-    });
+			search.on('error', (err) => {
+				return reject(new Error(`Erreur de recherche: ${err.message}`));
+			});
+		});
+	});
+}
+
+// Mise a jour d'un dn LDAP
+async function updateLDAP(client, dn, changes) {
+	try {
+
+console.log('changes: ', JSON.stringify(changes, null, 2)); return false; // pour debug
+
+		const promises = changes.map(change => {
+			return new Promise((resolve, reject) => {
+				changes.forEach(change => {
+					client.modify(dn, change, (err) => {
+						if (err) {
+							console.error(`Erreur lors de la modification ${change.operation} :`, err);
+						}
+					});
+				});
+			});
+		});
+
+		// Attendre que toutes les modifications soient terminées
+		await Promise.all(promises);
+
+		return true;
+	} catch(err) {
+		console.error(`Erreur dans de mise à jour de la base LDAP : ${err.message}`);
+		throw err; // Relance de l'erreur
+	}
 }
 
 /**
- * Vérifie l'existence de la branche racine dans LDAP et la crée si elle n'existe pas.
+ * Vérifie l'existence de la branche racine dans LDAP et la créer si elle n'existe pas.
  * @returns {Promise<void>}
  */
 async function checkAndCreateOrganizationalUnit(client, dn) {
-    try {
-	const dnExists = await checkDNExists(client, dn);
-	if (dnExists) {
-	    return true;
-        }
+	try {
+		const dnExists = await checkDNExists(client, dn);
+		if (dnExists) {
+			return true;
+		}
 
-	const sep = dn.indexOf(',');
-        let root;
-        let entryName;
+		const sep = dn.indexOf(',');
+		let root;
+		let entryName;
 
-        // Vérification de validité du DN
-        if (sep === -1 || !dn.startsWith("ou=")) {
-            throw new Error(`L'unité organisationnelle ${dn} à créer est incorrecte.`);
-        }
+		// Vérification de validité du DN
+		if (sep === -1 || !dn.startsWith("ou=")) {
+			throw new Error(`L'unité organisationnelle ${dn} à créer est incorrecte.`);
+		}
 
-        // Extraction de la racine et du nom de l'unité organisationnelle à créer
-        root = dn.substring(sep + 1).trim(); // racine de création  
-        entryName = dn.substring(dn.indexOf('=') + 1, sep).trim(); // unité organisationnelle
+		// Extraction de la racine et du nom de l'unité organisationnelle à créer
+		root = dn.substring(sep + 1).trim(); // racine de création
+		entryName = dn.substring(dn.indexOf('=') + 1, sep).trim(); // unité organisationnelle
 
-	if (await checkAndCreateOrganizationalUnit(client, root) && await createOrganizationalUnit(client, dn)) {
-	    return true;
+		if (await checkAndCreateOrganizationalUnit(client, root) && await createOrganizationalUnit(client, dn)) {
+			return true;
+		}
+		return false;
+
+	} catch (err) {
+		console.error(`Erreur dans checkAndCreateOrganizationalUnit : ${err.message}`);
+		throw err; // Relance de l'erreur
 	}
-	return false;
-
-    } catch (err) {
-        console.error(`Erreur dans checkAndCreateOrganizationalUnit : ${err.message}`);
-	throw err; // Relance de l'erreur
-    }
 
 }
 
 async function checkDNExists(client, dn) {
-    return new Promise((resolve) => {
-        client.search(dn, { scope: 'base' }, (err, res) => {
-            if (err) {
-                return resolve(false);
-            }
+	return new Promise((resolve) => {
+		client.search(dn, { scope: 'base' }, (err, res) => {
+			if (err) {
+				return resolve(false);
+			}
 
-            let exists = false;
+			let exists = false;
 
-            // Écouter les entrées de recherche  
-            res.on('searchEntry', (entry) => {
-                // Si nous recevons une entrée, cela signifie que le DN existe  
-                exists = true;
-            });
+			// Écouter les entrées de recherche
+			res.on('searchEntry', (entry) => {
+				// Si nous recevons une entrée, cela signifie que le DN existe
+				exists = true;
+			});
 
-            // Écouter la fin de la recherche  
-            res.on('end', (result) => {
-                // Si le statut de la recherche n'est pas 0, cela peut indiquer qu'aucune entrée n'a été trouvée  
-                if (result.status !== 0) {
-                    resolve(false); // Résoudre avec false en cas d'erreur  
-                }
-                // Résoudre avec true ou false selon l'existence  
-                resolve(exists);
-            });
+			// Écouter la fin de la recherche
+			res.on('end', (result) => {
+				// Si le statut de la recherche n'est pas 0, cela peut indiquer qu'aucune entrée n'a été trouvée
+				if (result.status !== 0) {
+					resolve(false); // Résoudre avec false en cas d'erreur
+				}
+				// Résoudre avec true ou false selon l'existence
+				resolve(exists);
+			});
 
-	    // Écouter les erreurs de recherche (au cas où)
-            res.on('error', (error) => {
-                resolve(false); // Résoudre avec false en cas d'erreur  
-            });
-        });
-    });
+		// Écouter les erreurs de recherche (au cas où)
+			res.on('error', (error) => {
+				resolve(false); // Résoudre avec false en cas d'erreur
+			});
+		});
+	});
 }
 
-// Fonction auxiliaire pour créer la branche racine
+// Fonction auxiliaire pour créer la branche racine conf des attributs
 async function createOrganizationalUnit(client, dn) {
 
-    const sep = dn.indexOf(',');
-    let root;
-    let entryName;
+	const sep = dn.indexOf(',');
+	let root;
+	let entryName;
 
-    try {
-        // Vérification de validité du DN
-        if (sep === -1 || !dn.startsWith("ou=")) {
-            throw new Error(`L'unité organisationnelle ${dn} à créer est incorrecte.`);
-        }
+	try {
+		// Vérification de validité du DN
+		if (sep === -1 || !dn.startsWith("ou=")) {
+			throw new Error(`L'unité organisationnelle ${dn} à créer est incorrecte.`);
+		}
 
-        // Extraction de la racine et du nom de l'unité organisationnelle à créer
-        root = dn.substring(sep + 1).trim(); // racine de création  
-        entryName = dn.substring(dn.indexOf('=') + 1, sep).trim(); // unité organisationnelle
+		// Extraction de la racine et du nom de l'unité organisationnelle à créer
+		root = dn.substring(sep + 1).trim(); // racine de création
+		entryName = dn.substring(dn.indexOf('=') + 1, sep).trim(); // unité organisationnelle
 
-        // Construction de l'entrée pour l'unité organisationnelle  
-        const entry = {
-            objectClass: ['top', 'organizationalUnit'],
-            ou: entryName 
-        };
+		// Construction de l'entrée pour l'unité organisationnelle
+		const entry = {
+			objectClass: ['top', 'organizationalUnit'],
+			ou: entryName 
+		};
 
-        // Attente de l'ajout avec le client  
-        await new Promise((resolve, reject) => {
-            client.add(dn, entry, (err) => {
-                if (err) {
-                    return reject(err);
-                }
-                resolve();
-            });
-        });
-        return true;
+		// Attente de l'ajout avec le client
+		await new Promise((resolve, reject) => {
+			client.add(dn, entry, (err) => {
+				if (err) {
+					return reject(err);
+				}
+				resolve();
+			});
+		});
+		return true;
 
-    } catch (err) {
-        const errorEntryName = entryName || 'inconnu';
-        const errorRoot = root || 'inconnu';
-        throw new Error(`Échec de la création de l'unité organisationnelle ou=${errorEntryName} dans ${errorRoot}. Détails : ${err.message}`);
-    }
+	} catch (err) {
+		const errorEntryName = entryName || 'inconnu';
+		const errorRoot = root || 'inconnu';
+		throw new Error(`Échec de la création de l'unité organisationnelle ou=${errorEntryName} dans ${errorRoot}. Détails : ${err.message}`);
+	}
 }
 
 /**
@@ -189,48 +217,51 @@ async function createOrganizationalUnit(client, dn) {
  * @returns {Promise<void>}
  */
 async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
-    try {
-	const root = config.configDn.attributs + ',' + config.configDn.root;
-	await checkAndCreateOrganizationalUnit(client, root);
+	try {
+		const root = config.configDn.attributs + ',' + config.configDn.root;
+		await checkAndCreateOrganizationalUnit(client, root);
 
-	const dn = 'cn=' + attrName + ',' + root;
-	const entry = {};
-	entry.objectClass = ['top', 'applicationProcess'];
-	entry.cn = attrName;
-	if (attrConf.customWording) {
-	    entry.l = attrConf.customWording; 
+		const dn = 'cn=' + attrName + ',' + root;
+		const entry = {};
+		entry.objectClass = ['top', 'applicationProcess'];
+		entry.cn = attrName;
+		if (attrConf.customWording) {
+			entry.l = attrConf.customWording; 
+		}
+		if (attrConf.valueCheck) {
+			entry.description = attrConf.valueCheck; 
+		}
+
+		const dnExists = await checkDNExists(client, dn);
+		if (dnExists) {
+			// Si l'entrée existe, la supprimer
+			await new Promise((resolve, reject) => {
+				client.del(dn, (err) => {
+					if (err) {
+						return reject(err);
+					}
+					resolve();
+				});
+			});
+		}
+
+		if (entry.l || entry.description) {
+			// Ajouter la nouvelle entrée d'attribut
+			await new Promise((resolve, reject) => {
+				client.add(dn, entry, (err) => {
+					if (err) {
+						return reject(err);
+					}
+					resolve();
+				});
+			});
+		}
+
+		return true;
+
+	} catch (error) {
+		throw new Error(`Erreur dans la mise à jour des paramètres d'attribut: ${error.message}`);
 	}
-	if (attrConf.valueCheck) {
-	    entry.description = attrConf.valueCheck; 
-	}
-
-	const dnExists = await checkDNExists(client, dn);
-	if (dnExists) {
-	    // Si l'entrée existe, la supprimer
-	    await new Promise((resolve, reject) => {
-                client.del(dn, (err) => {
-                    if (err) {
-                        return reject(err);
-                    }
-                    resolve();
-                });
-            });
-	}
-
-	// Ajouter la nouvelle entrée d'attribut
-        await new Promise((resolve, reject) => {
-            client.add(dn, entry, (err) => {
-                if (err) {
-                    return reject(err);
-                }
-                resolve();
-            });
-        });
-        return true;
-
-    } catch (error) {
-	throw new Error(`Erreur dans updateAttributeConfigInLDAP: ${error.message}`);
-    }
 }
 
 /**
@@ -282,13 +313,6 @@ async function objectClassDefToJson(inputString) {
 			MAY: mayAttributes
 		};
 
-		// Ajout des attributs MUST et MAY directement dans l'objet
-/*		[must, may].forEach((type) => {
-			if (type) type.split(' $ ').forEach(attr => {
-				objectClass[attr.trim()] = null; // Ajouter chaque attribut avec une valeur initiale de null
-			});
-		});
-*/
 		resolve(objectClass);
 	});
 }
@@ -336,57 +360,58 @@ const getAllMustAttributes = async (config, objectClass) => {
 }
 
 /**
- * Fonction pour récupérer les attributs de chaque objectClass dans le schéma  
+ * Fonction pour récupérer les attributs de chaque objectClass dans le schéma
  */
 const getObjectClass = async (config, objectClassName) => {
-    // Créer un client pour interroger le schéma
-    const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+	// Créer un client pour interroger le schéma
+	const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
-    try {
-        // Effectuer le bind avec le DN et le mot de passe d'accès au schéma LDAP
-        await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
+	try {
+		// Effectuer le bind avec le DN et le mot de passe d'accès au schéma LDAP
+		await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
 
-        if (!objectClassName || objectClassName.length === 0) {
-            throw new Error(`ObjetClass non trouvé`); // Lancer une erreur vers le catch  
-        }
+		if (!objectClassName || objectClassName.length === 0) {
+			throw new Error(`ObjetClass non trouvé`); // Lancer une erreur vers le catch
+		}
 
-        // Utilisation de map pour lancer des recherches asynchrones pour chaque objectClass  
-        const options = {
-            filter: `(olcObjectClasses=* NAME '${objectClassName}' *)`,
-            scope: 'sub',
-            attributes: ['olcObjectClasses']
-        };
+		// Utilisation de map pour lancer des recherches asynchrones pour chaque objectClass
+		const options = {
+			filter: `(olcObjectClasses=* NAME '${objectClassName}' *)`,
+			scope: 'sub',
+			attributes: ['olcObjectClasses']
+		};
 
-        // Appel à searchLDAP pour effectuer la recherche  
+		// Appel à searchLDAP pour effectuer la recherche
 		const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
-	    	.catch(() => {
-        		throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`)
-        	});
+			.catch(() => {
+				throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`)
+			});
 
-        // Convertir le résultat brut en JSON  
-        const objectClass = await objectClassDefToJson(result[0].olcObjectClasses.find(str => {
+		// Convertir le résultat brut en JSON
+		const objectClass = await objectClassDefToJson(result[0].olcObjectClasses.find(str => {
 				const regex = new RegExp(`\\s*NAME\\s+'${objectClassName}'\\s+`);
 				return regex.test(str);
-	    	})
+			})
 		);
 
 	return objectClass; // Retourner l'objet résultat
-    
-    } catch (error) {
-        console.error('Erreur de recherche pour', objectClassName, ':', error);
+	
+	} catch (error) {
+		console.error('Erreur de recherche pour', objectClassName, ':', error);
 	throw error; // Relancer l'erreur pour que l'appelant puisse la gérer 
-    } finally {
-	schemaClient.unbind(); // Fermer la connexion au client du schéma, même en cas d'erreur  
-    }
+	} finally {
+	schemaClient.unbind(); // Fermer la connexion au client du schéma, même en cas d'erreur
+	}
 };
 
 
 module.exports = {
-    bindClient,
-    searchLDAP,
-    rawSearchLDAP,
-    getUserRoleFromDatabase,
-    getObjectClass,
+	bindClient,
+	searchLDAP,
+	updateLDAP,
+	rawSearchLDAP,
+	getUserRoleFromDatabase,
+	getObjectClass,
 	getAllMustAttributes,
-    updateAttributeConfigInLDAP
+	updateAttributeConfigInLDAP
 };
