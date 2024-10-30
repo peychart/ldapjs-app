@@ -384,9 +384,13 @@
 				window.location.reload();
             }
 
-			function exit() {
-				// Empêche la soumission du formulaire
-				event.preventDefault();
+	    function exit() {
+                // Empêche la soumission du formulaire
+                event.preventDefault();
+
+                if (!document.getElementById('saveButton').disabled
+                    && !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
+                        return;
 
                 window.location.href = '/search'; // Redirection vers la route '/search'
             }
