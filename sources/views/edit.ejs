@@ -100,7 +100,7 @@
         <h1>Carnet d'Annuaire</h1>
 
         <!-- Formulaire principal -->
-        <form id="mainForm" action="/update/<%= dn %>" method="POST" onsubmit="return validateForm()">
+        <form id="mainForm" action="/edit/<%= dn %>" method="POST">
 
             <!-- Conteneur pour les boutons avec Flexbox -->
             <div class="d-flex justify-content-end mb-3">
@@ -264,9 +264,10 @@
 				});
 			}
 
-			function validateForm() {
+			function validateMainForm() {
 				alert ("Désolé : fonction en cours d'implémentation ...");
-				return false;
+				return true;
+//				return false;
 
 /*				// Exemple de validation : vérifier si l'email est valide
 				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
@@ -274,8 +275,56 @@
 					errorMessage.innerText = 'Veuillez entrer une adresse email valide.';
 					return false; // Empêche l'envoi du formulaire
 				}
+
+		// Côté serveur :
+				// DN de l'entrée à modifier
+				const dn = 'cn=John Doe,dc=example,dc=com';
+
+				// Modifications à apporter  
+				const changes = [
+					{ operation: 'replace', modification: { mail: 'john.doe@example.com' } },
+					{ operation: 'add', modification: { telephoneNumber: '+123456789' } },
+					{ operation: 'delete', modification: { description: '' } }
+				];
+
+				// Effectuer les modifications  
+				changes.forEach(change => {
+					client.modify(dn, change, (err) => {
+						if (err) {
+							console.error(`Erreur lors de la modification ${change.operation} :`, err);
+						} else {
+							console.log(`Modification ${change.operation} effectuée avec succès.`);
+						}
+					});
+				});
 */
 			}
+
+            function restoreValues() {
+				// Empêche la soumission du formulaire
+				event.preventDefault();
+
+				// Rafraichir la page et se repositionner sur l'onglet courant
+				const activeTab = document.querySelector('.nav-link.active');
+				const activeTabId = activeTab ? activeTab.id : null;
+				if (activeTabId) {
+					localStorage.setItem('activeTab', activeTabId);
+				}
+
+				// Rafraichir la page
+				window.location.reload();
+            }
+
+			function exit() {
+				// Empêche la soumission du formulaire
+				event.preventDefault();
+
+                if (!document.getElementById('saveButton').disabled
+					&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
+						return;
+
+                window.location.href = '/search'; // Redirection vers la route '/search'
+            }
 
             function openEditModal(attrName, objectAttribute) {
                 defaultAttributeLabel = attrName;
@@ -369,33 +418,7 @@
                 }
             }
 
-            function restoreValues() {
-				// Empêche la soumission du formulaire
-				event.preventDefault();
-
-				// Rafraichir la page et se repositionner sur l'onglet courant
-				const activeTab = document.querySelector('.nav-link.active');
-				const activeTabId = activeTab ? activeTab.id : null;
-				if (activeTabId) {
-					localStorage.setItem('activeTab', activeTabId);
-				}
-
-				// Rafraichir la page
-				window.location.reload();
-            }
-
-	    function exit() {
-                // Empêche la soumission du formulaire
-                event.preventDefault();
-
-                if (!document.getElementById('saveButton').disabled
-                    && !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
-                        return;
-
-                window.location.href = '/search'; // Redirection vers la route '/search'
-            }
-
-			// 
+			// Mise à jour de l'état du bouton de validation du Main formulaire
             const tabs = document.querySelectorAll('#myTab .nav-link');
             tabs.forEach((tab) => {
                 tab.addEventListener('click', () => {
@@ -415,23 +438,53 @@
                 });
             });
 
-			// Gestion des événements de changement d'onglet  
+			function handleTabValues(all=false) {
+				// Récupérer l'onglet actif actuel
+				const activeTab = document.querySelector('.tab-pane.show');
+				if (activeTab) {
+					const currentTabId = activeTab.id;
+					// Sauvegarder les valeurs de l'onglet actuel
+					saveInputValues(currentTabId);
+				
+					if (all) {
+						const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
+						allTabs.forEach(tab => {
+							const tabId = tab.id; // Obtenir l'ID de chaque onglet
+							restoreInputValues(tabId); // Restaurer les valeurs pour cet onglet
+						});
+					} else {
+						// Récupérer l'ID de l'onglet nouvellement sélectionné
+						const newTabId = document.querySelector('.nav-link.active').getAttribute('href').substring(1);
+						// Restaurer les valeurs dans le nouvel onglet
+						restoreInputValues(newTabId);
+					}
+				}
+			}
+
+			// Gestion des événements de changement d'onglet (maj des valeurs modifiées des autres onglets)
 			const navLinks = document.querySelectorAll('#myTab .nav-link');
 				navLinks.forEach(link => {
 				link.addEventListener('click', () => {
-					// Récupérer l'onglet actif actuel  
-					const currentTabId = document.querySelector('.tab-pane.show').id;
-					// Sauvegarder les valeurs de l'onglet actuel
-					saveInputValues(currentTabId);
-
-					// Récupérer l'ID de l'onglet nouvellement sélectionné  
-					const newTabId = link.getAttribute('href').substring(1);
-					// Restaurer les valeurs dans le nouvel onglet  
-					restoreInputValues(newTabId);
+					handleTabValues();
 				});
 			});
 
-			// Fonction pour restaurer l'onglet actif après le rechargement
+			// Gestion de la soumission du formulaire
+			const form = document.querySelector('form'); // Sélectionnez votre formulaire
+			if (form && form.id === 'mainForm') {
+				form.addEventListener('submit', (event) => {
+					// Synchoniser les champs de tous les autres onglets
+					handleTabValues(all=true);
+
+					// Validation des données modifiées
+					if (!validateMainForm()) {
+						event.preventDefault();
+						return; // Sortir de la fonction pour éviter la soumission
+					}
+				});
+			}
+
+			// Fonction pour restaurer la position sur l'onglet actif après le rechargement page
 			window.onload = function() {
 				const activeTabId = localStorage.getItem('activeTab');
 
