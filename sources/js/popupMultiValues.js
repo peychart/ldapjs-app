@@ -1,4 +1,3 @@
-<script>
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.popupContainer').forEach(container => {
             const attrName = container.getAttribute('data-attr-name'); // Récupérer le nom dynamique  
@@ -30,11 +29,14 @@
 
             // Ouvrir la popup lorsque le champ input reçoit le focus  
             editInput.addEventListener('focus', () => {
-                const rect = editInput.getBoundingClientRect();
-                popupOptions.style.display = 'block';
-                popupOptions.style.top = `${rect.bottom + window.scrollY}px`; // Positionner juste en dessous du champ  
-                popupOptions.style.left = `${rect.left}px`; // Aligner avec le champ  
-                renderOptions(); // Rendre les options dans la popup  
+                 const values = JSON.parse(hiddenInput.value || "[]"); // Récupérez les valeurs du champ caché  
+                 if (values.length >= 2) { // Vérifiez qu'il y a au moins 2 valeurs
+                    const rect = editInput.getBoundingClientRect();
+                    popupOptions.style.display = 'block';
+                    popupOptions.style.top = `${rect.bottom + window.scrollY - 50}px`; // Positionner juste en dessous du champ  
+                    popupOptions.style.left = `${rect.left - 30}px`; // Aligner avec le champ  
+                    renderOptions(); // Rendre les options dans la popup  
+                }
             });
 
             // Mise à jour de la valeur pointée par l'index en temps réel  
@@ -52,7 +54,7 @@
                     editInput.value = options[index]; // Mettre la valeur sélectionnée dans le champ d'entrée  
                     hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
                     renderOptions(); // Rendre les options pour mettre à jour la sélection  
-                    editInput.focus(); // Replacer le focus sur l'input pour garder la popup ouverte  
+//                  editInput.focus(); // Replacer le focus sur l'input pour garder la popup ouverte  
                 }
             });
 
@@ -88,7 +90,7 @@
                 index = options.length - 1; // Mettre l'index sur la nouvelle ligne vide  
                 editInput.value = options[index]; // Mettre la valeur de l'input sur la ligne vide  
                 hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
-                editInput.focus(); // Replacer le focus sur l'input  
+//              editInput.focus(); // Replacer le focus sur l'input  
                 // Ouvrir la popup  
                 const rect = editInput.getBoundingClientRect(); // Récupérer la position de l'input  
                 popupOptions.style.display = 'block'; // Ouvrir la popup  
@@ -101,4 +103,3 @@
             renderOptions();
         });
     });
-</script>
