@@ -55,7 +55,7 @@
         .edit-btn i {
             font-size: 0.8em; /* Réduit la taille de l'icône */
         }
-	.btn-restore {
+        .btn-restore {
             background-color: #FFE0B2; /* Couleur orange plus clair */
             border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
             color: black; /* Couleur du texte en noir */
@@ -63,7 +63,7 @@
         .btn-restore:hover {
             background-color: #FFA726; /* Couleur plus foncée au survol */
         }
-	.btn-exit {
+        .btn-exit {
             background-color: #FFCC80; /* Couleur orange pastel */
             border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
             color: black; /* Couleur du texte en black */
@@ -80,10 +80,10 @@
         .btn-save:hover {
             background-color: #E0E0E0; /* Couleur beige plus foncé au survol */
         }
-	.btn-save.disabled:hover {
-	    background-color: #F5F5DC; /* Rétablir la couleur d'origine lorsqu'il est désactivé */
-	    cursor: not-allowed; /* Change le curseur pour indiquer que le bouton est désactivé */
-	}
+        .btn-save.disabled:hover {
+	        background-color: #F5F5DC; /* Rétablir la couleur d'origine lorsqu'il est désactivé */
+	        cursor: not-allowed; /* Change le curseur pour indiquer que le bouton est désactivé */
+        }
         .btn-save.enabled {
             color: #9B111E; /* Rouge rubis lorsqu'il est activé */
             background-color: #98FB98; /* Vert tendre lorsque activé */
@@ -92,6 +92,31 @@
             background-color: #ffffe0; /* Fond jaune clair pour la modale */
             border-radius: 15px; /* Arrondir les angles de la fenêtre modale */
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ajoute une ombre douce autour de la modale */
+        }
+        .popup {
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            width: 200px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .option {
+            padding: 5px;
+            cursor: pointer;
+        }
+        .option:hover, .option.selected {
+            background-color: #e0e0e0; /* Couleur de surbrillance pour l'option sélectionnée */
+        }
+        .add-button {
+            background-color: green;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -125,50 +150,30 @@
             <div class="tab-content" id="myTabContent">
                 <% objectClassesDetails.forEach((objectClass, index) => { %>
                     <div class="tab-pane fade <%= index === 0 ? 'show active' : '' %>" id="<%= objectClass.NAME %>" role="tabpanel" aria-labelledby="<%= objectClass.NAME %>-tab">
-                        <h3></h3> <!-- Suppression de "Attributes" -->
-                        <h4 class="underline">Attributs obligatoires :</h4>
-                        <ul>
-                            <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
-                                if (objectClass.ATTRIBUTE[attrName].type === 'MUST') {
-                                    const objectAttribute = objectClass.ATTRIBUTE[attrName];
-                                    const displayLabel = objectAttribute.customWording || attrName;
-                            %>
-                            <li>
-                                <strong><%= displayLabel %>:</strong>
-                                <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </button>
-                                <input type="text"
-                                    name="<%= attrName %>"
-                                    value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
-                                    class="form-control"
-                                    onfocus="valueOnfocus(this)"
-                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
-                            </li>
-                            <% } }) %>
-                        </ul>
-    
-                        <h4 class="underline">Attributs optionnels :</h4>
-                        <ul>
-                            <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
-                                if (objectClass.ATTRIBUTE[attrName].type === 'MAY') {
-                                    const objectAttribute = objectClass.ATTRIBUTE[attrName];
-                                    const displayLabel = objectAttribute.customWording || attrName;
-                            %>
-                            <li>
-                                <strong><%= displayLabel %>:</strong>
-                                <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </button>
-                                <input type="text"
-                                    name="<%= attrName %>"
-                                    value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
-                                    class="form-control"
-                                    onfocus="valueOnfocus(this)"
-                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
-                            </li>
-                            <% } }) %>
-                        </ul>
+                        <% ['MUST', 'MAY'].forEach(type => { %>
+                            <h3 class="underline">Attributs <%= (type === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
+                            <ul>
+						        <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
+                                    if (objectClass.ATTRIBUTE[attrName].type === type) {
+                                        const objectAttribute = objectClass.ATTRIBUTE[attrName];
+                                        const displayLabel = objectAttribute.customWording || attrName;
+                                %>
+                                <li>
+                                    <strong><%= displayLabel %>:</strong>
+                                    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+									<!-- <%- include('popupMultiValues') %> -->
+                                    <input type="text"
+                                        name="<%= attrName %>"
+                                        value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
+                                        class="form-control"
+                                        onfocus="valueOnfocus(this)"
+                                        oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
+                                </li>
+                                <% } }) %>
+                            </ul>
+                        <% }) %>
                     </div>
                 <% }) %>
 
@@ -227,6 +232,7 @@
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+		<script src="/js/popupMultiValues.js"></script>
         <script>
             let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut  
             let initialValueOnCurrentInput = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
