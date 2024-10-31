@@ -325,7 +325,7 @@ app.get('/edit/:dn', async (req, res) => {
 	const attrDefOptions = {
 		//filter: '(cn=*)',
 		scope: 'one',
-		attributes: [ 'cn', 'l', 'description' ]
+		attributes: [ 'cn', 'l', 'description', 'ou' ]
 	};
 
 	const attributes = await searchLDAP(client, attrDefDN, attrDefOptions).catch (err => {
@@ -337,12 +337,26 @@ app.get('/edit/:dn', async (req, res) => {
 		objectClass['ATTRIBUTE'] = {};
 	    ['MUST', 'MAY'].forEach(key => {
 			Object.keys(objectClass[key]).forEach(attr => {
-				// Ajour des valeurs de l'entrée à éditer
-				objectClass['ATTRIBUTE'][attr] = { type: key, values: objectData[attr] || null };
+				const forceMultiValue = attributes.find(item => item.cn.includes(attr))?.ou ?? null;
+				const multiValue = (forceMultiValue && forceMultiValue[0] === 'MULTI-VALUE') || !!objectClass[key][attr]?.MULTIVALUE;
+
+				// Ajout valuer(s) ajustée(s) du format SINGLE-VALUE ou MULTI-VALUE
+				if (multiValue) {
+					const values = Array.isArray(objectData[attr]) ? objectData[attr] : (objectData[attr] !== undefined ? [objectData[attr]] : []);
+					objectClass['ATTRIBUTE'][attr] = { type: key, values: values };
+				} else {
+					const value = Array.isArray(objectData[attr]) 
+					// Si le tableau n'est pas vide, prendre le premier élément, sinon null  
+					? (objectData[attr].length > 0 ? objectData[attr][0] : null)
+					// Retourne null si undefined  
+					: objectData[attr] !== undefined ? objectData[attr] : null;
+					objectClass['ATTRIBUTE'][attr] = { type: key, values: value };
+				}
 
 				// Ajout de la propriété customType à chaque attribut
 				objectClass['ATTRIBUTE'][attr].customWording = attributes.find(item => item.cn.includes(attr))?.l || null;
 				objectClass['ATTRIBUTE'][attr].valueCheck = attributes.find(item => item.cn.includes(attr))?.description || null;
+				if (forceMultiValue !== null) objectClass['ATTRIBUTE'][attr].MULTIVALUE = multiValue;
 			});
 			delete objectClass[key];
 	    });
@@ -418,15 +432,21 @@ app.post('/update-attributeCtl/:dn', async (req, res) => {
         // Récupérer les clés du corps de la requête
 		const keys = Object.keys(req.body);
 
+//console.log('req.body: ', JSON.stringify(req.body)); // Pour debug
 		for (let key of keys) {
 			if (key === 'attributeId') {
 				attrName = req.body[key];
+			} else if (key === 'attributeType') {
+				if (req.body[key] !== 'SCHEMA')
+					attrConf.MULTIVALUE = (req.body[key] === 'MULTI-VALUE');
 			} else if (key === 'newLabel' && req.body[key]) {
 				attrConf.customWording = req.body[key];
 			} else if (key === 'jsValidation' && req.body[key]) {
 				attrConf.valueCheck = req.body[key];
 			}
 		}  
+//console.log('attrName: ', JSON.stringify(attrName)); // Pour debug
+//console.log('attrConf: ', JSON.stringify(attrConf)); // Pour debug
 
         // Validation des données  
         if (!attrName) {
