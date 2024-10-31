@@ -16,7 +16,11 @@
             background: linear-gradient(to bottom, #fff4b2, #d1c93b); /* Dégradé du jaune clair vers un jaune plus doux */
             min-height: 100vh; /* La hauteur minimale du corps est de 100% de la fenêtre */
         }
-	.nav-tabs .nav-item .nav-link {
+        .form-control::placeholder {
+            color: #b0b0b0; /* Couleur du placeholder (gris clair) */
+            opacity: 1; /* Assurez-vous que l'opacité est à 1 */
+        }
+        .nav-tabs .nav-item .nav-link {
             border: 1px solid #fff4b2; /* Bordure pour tous les onglets */
             border-bottom: none; /* Enlève la bordure inférieure pour tous les onglets */
             background-color: #B19F8C; /* Fond beige pour les onglets */
@@ -27,14 +31,14 @@
         .nav-tabs .nav-item .nav-link.active {
             border: 1px solid #000000; /* Bordure noire pour l'onglet actif */
             border-bottom: none; /* Retire la bordure inférieure de l'onglet actif */
-	    border-right: 2px solid #000000; /* Assure que la bordure droite est visible */
+            border-right: 2px solid #000000; /* Assure que la bordure droite est visible */
             background-color: #ffffe0; /* Fond clair pour l'onglet actif */
             color: #000000; /* Couleur du texte de l'onglet actif en noir */
-	    padding-top: 9px; /* Ajustez selon vos besoins */
+            padding-top: 9px; /* Ajustez selon vos besoins */
         }
         .nav-tabs .nav-item .nav-link:not(.active) { /* Cibler spécifiquement les onglets non actifs */
             background-color: #D1C6A9; /* Fond beige clair pour l'onglet non actif */
-	    border-bottom: 1px solid #000000; /* Ajoute une bordure inférieure noire pour les onglets non actifs */
+            border-bottom: 1px solid #000000; /* Ajoute une bordure inférieure noire pour les onglets non actifs */
             color: #000000; /* Couleur du texte en noir */
         }
         .tab-content {
@@ -81,8 +85,8 @@
             background-color: #E0E0E0; /* Couleur beige plus foncé au survol */
         }
         .btn-save.disabled:hover {
-	        background-color: #F5F5DC; /* Rétablir la couleur d'origine lorsqu'il est désactivé */
-	        cursor: not-allowed; /* Change le curseur pour indiquer que le bouton est désactivé */
+            background-color: #F5F5DC; /* Rétablir la couleur d'origine lorsqu'il est désactivé */
+            cursor: not-allowed; /* Change le curseur pour indiquer que le bouton est désactivé */
         }
         .btn-save.enabled {
             color: #9B111E; /* Rouge rubis lorsqu'il est activé */
@@ -102,6 +106,20 @@
             overflow-y: auto;
             z-index: 1000;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .editInput {
+            flex: 1; /* Permet à l'input de remplir la largeur disponible */
+            margin: 0; /* Supprime les marges pour un alignement parfait */
+            /*margin-right: 5px;
+            margin-left: 0px;*/
+            padding: 8px; /* Espace intérieur pour un meilleur confort visuel */
+            border: 1px solid #d3d3d3; /* Bordure grise */
+            border-radius: 4px; /* Arrondi léger des coins */
+            transition: border-color 0.3s; /* Transition douce pour les changements de couleur de bordure */
+        }
+        .editInput::placeholder {
+            color: #b0b0b0; /* Couleur du placeholder (gris plus clair) */
+            opacity: 1; /* Assurez-vous que l'opacité est à 1 pour que la couleur soit bien visible */
         }
         .option {
             padding: 5px;
@@ -129,8 +147,8 @@
 
             <!-- Conteneur pour les boutons avec Flexbox -->
             <div class="d-flex justify-content-end mb-3">
-                <button id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
-                <button id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Exit</button>
+                <button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
+                <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Exit</button>
                 <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;">Valider</button>
             </div>
 
@@ -153,7 +171,7 @@
                         <% ['MUST', 'MAY'].forEach(type => { %>
                             <h3 class="underline">Attributs <%= (type === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
                             <ul>
-						        <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
+                                <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
                                     if (objectClass.ATTRIBUTE[attrName].type === type) {
                                         const objectAttribute = objectClass.ATTRIBUTE[attrName];
                                         const displayLabel = objectAttribute.customWording || attrName;
@@ -163,13 +181,32 @@
                                     <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
-									<!-- <%- include('popupMultiValues') %> -->
-                                    <input type="text"
-                                        name="<%= attrName %>"
-                                        value="<%= objectAttribute.values && objectAttribute.values.length > 0 ? objectAttribute.values[0] : '' %>"
-                                        class="form-control"
-                                        onfocus="valueOnfocus(this)"
-                                        oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
+                                    <%# if (objectAttribute.values && Array.isArray(objectAttribute.values)) { %>
+                                    <% if (objectAttribute.MULTIVALUE) { %>
+                                        <!-- popupMultiValues -->
+                                        <div class="popupContainer" data-attr-name="<%= attrName %>">
+                                            <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
+                                                <input type="text"
+                                                    class="editInput"
+                                                    placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
+                                                    onfocus="valueOnfocus(this)"
+                                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
+                                                <!-- Champ caché pour soumettre les valeurs au formulaire -->
+                                                <input type="hidden" id="<%= attrName %>" class="hiddenInput" name="<%= attrName %>" value="<%= objectAttribute.values ?JSON.stringify(objectAttribute.values) :[] %>">
+                                                <!-- Bouton d'ajout d'une valeur à l'attribut -->
+                                                <button type="button" class="add-button">+</button>
+                                            </div>
+                                            <div class="popup" style="display: none;"></div> <!-- Initialisation des options -->
+                                        </div>
+                                    <% } else { %>
+                                        <input type="text"
+                                            name="<%= attrName %>"
+                                            value="<%= objectAttribute.values ?objectAttribute.values[0] :'' %>"
+                                            class="form-control"
+                                            placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
+                                            onfocus="valueOnfocus(this)"
+                                            oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
+                                    <% } %>
                                 </li>
                                 <% } }) %>
                             </ul>
@@ -196,7 +233,7 @@
         <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
-				    <form id="attrForm" action="/update-attributeCtl/<%= dn  %>" method="POST">
+                    <form id="attrForm" action="/update-attributeCtl/<%= dn  %>" method="POST">
                         <div class="modal-header">
                             <h5 class="modal-title" id="editModalLabel">Modifier le libellé d'attribut "<span id="attributeName"></span>"</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
@@ -251,20 +288,21 @@
 
 			// Fonction pour sauvegarder les valeurs des inputs de l'onglet actif
 			function saveInputValues(tabId) {
-				const inputs = document.querySelectorAll(`#${tabId} input[type="text"]`);
+				const inputs = document.querySelectorAll(`#${tabId} input[type="text"], #${tabId} input[type="hidden"]`);
 
 				inputs.forEach(input => {
 					// Stocker la valeur de chaque input
-					currentTabInputValues[input.name] = input.value;
+					if (input.name)
+						currentTabInputValues[input.name] = input.value;
 				});
 			}
 
 			// Fonction pour restaurer les valeurs des inputs dans l'onglet actif
 			function restoreInputValues(tabId) {
-				const inputs = document.querySelectorAll(`#${tabId} input[type="text"]`);
+				const inputs = document.querySelectorAll(`#${tabId} input[type="text"], #${tabId} input[type="hidden"]`);
 
 				inputs.forEach(input => {
-					if (currentTabInputValues[input.name] !== undefined) {
+					if (input.name && currentTabInputValues[input.name] !== undefined) {
 						input.value = currentTabInputValues[input.name]; // Restaurer la valeur si elle existe  
 					}
 				});
@@ -307,9 +345,6 @@
 			}
 
             function restoreValues() {
-				// Empêche la soumission du formulaire
-				event.preventDefault();
-
 				// Rafraichir la page et se repositionner sur l'onglet courant
 				const activeTab = document.querySelector('.nav-link.active');
 				const activeTabId = activeTab ? activeTab.id : null;
@@ -322,9 +357,6 @@
             }
 
 			function exit() {
-				// Empêche la soumission du formulaire
-				event.preventDefault();
-
                 if (!document.getElementById('saveButton').disabled
 					&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
 						return;
@@ -402,14 +434,15 @@
             }
 
             function checkSaveButton() {
-                const inputs = document.querySelectorAll('.tab-pane input[type="text"]');
+                const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
                 let isAnyInputChanged = false;
 
                 inputs.forEach(input => {
-                    if (input.value !== input.defaultValue) {
-                        isAnyInputChanged = true;
-                    }
-                });
+					if (input.name) {
+						if (input.value !== input.defaultValue)
+							isAnyInputChanged = true;
+					}
+               	});
 
                 const saveButton = document.getElementById('saveButton');
 
@@ -446,24 +479,22 @@
 
 			function handleTabValues(all=false) {
 				// Récupérer l'onglet actif actuel
-				const activeTab = document.querySelector('.tab-pane.show');
-				if (activeTab) {
-					const currentTabId = activeTab.id;
+				const currentTab = document.querySelector('.tab-pane.show');
+				if (currentTab) {
 					// Sauvegarder les valeurs de l'onglet actuel
-					saveInputValues(currentTabId);
+					saveInputValues(currentTab.id);
 				
-					if (all) {
+//					if (all) {
 						const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
 						allTabs.forEach(tab => {
-							const tabId = tab.id; // Obtenir l'ID de chaque onglet
-							restoreInputValues(tabId); // Restaurer les valeurs pour cet onglet
+							restoreInputValues(tab.id); // Restaurer les valeurs pour cet onglet
 						});
-					} else {
+/*                  } else {
 						// Récupérer l'ID de l'onglet nouvellement sélectionné
 						const newTabId = document.querySelector('.nav-link.active').getAttribute('href').substring(1);
 						// Restaurer les valeurs dans le nouvel onglet
 						restoreInputValues(newTabId);
-					}
+					}*/
 				}
 			}
 
@@ -484,7 +515,9 @@
 
 					// Validation des données modifiées
 					if (!validateMainForm()) {
+						// Eviter la soumission du formulaire
 						event.preventDefault();
+
 						return; // Sortir de la fonction pour éviter la soumission
 					}
 				});
