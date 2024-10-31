@@ -1,0 +1,8 @@
+<div class="popupContainer" data-attr-name="<%= attrName %>">
+    <div class="container">
+        <input type="text" class="editInput" placeholder="Éditez ou ajoutez une valeur ici" style="width: 300px;">
+        <input type="hidden" id="<%= attrName %>" class="hiddenInput" name="<%= attrName %>[]" value="<%= JSON.stringify(values) %>"> <!-- Champ caché pour soumettre la valeur -->
+        <button class="add-button">+</button> <!-- Bouton d'ajout -->
+    </div>
+    <div class="popup" style="display: none;"></div> <!-- Initialisation des options -->
+</div>
