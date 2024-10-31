@@ -228,9 +228,13 @@ async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
 		if (attrConf.customWording) {
 			entry.l = attrConf.customWording; 
 		}
+		if (attrConf.MULTIVALUE != null) {
+			entry.ou = attrConf.MULTIVALUE ?'MULTI-VALUE' :'SINGLE-VALUE'; 
+		}
 		if (attrConf.valueCheck) {
 			entry.description = attrConf.valueCheck; 
 		}
+//console.log('entry: ', JSON.stringify(entry)); // Pour debug
 
 		const dnExists = await checkDNExists(client, dn);
 		if (dnExists) {
@@ -245,7 +249,7 @@ async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
 			});
 		}
 
-		if (entry.l || entry.description) {
+		if (Object.entries(entry).length > 0) {
 			// Ajouter la nouvelle entrée d'attribut
 			await new Promise((resolve, reject) => {
 				client.add(dn, entry, (err) => {
