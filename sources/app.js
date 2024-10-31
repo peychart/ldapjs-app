@@ -25,6 +25,7 @@ const configPath = path.join(__dirname, 'config.json');
 let config = {};
 
 const app = express();
+app.use('/js', express.static(path.join(__dirname, 'public/js')));
 const defaultNodePort = 3000;
 const defaultLdapPort = 3000;
 
@@ -347,7 +348,7 @@ app.get('/edit/:dn', async (req, res) => {
 	    });
 	});
 
-//console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
     } catch (error) {
