@@ -97,6 +97,15 @@
             border-radius: 15px; /* Arrondir les angles de la fenêtre modale */
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ajoute une ombre douce autour de la modale */
         }
+		.custom-radio-group {
+            display: flex;
+            justify-content: space-between; /* Ecarte les boutons au maximum */
+            width: 100%; /* S'assure que le conteneur prend toute la largeur disponible */
+        }
+        .form-check {
+            flex: 1; /* Permet à chaque bouton de prendre une part égale de l'espace disponible */
+            text-align: center; /* Centre le texte de chaque bouton */
+        }
         .popup {
             position: absolute;
             background: white;
@@ -149,7 +158,7 @@
             <div class="d-flex justify-content-end mb-3">
                 <button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
                 <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Exit</button>
-                <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;">Valider</button>
+                <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
             </div>
 
             <!-- Nav tabs -->
@@ -181,8 +190,7 @@
                                     <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
-                                    <%# if (objectAttribute.values && Array.isArray(objectAttribute.values)) { %>
-                                    <% if (objectAttribute.MULTIVALUE) { %>
+                                    <% if (objectAttribute.values && Array.isArray(objectAttribute.values)) { %>
                                         <!-- popupMultiValues -->
                                         <div class="popupContainer" data-attr-name="<%= attrName %>">
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
@@ -201,7 +209,7 @@
                                     <% } else { %>
                                         <input type="text"
                                             name="<%= attrName %>"
-                                            value="<%= objectAttribute.values ?objectAttribute.values[0] :'' %>"
+                                            value="<%= objectAttribute.values ?objectAttribute.values :'' %>"
                                             class="form-control"
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
                                             onfocus="valueOnfocus(this)"
@@ -235,18 +243,36 @@
                 <div class="modal-content">
                     <form id="attrForm" action="/update-attributeCtl/<%= dn  %>" method="POST">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="editModalLabel">Modifier le libellé d'attribut "<span id="attributeName"></span>"</h5>
+                            <h5 class="modal-title" id="editModalLabel"><strong>Modifier le libellé d'attribut "<span id="attributeName"></span>"</strong></h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                         <div class="modal-body">
                             <div class="form-group">
-                                <label for="newLabel">Libellé d'affichage de l'attribut :</label>
+                                <label for="newLabel"><strong>Libellé d'affichage de l'attribut :</strong></label>
                                 <input type="text" class="form-control" id="newLabel" name="newLabel" style='color:black;'>
                             </div>
+							<!-- Ajout des boutons radio -->
                             <div class="form-group">
-                                <label for="jsValidation">Code JS de contrôle de saisie :</label>
+                                <label><strong>Type d'attribut :</strong></label><br>
+                                <div class="custom-radio-group"> <!-- Container flex pour les boutons radio -->
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="attributeType" id="singleValue" value="SINGLE-VALUE">
+                                        <label class="form-check-label" for="singleValue">SINGLE-VALUE</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="attributeType" id="schema" value="SCHEMA" checked>
+                                        <label class="form-check-label" for="schema">cf. SCHEMA</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="attributeType" id="multiValue" value="MULTI-VALUE">
+                                        <label class="form-check-label" for="multiValue">MULTI-VALUE</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="jsValidation"><strong>Code JS de contrôle de saisie :</strong></label>
                                 <textarea class="form-control" id="jsValidation" name="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
                             </div>
                             <input type="hidden" id="attributeId" name="attributeId"> <!-- Champ caché pour l'attributeName -->
@@ -375,6 +401,9 @@
                 newLabelInputField.value = objectAttribute.customWording || '';
                 newLabelInputField.placeholder = defaultAttributeLabel;
 
+				const radio = (objectAttribute.MULTIVALUE === undefined) ?'schema' : (objectAttribute.MULTIVALUE ?'multiValue' :'singleValue');
+				document.getElementById(radio).checked = true;
+
                 document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
                 document.getElementById('attributeName').textContent = defaultAttributeLabel;
@@ -433,14 +462,19 @@
                 }
             }
 
+			// Valide le bouton seulement sur modifications
             function checkSaveButton() {
                 const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
                 let isAnyInputChanged = false;
 
                 inputs.forEach(input => {
 					if (input.name) {
-						if (input.value !== input.defaultValue)
+						if (input.value !== input.defaultValue) {
 							isAnyInputChanged = true;
+/*console.log('\ninput.name: ', input.name);
+console.log('input.value: ', input.value);
+console.log('input.defaultValue: ', input.defaultValue);*/
+						}
 					}
                	});
 
@@ -477,24 +511,25 @@
                 });
             });
 
-			function handleTabValues(all=false) {
+			// Synchronisation des inputs inter-onglets
+			function handleTabValues(All=true) {
 				// Récupérer l'onglet actif actuel
 				const currentTab = document.querySelector('.tab-pane.show');
 				if (currentTab) {
 					// Sauvegarder les valeurs de l'onglet actuel
 					saveInputValues(currentTab.id);
 				
-//					if (all) {
-						const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
-						allTabs.forEach(tab => {
-							restoreInputValues(tab.id); // Restaurer les valeurs pour cet onglet
-						});
-/*                  } else {
+/*					if (!all) {
 						// Récupérer l'ID de l'onglet nouvellement sélectionné
 						const newTabId = document.querySelector('.nav-link.active').getAttribute('href').substring(1);
 						// Restaurer les valeurs dans le nouvel onglet
 						restoreInputValues(newTabId);
-					}*/
+                    } else {*/
+						const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
+						allTabs.forEach(tab => {
+							restoreInputValues(tab.id); // Restaurer les valeurs pour cet onglet
+						});
+//					}
 				}
 			}
 
@@ -511,7 +546,7 @@
 			if (form && form.id === 'mainForm') {
 				form.addEventListener('submit', (event) => {
 					// Synchoniser les champs de tous les autres onglets
-					handleTabValues(all=true);
+					handleTabValues();
 
 					// Validation des données modifiées
 					if (!validateMainForm()) {
