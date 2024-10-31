@@ -81,25 +81,6 @@
                     popupOptions.style.display = 'none'; // Fermer la popup après sélection  
                 }
             });
-
-            // Fonction pour ajouter une nouvelle ligne vide  
-            addButton.addEventListener('click', () => {
-                if (!options.includes('')) { // Vérifier si une ligne vide existe déjà  
-                    options.push(''); // Ajouter une nouvelle ligne vide  
-                }
-                index = options.length - 1; // Mettre l'index sur la nouvelle ligne vide  
-                editInput.value = options[index]; // Mettre la valeur de l'input sur la ligne vide  
-                hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
-//              editInput.focus(); // Replacer le focus sur l'input  
-                // Ouvrir la popup  
-                const rect = editInput.getBoundingClientRect(); // Récupérer la position de l'input  
-                popupOptions.style.display = 'block'; // Ouvrir la popup  
-                popupOptions.style.top = `${rect.bottom + window.scrollY}px`; // Positionner juste en dessous du champ  
-                popupOptions.style.left = `${rect.left}px`; // Aligner avec le champ  
-                renderOptions(); // Rendre les options pour mettre à jour  
-            });
-
-            // Initialiser les options au chargement  
-            renderOptions();
         });
     });
+
