@@ -163,9 +163,9 @@
 
             <!-- Nav tabs -->
             <ul class="nav nav-tabs" id="myTab" role="tablist">
-                <% objectClassesDetails.forEach((objectClass, index) => { %>
+                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => { %>
                     <li class="nav-item">
-                        <a class="nav-link <%= index === 0 ? 'active' : '' %>" id="<%= objectClass.NAME %>-tab" data-toggle="tab" href="#<%= objectClass.NAME %>" role="tab" aria-controls="<%= objectClass.NAME %>" aria-selected="<%= index === 0 %>"><%= objectClass.NAME %></a>
+                        <a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>" id="<%= objectClass.NAME %>-tab" data-toggle="tab" href="#<%= objectClass.NAME %>" role="tab" aria-controls="<%= objectClass.NAME %>" aria-selected="<%= objectClassIndex === 0 %>"><%= objectClass.NAME %></a>
                     </li>
                 <% }) %>
                 <li class="nav-item">
@@ -175,8 +175,8 @@
 
             <!-- Tab panes -->
             <div class="tab-content" id="myTabContent">
-                <% objectClassesDetails.forEach((objectClass, index) => { %>
-                    <div class="tab-pane fade <%= index === 0 ? 'show active' : '' %>" id="<%= objectClass.NAME %>" role="tabpanel" aria-labelledby="<%= objectClass.NAME %>-tab">
+                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => { %>
+                    <div class="tab-pane fade <%= objectClassIndex === 0 ? 'show active' : '' %>" id="<%= objectClass.NAME %>" role="tabpanel" aria-labelledby="<%= objectClass.NAME %>-tab">
                         <% ['MUST', 'MAY'].forEach(type => { %>
                             <h3 class="underline">Attributs <%= (type === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
                             <ul>
@@ -196,9 +196,12 @@
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
                                                 <input type="text"
                                                     class="editInput"
+                                                    data-ObjectClassIndex = objectClassIndex
                                                     placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
                                                     onfocus="valueOnfocus(this)"
-                                                    oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
+                                                    oninput="checkSaveButton();
+                                                             checkInputFunction(this, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);
+                                                        " />
                                                 <!-- Champ caché pour soumettre les valeurs au formulaire -->
                                                 <input type="hidden" id="<%= attrName %>" class="hiddenInput" name="<%= attrName %>" value="<%= objectAttribute.values ?JSON.stringify(objectAttribute.values) :[] %>">
                                                 <!-- Bouton d'ajout d'une valeur à l'attribut -->
@@ -211,9 +214,12 @@
                                             name="<%= attrName %>"
                                             value="<%= objectAttribute.values ?objectAttribute.values :'' %>"
                                             class="form-control"
+                                            data-ObjectClassIndex = objectClassIndex
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
                                             onfocus="valueOnfocus(this)"
-                                            oninput="checkSaveButton(); checkInputFunction(this, <%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);" />
+                                            oninput="checkSaveButton();
+                                                     checkInputFunction(this, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);
+                                                " />
                                     <% } %>
                                 </li>
                                 <% } }) %>
@@ -253,7 +259,7 @@
                                 <label for="newLabel"><strong>Libellé d'affichage de l'attribut :</strong></label>
                                 <input type="text" class="form-control" id="newLabel" name="newLabel" style='color:black;'>
                             </div>
-							<!-- Ajout des boutons radio -->
+                            <!-- Ajout des boutons radio -->
                             <div class="form-group">
                                 <label><strong>Type d'attribut :</strong></label><br>
                                 <div class="custom-radio-group"> <!-- Container flex pour les boutons radio -->
@@ -295,13 +301,13 @@
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-		<script src="/js/popupMultiValues.js"></script>
+        <script src="/js/popupMultiValues.js"></script>
         <script>
             let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut  
             let initialValueOnCurrentInput = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
 			const currentTabInputValues = {};
 
-            function checkInputFunction(input, attrName, objectAttribute, objectClassesDetails) {
+            function checkInputFunction(input, objectAttribute, objectClassesDetails) {
                 if (objectAttribute.valueCheck[0]) {
                     eval(objectAttribute.valueCheck[0]);
                     check(input, objectClassesDetails, initialValueOnCurrentInput);
@@ -532,6 +538,29 @@ console.log('input.defaultValue: ', input.defaultValue);*/
 //					}
 				}
 			}
+
+			function handleInputChange(input) {
+console.clear();
+console.log('changement sur : ', input.name);
+            }
+
+			// Gestion du changement d'un input formulaire
+			const inputs = document.querySelectorAll('#mainForm input');
+			// Ajoutez un écouteur d'événements à chaque champ d'entrée  
+			inputs.forEach(inputField => {
+				inputField.addEventListener('input', () => handleInputChange(inputField,));
+
+				// Configurer le MutationObserver pour chaque champ d'entrée modifié par script
+                const observer = new MutationObserver(() => {
+                    handleInputChange(inputField); // Appeler la fonction lors d'un changement
+                });
+
+				// Observer les changements de l'attribut 'value' du champ d'entrée
+                observer.observe(inputField, {
+                    attributes: true, // Observer les changements d'attributs
+                    attributeFilter: ['value'] // Filtrer pour ne réagir qu'aux changements de l'attribut 'value'
+                });
+			});
 
 			// Gestion des événements de changement d'onglet (maj des valeurs modifiées des autres onglets)
 			const navLinks = document.querySelectorAll('#myTab .nav-link');
