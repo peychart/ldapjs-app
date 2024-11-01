@@ -187,7 +187,7 @@
                                 %>
                                 <li>
                                     <strong><%= displayLabel %>:</strong>
-                                    <button type="button" class="edit-btn" onclick="openEditModal(<%= JSON.stringify(attrName) %>, <%= JSON.stringify(objectAttribute) %>)">
+                                    <button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
                                     <% if (objectAttribute.values && Array.isArray(objectAttribute.values)) { %>
@@ -196,14 +196,17 @@
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
                                                 <input type="text"
                                                     class="editInput"
-                                                    data-ObjectClassIndex = objectClassIndex
+                                                    data-object-class-index = '<%= objectClassIndex %>'
                                                     placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
-                                                    onfocus="valueOnfocus(this)"
                                                     oninput="checkSaveButton();
-                                                             checkInputFunction(this, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);
+                                                             checkInputFunction(this, '<%= attrName %>');
                                                         " />
                                                 <!-- Champ caché pour soumettre les valeurs au formulaire -->
-                                                <input type="hidden" id="<%= attrName %>" class="hiddenInput" name="<%= attrName %>" value="<%= objectAttribute.values ?JSON.stringify(objectAttribute.values) :[] %>">
+                                                <input type="hidden"
+                                                    id="<%= attrName %>"
+                                                    class="hiddenInput"
+                                                    name="<%= attrName %>"
+                                                    value="<%= objectAttribute.values ?JSON.stringify(objectAttribute.values) :[] %>">
                                                 <!-- Bouton d'ajout d'une valeur à l'attribut -->
                                                 <button type="button" class="add-button">+</button>
                                             </div>
@@ -212,13 +215,12 @@
                                     <% } else { %>
                                         <input type="text"
                                             name="<%= attrName %>"
-                                            value="<%= objectAttribute.values ?objectAttribute.values :'' %>"
+                                            value="<%= objectAttribute.values || '' %>"
                                             class="form-control"
-                                            data-ObjectClassIndex = objectClassIndex
+                                            data-object-class-index = '<%= objectClassIndex %>'
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
-                                            onfocus="valueOnfocus(this)"
                                             oninput="checkSaveButton();
-                                                     checkInputFunction(this, <%= JSON.stringify(objectAttribute) %>, <%= JSON.stringify(objectClassesDetails) %>);
+                                                     checkInputFunction(this, '<%= attrName %>');
                                                 " />
                                     <% } %>
                                 </li>
@@ -303,20 +305,17 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script src="/js/popupMultiValues.js"></script>
         <script>
-            let defaultAttributeLabel = ''; // Pour garder la valeur par défaut du nom d'attribut  
-            let initialValueOnCurrentInput = ''; // Mémorise les valeurs de champs avant toute saisie pour utilisation dans checkInputFunction()
+			let objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
 			const currentTabInputValues = {};
 
-            function checkInputFunction(input, objectAttribute, objectClassesDetails) {
+            function checkInputFunction(input, attrName) {
+				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
+				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
                 if (objectAttribute.valueCheck[0]) {
                     eval(objectAttribute.valueCheck[0]);
-                    check(input, objectClassesDetails, initialValueOnCurrentInput);
+                    check(input, objectClassesDetails, input.defaultValue);
                 }
             }
-
-			function valueOnfocus(input) {
-                initialValueOnCurrentInput = input.value;
-            };
 
 			// Fonction pour sauvegarder les valeurs des inputs de l'onglet actif
 			function saveInputValues(tabId) {
@@ -396,8 +395,9 @@
                 window.location.href = '/search'; // Redirection vers la route '/search'
             }
 
-            function openEditModal(attrName, objectAttribute) {
-                defaultAttributeLabel = attrName;
+            function openEditModal(button, attrName) {
+				const objectClassIndex = parseInt(button.dataset.objectClassIndex);
+				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
                 if (!document.getElementById('saveButton').disabled) {
                     alert("Opération impossible : il y a des modifications d'attributs en cours !");
                     return;
@@ -405,15 +405,15 @@
 
                 const newLabelInputField = document.getElementById('newLabel');
                 newLabelInputField.value = objectAttribute.customWording || '';
-                newLabelInputField.placeholder = defaultAttributeLabel;
+                newLabelInputField.placeholder = attrName;
 
 				const radio = (objectAttribute.MULTIVALUE === undefined) ?'schema' : (objectAttribute.MULTIVALUE ?'multiValue' :'singleValue');
 				document.getElementById(radio).checked = true;
 
                 document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
-                document.getElementById('attributeName').textContent = defaultAttributeLabel;
-				document.getElementById('attributeId').value = defaultAttributeLabel; // Pour envoi par le formulaire
+                document.getElementById('attributeName').textContent = attrName;
+				document.getElementById('attributeId').value = attrName; // Pour envoi par le formulaire
 
                 $('#editModal').modal('show');
             }
@@ -478,8 +478,8 @@
 						if (input.value !== input.defaultValue) {
 							isAnyInputChanged = true;
 /*console.log('\ninput.name: ', input.name);
-console.log('input.value: ', input.value);
-console.log('input.defaultValue: ', input.defaultValue);*/
+//console.log('input.value: ', input.value);
+//console.log('input.defaultValue: ', input.defaultValue);*/
 						}
 					}
                	});
@@ -540,7 +540,7 @@ console.log('input.defaultValue: ', input.defaultValue);*/
 			}
 
 			function handleInputChange(input) {
-console.clear();
+//console.clear();
 console.log('changement sur : ', input.name);
             }
 
@@ -548,7 +548,7 @@ console.log('changement sur : ', input.name);
 			const inputs = document.querySelectorAll('#mainForm input');
 			// Ajoutez un écouteur d'événements à chaque champ d'entrée  
 			inputs.forEach(inputField => {
-				inputField.addEventListener('input', () => handleInputChange(inputField,));
+				inputField.addEventListener('input', () => handleInputChange(inputField));
 
 				// Configurer le MutationObserver pour chaque champ d'entrée modifié par script
                 const observer = new MutationObserver(() => {
