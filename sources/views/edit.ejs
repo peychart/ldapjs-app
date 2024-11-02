@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -310,15 +310,15 @@
         <script>
 			let objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
 
-            function checkInputFunction(input, attrName) {
+			function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
 				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
 
 				// Excution des scripts personnailisés
-                if (objectAttribute.valueCheck[0]) {
-                    eval(objectAttribute.valueCheck[0]);
-                    check(input, objectClassesDetails, input.defaultValue);
-                }
+				if (objectAttribute.valueCheck[0]) {
+					eval(objectAttribute.valueCheck[0]);
+					check(input, objectClassesDetails, input.defaultValue);
+				}
 
 				// Mise à jour de l áttribut dans les autres oglets
 				const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
@@ -332,13 +332,12 @@
 
 				// Mise à jour de l'état du bouton de Validaion
 				checkSaveButton();
-            }
+			}
 
 			function validateMainForm() {
 				alert ("Désolé : fonction en cours d'implémentation ...");
 				return true;
 				return false;
-
 /*
 				// Exemple de validation : vérifier si l'email est valide
 				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
@@ -358,119 +357,119 @@
 			}
 
 			// Rafraichir la page et se repositionner sur l'onglet courant
-            function restoreValues() {
+			function restoreValues() {
 				saveCurrentTab();
 
 				// Rafraichir la page
 				window.location.reload();
-            }
+			}
 
 			// Abandon de la page
 			function exit() {
-                if (!document.getElementById('saveButton').disabled
+				if (!document.getElementById('saveButton').disabled
 					&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
 						return;
 
-                window.location.href = '/search'; // Redirection vers la route '/search'
-            }
+				window.location.href = '/search'; // Redirection vers la route '/search'
+			}
 
 			// Edition des propriétés d'attribut
-            function openEditModal(button, attrName) {
+			function openEditModal(button, attrName) {
 				const objectClassIndex = parseInt(button.dataset.objectClassIndex);
 				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
-                if (!document.getElementById('saveButton').disabled) {
-                    alert("Opération impossible : il y a des modifications d'attributs en cours !");
-                    return;
-                }
+				if (!document.getElementById('saveButton').disabled) {
+					alert("Opération impossible : il y a des modifications d'attributs en cours !");
+					return;
+				}
 
-                const newLabelInputField = document.getElementById('newLabel');
-                newLabelInputField.value = objectAttribute.customWording || '';
-                newLabelInputField.placeholder = attrName;
+				const newLabelInputField = document.getElementById('newLabel');
+				newLabelInputField.value = objectAttribute.customWording || '';
+				newLabelInputField.placeholder = attrName;
 
 				const radio = (objectAttribute.MULTIVALUE === undefined) ?'schema' : (objectAttribute.MULTIVALUE ?'multiValue' :'singleValue');
 				document.getElementById(radio).checked = true;
 
-                document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
+				document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
-                document.getElementById('attributeName').textContent = attrName;
+				document.getElementById('attributeName').textContent = attrName;
 				document.getElementById('attributeId').value = attrName; // Pour envoi par le formulaire
 
 				saveCurrentTab();
-                $('#editModal').modal('show');
-            }
+				$('#editModal').modal('show');
+			}
 
-            function changeModalSize(increase) {
-                const modalDialog = document.querySelector('#editModal .modal-dialog');
-                const currentClassList = modalDialog.classList;
-                const jsValidationTextarea = document.getElementById('jsValidation');
-                const greater = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(true)"]');
-                const lower = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(false)"]');
+			function changeModalSize(increase) {
+				const modalDialog = document.querySelector('#editModal .modal-dialog');
+				const currentClassList = modalDialog.classList;
+				const jsValidationTextarea = document.getElementById('jsValidation');
+				const greater = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(true)"]');
+				const lower = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(false)"]');
 
-                let currentSize = '';
-                if (currentClassList.contains('modal-sm')) {
-                    currentSize = 'sm';
-                } else if (currentClassList.contains('modal-lg')) {
-                    currentSize = 'lg';
-                } else if (currentClassList.contains('modal-xl')) {
-                    currentSize = 'xl';
-                }
+				let currentSize = '';
+				if (currentClassList.contains('modal-sm')) {
+					currentSize = 'sm';
+				} else if (currentClassList.contains('modal-lg')) {
+					currentSize = 'lg';
+				} else if (currentClassList.contains('modal-xl')) {
+					currentSize = 'xl';
+				}
 
-                lower.style.color = greater.style.color = 'black';
-                if (increase) {
-                    if (currentSize === 'sm') {
-                        currentClassList.remove('modal-sm');
-                        jsValidationTextarea.rows = 10;
-                    } else if (currentSize === '') {
-                        currentClassList.remove('modal-sm');
-                        currentClassList.add('modal-lg');
-                        jsValidationTextarea.rows = 15;
-                    } else if (currentSize === 'lg') {
-                        currentClassList.remove('modal-lg');
-                        currentClassList.add('modal-xl');
-                        jsValidationTextarea.rows = 20;
-                        greater.style.color = '#ffffe0'; 
-                        greater.blur(); 
-                    }
-                } else {
-                    if (currentSize === 'xl') {
-                        currentClassList.remove('modal-xl');
-                        currentClassList.add('modal-lg');
-                        jsValidationTextarea.rows = 15;
-                    } else if (currentSize === 'lg') {
-                        currentClassList.remove('modal-lg');
-                        jsValidationTextarea.rows = 10;
-                    } else if (currentSize === '') {
-                        currentClassList.remove('modal-lg');
-                        currentClassList.add('modal-sm');
-                        jsValidationTextarea.rows = 5;
-                        lower.style.color = '#ffffe0'; 
-                        lower.blur(); 
-                    }
-                }
-            }
+				lower.style.color = greater.style.color = 'black';
+				if (increase) {
+					if (currentSize === 'sm') {
+						currentClassList.remove('modal-sm');
+						jsValidationTextarea.rows = 10;
+					} else if (currentSize === '') {
+						currentClassList.remove('modal-sm');
+						currentClassList.add('modal-lg');
+						jsValidationTextarea.rows = 15;
+					} else if (currentSize === 'lg') {
+						currentClassList.remove('modal-lg');
+						currentClassList.add('modal-xl');
+						jsValidationTextarea.rows = 20;
+						greater.style.color = '#ffffe0'; 
+						greater.blur(); 
+					}
+				} else {
+					if (currentSize === 'xl') {
+						currentClassList.remove('modal-xl');
+						currentClassList.add('modal-lg');
+						jsValidationTextarea.rows = 15;
+					} else if (currentSize === 'lg') {
+						currentClassList.remove('modal-lg');
+						jsValidationTextarea.rows = 10;
+					} else if (currentSize === '') {
+						currentClassList.remove('modal-lg');
+						currentClassList.add('modal-sm');
+						jsValidationTextarea.rows = 5;
+						lower.style.color = '#ffffe0'; 
+						lower.blur(); 
+					}
+				}
+			}
 
 			// Valide le bouton 'saveButton' seulement sur modification d'attributs
-            function checkSaveButton() {
-                const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
-                let isAnyInputChanged = false;
+			function checkSaveButton() {
+				const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
+				let isAnyInputChanged = false;
 
-                inputs.forEach(input => {
+				inputs.forEach(input => {
 					if (input.name)
 						if (input.value !== input.defaultValue)
 							isAnyInputChanged = true;
-               	});
+			   	});
 
-                const saveButton = document.getElementById('saveButton');
-                if (isAnyInputChanged) {
-                    saveButton.disabled = false;
-                    saveButton.classList.add('enabled');
-                    saveButton.classList.remove('disabled');
-                } else {
-                    saveButton.disabled = true;
-                    saveButton.classList.remove('enabled');
-                    saveButton.classList.add('disabled');
-                }
-            }
+				const saveButton = document.getElementById('saveButton');
+				if (isAnyInputChanged) {
+					saveButton.disabled = false;
+					saveButton.classList.add('enabled');
+					saveButton.classList.remove('disabled');
+				} else {
+					saveButton.disabled = true;
+					saveButton.classList.remove('enabled');
+					saveButton.classList.add('disabled');
+				}
+			}
 
 			// Gestion de la soumission du formulaire
 			const form = document.querySelector('form'); // Sélection formulaire
@@ -497,7 +496,7 @@
 				}
 			};
 
-        </script>
-    </div>
+		</script>
+	</div>
 </body>
 </html>
