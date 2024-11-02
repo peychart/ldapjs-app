@@ -18,6 +18,9 @@ const {
 	getAllMustAttributes,
     updateAttributeConfigInLDAP,
 } = require('./utils/ldapUtils');
+const {
+	isEqual
+} = require('./utils/utils');
 const createLogger = require('./utils/log');
 
 // Chargement de la configuration  
@@ -362,8 +365,7 @@ app.get('/edit/:dn', async (req, res) => {
 	    });
 	});
 
-console.clear();
-console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+//console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
     } catch (error) {
