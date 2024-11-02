@@ -165,7 +165,15 @@
             <ul class="nav nav-tabs" id="myTab" role="tablist">
                 <% objectClassesDetails.forEach((objectClass, objectClassIndex) => { %>
                     <li class="nav-item">
-                        <a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>" id="<%= objectClass.NAME %>-tab" data-toggle="tab" href="#<%= objectClass.NAME %>" role="tab" aria-controls="<%= objectClass.NAME %>" aria-selected="<%= objectClassIndex === 0 %>"><%= objectClass.NAME %></a>
+                        <a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>"
+                            id="<%= objectClass.NAME %>-tab"
+                            data-toggle="tab"
+                            href="#<%= objectClass.NAME %>"
+                            role="tab"
+                            aria-controls="<%= objectClass.NAME %>"
+                            aria-selected="<%= objectClassIndex === 0 %>">
+                                <%= objectClass.NAME %>
+                            </a>
                     </li>
                 <% }) %>
                 <li class="nav-item">
@@ -183,10 +191,9 @@
                                 <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
                                     if (objectClass.ATTRIBUTE[attrName].type === type) {
                                         const objectAttribute = objectClass.ATTRIBUTE[attrName];
-                                        const displayLabel = objectAttribute.customWording || attrName;
                                 %>
                                 <li>
-                                    <strong><%= displayLabel %>:</strong>
+                                    <strong><%= objectAttribute.customWording || attrName %>:</strong>
                                     <button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
@@ -198,9 +205,7 @@
                                                     class="editInput"
                                                     data-object-class-index = '<%= objectClassIndex %>'
                                                     placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
-                                                    oninput="checkSaveButton();
-                                                             checkInputFunction(this, '<%= attrName %>');
-                                                        " />
+                                                    oninput="checkInputFunction(this, '<%= attrName %>');" />
                                                 <!-- Champ caché pour soumettre les valeurs au formulaire -->
                                                 <input type="hidden"
                                                     id="<%= attrName %>"
@@ -219,9 +224,7 @@
                                             class="form-control"
                                             data-object-class-index = '<%= objectClassIndex %>'
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
-                                            oninput="checkSaveButton();
-                                                     checkInputFunction(this, '<%= attrName %>');
-                                                " />
+                                            oninput="checkInputFunction(this, '<%= attrName %>');" />
                                     <% } %>
                                 </li>
                                 <% } }) %>
@@ -281,7 +284,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="jsValidation"><strong>Code JS de contrôle de saisie :</strong></label>
-                                <textarea class="form-control" id="jsValidation" name="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
+                                <textarea class="form-control" id="jsValidation" name="jsValidation" rows="5" placeholder="Saisissez le code JavaScript ici..."></textarea>
                             </div>
                             <input type="hidden" id="attributeId" name="attributeId"> <!-- Champ caché pour l'attributeName -->
                         </div>
@@ -306,87 +309,63 @@
         <script src="/js/popupMultiValues.js"></script>
         <script>
 			let objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
-			const currentTabInputValues = {};
 
             function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
 				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
+
+				// Excution des scripts personnailisés
                 if (objectAttribute.valueCheck[0]) {
                     eval(objectAttribute.valueCheck[0]);
                     check(input, objectClassesDetails, input.defaultValue);
                 }
+
+				// Mise à jour de l áttribut dans les autres oglets
+				const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
+				allTabs.forEach(tab => {
+					tab.querySelectorAll('input').forEach((field) => {
+						if (field.name === input.name ) {
+							field.value = input.value;
+						}
+					});
+				});
+
+				// Mise à jour de l'état du bouton de Validaion
+				checkSaveButton();
             }
-
-			// Fonction pour sauvegarder les valeurs des inputs de l'onglet actif
-			function saveInputValues(tabId) {
-				const inputs = document.querySelectorAll(`#${tabId} input[type="text"], #${tabId} input[type="hidden"]`);
-
-				inputs.forEach(input => {
-					// Stocker la valeur de chaque input
-					if (input.name)
-						currentTabInputValues[input.name] = input.value;
-				});
-			}
-
-			// Fonction pour restaurer les valeurs des inputs dans l'onglet actif
-			function restoreInputValues(tabId) {
-				const inputs = document.querySelectorAll(`#${tabId} input[type="text"], #${tabId} input[type="hidden"]`);
-
-				inputs.forEach(input => {
-					if (input.name && currentTabInputValues[input.name] !== undefined) {
-						input.value = currentTabInputValues[input.name]; // Restaurer la valeur si elle existe  
-					}
-				});
-			}
 
 			function validateMainForm() {
 				alert ("Désolé : fonction en cours d'implémentation ...");
 				return true;
-//				return false;
+				return false;
 
-/*				// Exemple de validation : vérifier si l'email est valide
+/*
+				// Exemple de validation : vérifier si l'email est valide
 				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
 				if (!emailPattern.test(email)) {
 					errorMessage.innerText = 'Veuillez entrer une adresse email valide.';
 					return false; // Empêche l'envoi du formulaire
 				}
-
-		// Côté serveur :
-				// DN de l'entrée à modifier
-				const dn = 'cn=John Doe,dc=example,dc=com';
-
-				// Modifications à apporter  
-				const changes = [
-					{ operation: 'replace', modification: { mail: 'john.doe@example.com' } },
-					{ operation: 'add', modification: { telephoneNumber: '+123456789' } },
-					{ operation: 'delete', modification: { description: '' } }
-				];
-
-				// Effectuer les modifications  
-				changes.forEach(change => {
-					client.modify(dn, change, (err) => {
-						if (err) {
-							console.error(`Erreur lors de la modification ${change.operation} :`, err);
-						} else {
-							console.log(`Modification ${change.operation} effectuée avec succès.`);
-						}
-					});
-				});
 */
 			}
 
-            function restoreValues() {
-				// Rafraichir la page et se repositionner sur l'onglet courant
+			// Sauvegrder la position de l'onglet courant
+			function saveCurrentTab(){
 				const activeTab = document.querySelector('.nav-link.active');
-				const activeTabId = activeTab ? activeTab.id : null;
-				if (activeTabId) {
+				if (activeTab ? activeTab.id : null) {
 					localStorage.setItem('activeTab', activeTabId);
 				}
+			}
+
+			// Rafraichir la page et se repositionner sur l'onglet courant
+            function restoreValues() {
+				saveCurrentTab();
 
 				// Rafraichir la page
 				window.location.reload();
             }
 
+			// Abandon de la page
 			function exit() {
                 if (!document.getElementById('saveButton').disabled
 					&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
@@ -395,6 +374,7 @@
                 window.location.href = '/search'; // Redirection vers la route '/search'
             }
 
+			// Edition des propriétés d'attribut
             function openEditModal(button, attrName) {
 				const objectClassIndex = parseInt(button.dataset.objectClassIndex);
 				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
@@ -415,6 +395,7 @@
                 document.getElementById('attributeName').textContent = attrName;
 				document.getElementById('attributeId').value = attrName; // Pour envoi par le formulaire
 
+				saveCurrentTab();
                 $('#editModal').modal('show');
             }
 
@@ -468,24 +449,18 @@
                 }
             }
 
-			// Valide le bouton seulement sur modifications
+			// Valide le bouton 'saveButton' seulement sur modification d'attributs
             function checkSaveButton() {
                 const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
                 let isAnyInputChanged = false;
 
                 inputs.forEach(input => {
-					if (input.name) {
-						if (input.value !== input.defaultValue) {
+					if (input.name)
+						if (input.value !== input.defaultValue)
 							isAnyInputChanged = true;
-/*console.log('\ninput.name: ', input.name);
-//console.log('input.value: ', input.value);
-//console.log('input.defaultValue: ', input.defaultValue);*/
-						}
-					}
                	});
 
                 const saveButton = document.getElementById('saveButton');
-
                 if (isAnyInputChanged) {
                     saveButton.disabled = false;
                     saveButton.classList.add('enabled');
@@ -497,86 +472,10 @@
                 }
             }
 
-			// Mise à jour de l'état du bouton de validation du Main formulaire
-            const tabs = document.querySelectorAll('#myTab .nav-link');
-            tabs.forEach((tab) => {
-                tab.addEventListener('click', () => {
-                    const activeTab = document.querySelector('.tab-pane.show');
-                    if (activeTab) {
-                        activeTab.querySelectorAll('input').forEach((field) => {
-                            checkSaveButton(field);
-                        });
-                    }
-
-                    const newActiveTab = document.querySelector(tab.getAttribute('href'));
-                    if (newActiveTab) {
-                        newActiveTab.querySelectorAll('input').forEach((field) => {
-                            checkSaveButton(field);
-                        });
-                    }
-                });
-            });
-
-			// Synchronisation des inputs inter-onglets
-			function handleTabValues(All=true) {
-				// Récupérer l'onglet actif actuel
-				const currentTab = document.querySelector('.tab-pane.show');
-				if (currentTab) {
-					// Sauvegarder les valeurs de l'onglet actuel
-					saveInputValues(currentTab.id);
-				
-/*					if (!all) {
-						// Récupérer l'ID de l'onglet nouvellement sélectionné
-						const newTabId = document.querySelector('.nav-link.active').getAttribute('href').substring(1);
-						// Restaurer les valeurs dans le nouvel onglet
-						restoreInputValues(newTabId);
-                    } else {*/
-						const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
-						allTabs.forEach(tab => {
-							restoreInputValues(tab.id); // Restaurer les valeurs pour cet onglet
-						});
-//					}
-				}
-			}
-
-			function handleInputChange(input) {
-//console.clear();
-console.log('changement sur : ', input.name);
-            }
-
-			// Gestion du changement d'un input formulaire
-			const inputs = document.querySelectorAll('#mainForm input');
-			// Ajoutez un écouteur d'événements à chaque champ d'entrée  
-			inputs.forEach(inputField => {
-				inputField.addEventListener('input', () => handleInputChange(inputField));
-
-				// Configurer le MutationObserver pour chaque champ d'entrée modifié par script
-                const observer = new MutationObserver(() => {
-                    handleInputChange(inputField); // Appeler la fonction lors d'un changement
-                });
-
-				// Observer les changements de l'attribut 'value' du champ d'entrée
-                observer.observe(inputField, {
-                    attributes: true, // Observer les changements d'attributs
-                    attributeFilter: ['value'] // Filtrer pour ne réagir qu'aux changements de l'attribut 'value'
-                });
-			});
-
-			// Gestion des événements de changement d'onglet (maj des valeurs modifiées des autres onglets)
-			const navLinks = document.querySelectorAll('#myTab .nav-link');
-				navLinks.forEach(link => {
-				link.addEventListener('click', () => {
-					handleTabValues();
-				});
-			});
-
 			// Gestion de la soumission du formulaire
-			const form = document.querySelector('form'); // Sélectionnez votre formulaire
+			const form = document.querySelector('form'); // Sélection formulaire
 			if (form && form.id === 'mainForm') {
 				form.addEventListener('submit', (event) => {
-					// Synchoniser les champs de tous les autres onglets
-					handleTabValues();
-
 					// Validation des données modifiées
 					if (!validateMainForm()) {
 						// Eviter la soumission du formulaire
@@ -590,7 +489,6 @@ console.log('changement sur : ', input.name);
 			// Fonction pour restaurer la position sur l'onglet actif après le rechargement page
 			window.onload = function() {
 				const activeTabId = localStorage.getItem('activeTab');
-
 				if (activeTabId) {
 					const targetTab = document.getElementById(activeTabId);
 					if (targetTab) {
