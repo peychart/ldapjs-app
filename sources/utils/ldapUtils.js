@@ -78,6 +78,13 @@ async function updateLDAP(client, dn, changes) {
 
 console.log('changes: ', JSON.stringify(changes, null, 2)); return false; // pour debug
 
+		// Modifications à apporter  
+		const changes = [
+			{ operation: 'replace', modification: { mail: 'john.doe@example.com' } },
+			{ operation: 'add', modification: { telephoneNumber: '+123456789' } },
+			{ operation: 'delete', modification: { description: '' } }
+		];
+
 		const promises = changes.map(change => {
 			return new Promise((resolve, reject) => {
 				changes.forEach(change => {
