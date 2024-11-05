@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -336,6 +336,13 @@
 
 			function validateMainForm() {
 				alert ("Désolé : fonction en cours d'implémentation ...");
+
+				// Passer l'info du format JSON tableau des inputs hidden au serveur
+				this.querySelectorAll('input[type="hidden"]').forEach(input => {
+					if (input.type === 'hidden' )
+						input.name += '[]'
+				});
+
 				return true;
 				return false;
 /*
