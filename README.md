@@ -168,9 +168,13 @@ function check(input, data, initialValue) {
 
 3. (à suivre) ...
 
-
+Connexion :
  ![](doc/images/login.png)
+
+Recherche :
  ![](doc/images/search.png)
+
+Edition :
  ![](doc/images/edit.png)
 
 
