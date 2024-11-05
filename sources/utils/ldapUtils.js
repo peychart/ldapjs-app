@@ -86,21 +86,23 @@ function generateLDIF(oldObject, newObject, dn) {
 				changes.push({
 					operation: 'delete',
 					modification: {
-						[key]: oldObject[key]
+						type: key,
+						values: [oldObject[key]]
 					}
 				});
 			} else {
 				const newValue = newObject[key];
 				const oldValue = Array.isArray(newValue) 
-                        ? (Array.isArray(oldObject[key]) ? oldObject[key] : [oldObject[key]]) 
-                        : (Array.isArray(oldObject[key]) ? oldObject[key][0] : oldObject[key]);
+						? (Array.isArray(oldObject[key]) ? oldObject[key] : [oldObject[key]]) 
+						: (Array.isArray(oldObject[key]) ? oldObject[key][0] : oldObject[key]);
 
 				if (!isEqual(oldValue, newValue)) {
 					// Si la clé existe dans les deux objets mais avec des valeurs différentes  
 					changes.push({
 						operation: 'replace',
 						modification: {
-							[key]: newObject[key]
+							type: key, 
+							values: Array.isArray(newValue) ? newValue : [newValue]
 						}
 					});
 				}
@@ -122,30 +124,42 @@ function generateLDIF(oldObject, newObject, dn) {
 			changes.push({
 				operation: 'add',
 				modification: {
-					[key]: newObject[key]
+					 type: key,
+					 values: Array.isArray(newObject[key]) ? newObject[key] : [newObject[key]]
 				}
 			});
 		}
 	});
 
 	// Convertir les changements en format compatible pour client.modify  
-	return { dn, changes: changes };
+	return { dn, changes };
 }
 
 // Mise a jour d'un dn LDAP
 async function updateLDAP(client, dn, newObject) {
+	// Validation des paramètres
+	if (!client || !dn || !newObject) {
+		throw new Error('Client, DN, et nouvel objet sont requis.');
+	}
+
 	try {
 		const oldObject = await searchLDAP(client, dn, {'scope': 'base', 'attributes': '*'});
+
+		if (!oldObject || oldObject.length === 0) {
+			throw new Error(`Aucun objet trouvé pour DN: ${dn}`);
+		}
+
+		// Génération du LDIF des changements
 		const { changes } = generateLDIF(oldObject[0] || null, newObject, dn);
 
-console.clear();	//pour debug
-console.log('oldObject:', oldObject);	//pour debug
-console.log('\n\nnewObject:', newObject);	//pour debug
-console.log('\n\nChanges to be submitted:', changes);	//pour debug
-return true; // pour debug
+//console.clear();	//pour debug
+//console.log('oldObject:', oldObject);	//pour debug
+//console.log('\n\nnewObject:', newObject);	//pour debug
+//console.log('\n\nChanges to be submitted:', JSON.stringify(changes, null, 2));	//pour debug
+//return true; // pour debug
 
 		// Exécution d'une seule requête pour toutes les modifications  
-		await new Promise((resolve, reject) => {
+		if (changes.length) await new Promise((resolve, reject) => {
 			client.modify(dn, changes, (err) => {
 				if (err) {
 						console.error(`Erreur lors de l'application des changements :`, err);
@@ -155,29 +169,11 @@ return true; // pour debug
 				}
 			});
 		});
-/* Si la base LDAP ne sait pas faire ce qui précède : 
-		const promises = changes.map(change => {
-			return new Promise((resolve, reject) => {
-				changes.forEach(change => {
-					client.modify(dn, change, (err) => {
-						if (err) {
-							console.error(`Erreur lors de la modification ${change.operation} :`, err);
-							reject(err); // Rejeter la promesse en cas d'erreur  
-						} else {
-							resolve(); // Résoudre la promesse si la modification réussit  
-						}
-					});
-				});
-			});
-		});
 
-		// Attendre que toutes les modifications soient terminées
-		await Promise.all(promises);
-*/
 		return true;
 	} catch(err) {
 		console.error(`Erreur dans de mise à jour de la base LDAP : ${err.message}`);
-		throw err; // Relance de l'erreur
+		throw err; // Relance de l'erreur pour propagation
 	}
 }
 
