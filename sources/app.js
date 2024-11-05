@@ -387,53 +387,32 @@ app.post('/edit/:dn', async (req, res) => {
         // Connexion au serveur LDAP 
         await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-        // Récupérer les clés du corps de la requête
-		const tmp = {};
-		const results = {};
+		// Traitement de la réponse  
+		const results = Object.keys(req.body).reduce((acc, key) => {
+			// Dédoubler les champs input de la réponse (répartis sur les onglets)) :
+			const value = Array.isArray(req.body[key]) ? req.body[key][0] : req.body[key];
 
-console.log('req.body: ', req.body);
+			// Parse JSON pour les clés marquées de '[]'
+			const safeParse = (val) => {
+				try {
+					return JSON.parse(val);
+				} catch (error) {
+					return val; // Retourne la valeur d'origine en cas d'erreur  
+				}
+			};
 
-		// Dédoubler les réponses :
-		Object.keys(req.body).forEach(key => {
-			if (Array.isArray(req.body[key])) {
-				tmp[key] = [...new Set(req.body[key])];
-				if (tmp[key].length === 1 )
-					tmp[key] = tmp[key][0];
+			if (key.endsWith('_hidden')  || key === 'businessCategory') {
+				const baseKey = key.slice(0, -7); // Enlever '[]' du nom de clé  
+
+				// Si la valeur est un tableau, parser chaque élément  
+				acc[baseKey] = Array.isArray(value) ? value.map(safeParse) : safeParse(value);
 			} else {
-				tmp[key] = req.body[key];
+				// Pour les autres champs, conserver la valeur  
+				acc[key] = value;
 			}
-		});
 
-		// Parse des inputs marqués avec '[]'
-		Object.keys(tmp).forEach(key => {
-            if (key.endsWith('[]')) {
-				const baseKey = key.slice(0, -2); // Enlever '[]' du nom de clé  
-                const value = tmp[key];
-
-			// Si la valeur est un tableau, essayons de parser chaque élément  
-                if (Array.isArray(value)) {
-                    results[baseKey] = value.map(item => {
-                        try {
-                            return JSON.parse(item); // Parser chaque élément du tableau  
-                        } catch (error) {
-                            console.error(`Erreur lors du parsing de ${item}:`, error);
-                            return item; // Retourner l'élément d'origine en cas d'erreur  
-                        }
-                    });
-                } else {
-                    // Si ce n'est pas un tableau, essayer de parser la valeur unique  
-                    try {
-                        results[baseKey] = JSON.parse(value); // Parser la valeur JSON  
-                    } catch (error) {
-                        console.error(`Erreur lors du parsing de ${value}:`, error);
-                        results[baseKey] = value; // Retourner la valeur d'origine en cas d'erreur  
-                    }
-                }
-            } else {
-                // Pour les autres champs, conserver la valeur  
-                results[key] = tmp[key];
-            }
-		});
+			return acc;
+		}, {});
 
 		// Mise à jour de la base LDAP
 		await updateLDAP(client, dn, results);
