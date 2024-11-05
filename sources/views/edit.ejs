@@ -308,7 +308,7 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script src="/js/popupMultiValues.js"></script>
         <script>
-			let objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
+			const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
 
 			function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
@@ -334,17 +334,15 @@
 				checkSaveButton();
 			}
 
-			function validateMainForm() {
+			function validateMainForm(form) {
 				alert ("Désolé : fonction en cours d'implémentation ...");
 
-				// Passer l'info du format JSON tableau des inputs hidden au serveur
-				this.querySelectorAll('input[type="hidden"]').forEach(input => {
-					if (input.type === 'hidden' )
-						input.name += '[]'
+				// Passer l'info au serveur du format JSON [] des inputs hidden de la 'mainForm' (attributs multi-valués)
+				form.querySelectorAll('input[type="hidden"]').forEach(input => {
+					input.name += '_hidden'
 				});
 
-				return true;
-				return false;
+				//return false;
 /*
 				// Exemple de validation : vérifier si l'email est valide
 				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
@@ -353,6 +351,7 @@
 					return false; // Empêche l'envoi du formulaire
 				}
 */
+				return true;
 			}
 
 			// Sauvegrder la position de l'onglet courant
@@ -399,7 +398,7 @@
 				document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
 				document.getElementById('attributeName').textContent = attrName;
-				document.getElementById('attributeId').value = attrName; // Pour envoi par le formulaire
+				document.getElementById('attributeId').value = attrName; // Pour envoi par le formulaire lors de la soumission
 
 				saveCurrentTab();
 				$('#editModal').modal('show');
@@ -483,7 +482,7 @@
 			if (form && form.id === 'mainForm') {
 				form.addEventListener('submit', (event) => {
 					// Validation des données modifiées
-					if (!validateMainForm()) {
+					if (!validateMainForm(form)) {
 						// Eviter la soumission du formulaire
 						event.preventDefault();
 
