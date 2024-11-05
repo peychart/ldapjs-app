@@ -354,14 +354,11 @@
 			}
 
 			function validateMainForm(form) {
-				alert ("Désolé : fonction en cours d'implémentation ...");
-
 				// Passer l'info au serveur du format JSON [] des inputs hidden de la 'mainForm' (attributs multi-valués)
 				form.querySelectorAll('input[type="hidden"]').forEach(input => {
 					input.name += '_hidden'
 				});
 
-				//return false;
 /*
 				// Exemple de validation : vérifier si l'email est valide
 				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
@@ -401,12 +398,30 @@
 				window.location.href = '/search'; // Redirection vers la route '/search'
 			}
 
-			function deleteEntry() {
-				// Logique pour supprimer l'entrée  
+			async function deleteEntry() {
 				if (confirm("Êtes-vous sûr de vouloir supprimer cette entrée ?")) {
 
-					// Appel à la logique de suppression ici  
-					console.log("Entrée supprimée (à compléter...)");
+					// Logique de suppression de l'entrée dn
+					try {
+						const response = await fetch("/delete/<%= dn %>", {
+							method: 'POST',
+								headers: {
+								'Content-Type': 'application/json'
+								}
+						});
+
+						const data = await response.json();
+
+						if (response.ok) {
+							alert(data.message); // Message de succès
+							window.location.href = data.redirect; // Redirection vers /search
+						} else {
+							alert(`Erreur: ${data.error}`);
+						}
+					} catch (error) {
+						console.error('Erreur:', error);
+						alert('Erreur lors de la suppression de l\'élément.');
+					}
 				}
 			}
 
