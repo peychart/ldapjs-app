@@ -113,6 +113,10 @@
                 errorMessage.innerText = '';
             }
         });
+        document.getElementById('login').addEventListener('change', function() {
+			// Focus password
+			document.getElementById('password').focus();
+		});
         document.getElementById('password').addEventListener('focus', function() {
             // Efface le message d'erreur  
             const errorMessage = document.getElementById('error-message');
