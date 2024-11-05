@@ -80,7 +80,7 @@ function generateLDIF(oldObject, newObject, dn) {
 
 	// Parcourir les propriétés de l'ancien objet  
 	if (oldObject !== null && typeof oldObject === 'object') Object.keys(oldObject).forEach(key => {
-		if (oldObject.hasOwnProperty(key) && key !== 'dn') {
+		if (oldObject.hasOwnProperty(key) && key !== 'dn' && key !== 'objectClass') {
 			if (!newObject || !newObject.hasOwnProperty(key)) {
 				// Si la clé n'est pas dans le nouvel objet, elle a été supprimée  
 				changes.push({
@@ -89,14 +89,21 @@ function generateLDIF(oldObject, newObject, dn) {
 						[key]: oldObject[key]
 					}
 				});
-			} else if (!isEqual(oldObject[key], newObject[key])) {
-				// Si la clé existe dans les deux objets mais avec des valeurs différentes  
-				changes.push({
-					operation: 'replace',
-					modification: {
-						[key]: newObject[key]
-					}
-				});
+			} else {
+				const newValue = newObject[key];
+				const oldValue = Array.isArray(newValue) 
+                        ? (Array.isArray(oldObject[key]) ? oldObject[key] : [oldObject[key]]) 
+                        : (Array.isArray(oldObject[key]) ? oldObject[key][0] : oldObject[key]);
+
+				if (!isEqual(oldValue, newValue)) {
+					// Si la clé existe dans les deux objets mais avec des valeurs différentes  
+					changes.push({
+						operation: 'replace',
+						modification: {
+							[key]: newObject[key]
+						}
+					});
+				}
 			}
 		}
 	});
@@ -128,17 +135,13 @@ function generateLDIF(oldObject, newObject, dn) {
 // Mise a jour d'un dn LDAP
 async function updateLDAP(client, dn, newObject) {
 	try {
-		const tmp = await searchLDAP(client, dn, {'scope': 'base', 'attributes': '*'});
-		const oldObject = tmp.map(entry => {
-            const { objectClass, ...oldObject } = entry; // Exclusion de objectClass  
-            return oldObject; // Retourner les attributs filtrés  
-        });
+		const oldObject = await searchLDAP(client, dn, {'scope': 'base', 'attributes': '*'});
 		const { changes } = generateLDIF(oldObject[0] || null, newObject, dn);
 
 
-console.log('oldObject:', oldObject);
-console.log('\n\nnewObject:', newObject);
-console.log('\n\nChanges to be submitted:', changes);
+console.log('oldObject:', oldObject);	//pour debug
+console.log('\n\nnewObject:', newObject);	//pour debug
+console.log('\n\nChanges to be submitted:', changes);	//pour debug
 
 return false; // pour debug
 
