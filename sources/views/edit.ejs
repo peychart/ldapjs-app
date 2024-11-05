@@ -56,7 +56,7 @@
             padding: 0; /* Supprime le padding pour un bouton plus compact */
             font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
         }
-        .edit-btn i {
+        .edit-btn {
             font-size: 0.8em; /* Réduit la taille de l'icône */
         }
         .btn-restore {
@@ -145,6 +145,18 @@
             cursor: pointer;
             border-radius: 5px;
         }
+        .btn-delete {
+            background-color: #dc3545; /* Rouge pour indiquer une action de suppression */
+            color: white; /* Texte en blanc pour un bon contraste */
+            border: none; /* Retirer la bordure par défaut */
+            padding: 10px 15px; /* Espacement interne */
+            cursor: pointer; /* Changer le curseur pour indiquer que c'est cliquable */
+            border-radius: 5px; /* Coins arrondis */
+            transition: background-color 0.3s; /* Animation de changement de couleur */
+        }
+        .btn-delete:hover {
+            background-color: #c82333; /* Couleur plus foncée au survol */
+        }
     </style>
 </head>
 <body>
@@ -155,10 +167,16 @@
         <form id="mainForm" action="/edit/<%= dn %>" method="POST">
 
             <!-- Conteneur pour les boutons avec Flexbox -->
-            <div class="d-flex justify-content-end mb-3">
-                <button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
-                <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Exit</button>
-                <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
+            <div class="d-flex justify-content-between mb-3">
+                <div class="d-flex"> <!-- Boutons à gauche -->
+                    <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
+                    <button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
+                    <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Sortir</button>
+                </div>
+
+                <div class="d-flex"> <!-- Boutons à droite -->
+                    <button type="button" id="deleteButton" class="btn btn-delete ml-2" onclick="deleteEntry()">Supprimer</button>
+                </div>
             </div>
 
             <!-- Nav tabs -->
@@ -309,6 +327,7 @@
         <script src="/js/popupMultiValues.js"></script>
         <script>
 			const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
+			let activeTabId;
 
 			function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
@@ -364,9 +383,12 @@
 
 			// Rafraichir la page et se repositionner sur l'onglet courant
 			function restoreValues() {
-				saveCurrentTab();
+				if (!document.getElementById('saveButton').disabled
+					&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir les abandonner ?") )
+						return;
 
 				// Rafraichir la page
+				saveCurrentTab();
 				window.location.reload();
 			}
 
@@ -377,6 +399,15 @@
 						return;
 
 				window.location.href = '/search'; // Redirection vers la route '/search'
+			}
+
+			function deleteEntry() {
+				// Logique pour supprimer l'entrée  
+				if (confirm("Êtes-vous sûr de vouloir supprimer cette entrée ?")) {
+
+					// Appel à la logique de suppression ici  
+					console.log("Entrée supprimée (à compléter...)");
+				}
 			}
 
 			// Edition des propriétés d'attribut
@@ -493,7 +524,7 @@
 
 			// Fonction pour restaurer la position sur l'onglet actif après le rechargement page
 			window.onload = function() {
-				const activeTabId = localStorage.getItem('activeTab');
+				activeTabId = localStorage.getItem('activeTab');
 				if (activeTabId) {
 					const targetTab = document.getElementById(activeTabId);
 					if (targetTab) {
