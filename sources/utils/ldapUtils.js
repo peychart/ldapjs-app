@@ -138,20 +138,10 @@ async function updateLDAP(client, dn, newObject) {
 		const oldObject = await searchLDAP(client, dn, {'scope': 'base', 'attributes': '*'});
 		const { changes } = generateLDIF(oldObject[0] || null, newObject, dn);
 
-
 console.log('oldObject:', oldObject);	//pour debug
 console.log('\n\nnewObject:', newObject);	//pour debug
 console.log('\n\nChanges to be submitted:', changes);	//pour debug
-
-return false; // pour debug
-
-		// Modifications à apporter  
-/*		const changes = [
-			{ operation: 'replace', modification: { mail: 'john.doe@example.com' } },
-			{ operation: 'add', modification: { telephoneNumber: '+123456789' } },
-			{ operation: 'delete', modification: { description: '' } }
-		];
-*/
+return true; // pour debug
 
 		const promises = changes.map(change => {
 			return new Promise((resolve, reject) => {
