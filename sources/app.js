@@ -263,7 +263,7 @@ app.post('/search', async (req, res) => {
 	// Récupérer les résultats de la recherche LDAP
 	const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
-        client.unbind();
+	client.unbind();
 
 	// Passer le searchTerm à la vue  
 	return res.render('search', { results, searchTerm: searchTerm, error: null });
@@ -388,18 +388,51 @@ app.post('/edit/:dn', async (req, res) => {
         await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
         // Récupérer les clés du corps de la requête
+		const tmp = {};
 		const results = {};
-		const keys = Object.keys(req.body);
 
-		// 
-		keys.forEach(key => {
+console.log('req.body: ', req.body);
+
+		// Dédoubler les réponses :
+		Object.keys(req.body).forEach(key => {
 			if (Array.isArray(req.body[key])) {
-				results[key] = [...new Set(req.body[key])];
-				if (results[key].length === 1 )
-					results[key] = results[key][0];
+				tmp[key] = [...new Set(req.body[key])];
+				if (tmp[key].length === 1 )
+					tmp[key] = tmp[key][0];
 			} else {
-				results[key] = req.body[key];
+				tmp[key] = req.body[key];
 			}
+		});
+
+		// Parse des inputs marqués avec '[]'
+		Object.keys(tmp).forEach(key => {
+            if (key.endsWith('[]')) {
+				const baseKey = key.slice(0, -2); // Enlever '[]' du nom de clé  
+                const value = tmp[key];
+
+			// Si la valeur est un tableau, essayons de parser chaque élément  
+                if (Array.isArray(value)) {
+                    results[baseKey] = value.map(item => {
+                        try {
+                            return JSON.parse(item); // Parser chaque élément du tableau  
+                        } catch (error) {
+                            console.error(`Erreur lors du parsing de ${item}:`, error);
+                            return item; // Retourner l'élément d'origine en cas d'erreur  
+                        }
+                    });
+                } else {
+                    // Si ce n'est pas un tableau, essayer de parser la valeur unique  
+                    try {
+                        results[baseKey] = JSON.parse(value); // Parser la valeur JSON  
+                    } catch (error) {
+                        console.error(`Erreur lors du parsing de ${value}:`, error);
+                        results[baseKey] = value; // Retourner la valeur d'origine en cas d'erreur  
+                    }
+                }
+            } else {
+                // Pour les autres champs, conserver la valeur  
+                results[key] = tmp[key];
+            }
 		});
 
 		// Mise à jour de la base LDAP
