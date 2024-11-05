@@ -15,7 +15,7 @@ function isEqual(value1, value2) {
             }
             // Compare chaque élément des tableaux  
             for (let i = 0; i < value1.length; i++) {
-                if (!isQual(value1[i], value2[i])) {
+                if (!isEqual(value1[i], value2[i])) {
                     return false; // Un élément ne correspond pas  
                 }
             }
@@ -32,7 +32,7 @@ function isEqual(value1, value2) {
 
         // Compare chaque clé et valeur  
         for (const key of keys1) {
-            if (!keys2.includes(key) || !isQual(value1[key], value2[key])) {
+            if (!keys2.includes(key) || !isEqual(value1[key], value2[key])) {
                 return false; // Une clé ou une valeur ne correspond pas  
             }
         }
