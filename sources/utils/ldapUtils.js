@@ -1,5 +1,8 @@
 const ldap = require('ldapjs');
 const config = require('../config.json'); // Assurez-vous d'importer votre fichier de configuration
+const {
+	isEqual
+} = require('../utils/utils');
 
 
 /**
@@ -38,7 +41,7 @@ async function searchLDAP(client, baseDN, searchOptions) {
 				acc[attr.type] = attr.values;
 				return acc;
 			}, {});
-		attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs
+			attributes.dn = entry.objectName; // Ajouter le DN à l'objet d'attributs
 			return attributes; // Retourner l'objet d'attributs formaté
 		});
 	} catch(err) {
@@ -72,18 +75,80 @@ async function rawSearchLDAP(client, baseDN, searchOptions) {
 	});
 }
 
-// Mise a jour d'un dn LDAP
-async function updateLDAP(client, dn, changes) {
-	try {
+function generateLDIF(oldObject, newObject, dn) {
+	const changes = [];
 
-console.log('changes: ', JSON.stringify(changes, null, 2)); return false; // pour debug
+	// Parcourir les propriétés de l'ancien objet  
+	if (oldObject !== null && typeof oldObject === 'object') Object.keys(oldObject).forEach(key => {
+		if (oldObject.hasOwnProperty(key) && key !== 'dn') {
+			if (!newObject || !newObject.hasOwnProperty(key)) {
+				// Si la clé n'est pas dans le nouvel objet, elle a été supprimée  
+				changes.push({
+					operation: 'delete',
+					modification: {
+						[key]: oldObject[key]
+					}
+				});
+			} else if (!isEqual(oldObject[key], newObject[key])) {
+				// Si la clé existe dans les deux objets mais avec des valeurs différentes  
+				changes.push({
+					operation: 'replace',
+					modification: {
+						[key]: newObject[key]
+					}
+				});
+			}
+		}
+	});
+
+	// Parcourir les propriétés du nouvel objet pour trouver les ajouts  
+	if (newObject !== null && typeof newObject === 'object') Object.keys(newObject).forEach(key => {
+		if (newObject.hasOwnProperty(key)
+			&& (!oldObject || !oldObject.hasOwnProperty(key))
+			&& newObject[key] !== null
+			&& newObject[key] !== undefined
+			&& newObject[key] !== ''
+			&& !(Array.isArray(newObject[key]) && newObject[key].length === 0)
+			&& !isEmptyObject(newObject[key])
+			) {
+			// Si la clé est dans le nouvel objet mais pas dans l'ancien, c'est un ajout  
+			changes.push({
+				operation: 'add',
+				modification: {
+					[key]: newObject[key]
+				}
+			});
+		}
+	});
+
+	// Convertir les changements en format compatible pour client.modify  
+	return { dn, changes: changes };
+}
+
+// Mise a jour d'un dn LDAP
+async function updateLDAP(client, dn, newObject) {
+	try {
+		const tmp = await searchLDAP(client, dn, {'scope': 'base', 'attributes': '*'});
+		const oldObject = tmp.map(entry => {
+            const { objectClass, ...oldObject } = entry; // Exclusion de objectClass  
+            return oldObject; // Retourner les attributs filtrés  
+        });
+		const { changes } = generateLDIF(oldObject[0] || null, newObject, dn);
+
+
+console.log('oldObject:', oldObject);
+console.log('\n\nnewObject:', newObject);
+console.log('\n\nChanges to be submitted:', changes);
+
+return false; // pour debug
 
 		// Modifications à apporter  
-		const changes = [
+/*		const changes = [
 			{ operation: 'replace', modification: { mail: 'john.doe@example.com' } },
 			{ operation: 'add', modification: { telephoneNumber: '+123456789' } },
 			{ operation: 'delete', modification: { description: '' } }
 		];
+*/
 
 		const promises = changes.map(change => {
 			return new Promise((resolve, reject) => {
@@ -91,6 +156,9 @@ console.log('changes: ', JSON.stringify(changes, null, 2)); return false; // pou
 					client.modify(dn, change, (err) => {
 						if (err) {
 							console.error(`Erreur lors de la modification ${change.operation} :`, err);
+							reject(err); // Rejeter la promesse en cas d'erreur  
+						} else {
+							resolve(); // Résoudre la promesse si la modification réussit  
 						}
 					});
 				});
@@ -99,7 +167,6 @@ console.log('changes: ', JSON.stringify(changes, null, 2)); return false; // pou
 
 		// Attendre que toutes les modifications soient terminées
 		await Promise.all(promises);
-
 		return true;
 	} catch(err) {
 		console.error(`Erreur dans de mise à jour de la base LDAP : ${err.message}`);
