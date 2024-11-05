@@ -138,11 +138,24 @@ async function updateLDAP(client, dn, newObject) {
 		const oldObject = await searchLDAP(client, dn, {'scope': 'base', 'attributes': '*'});
 		const { changes } = generateLDIF(oldObject[0] || null, newObject, dn);
 
+console.clear();	//pour debug
 console.log('oldObject:', oldObject);	//pour debug
 console.log('\n\nnewObject:', newObject);	//pour debug
 console.log('\n\nChanges to be submitted:', changes);	//pour debug
 return true; // pour debug
 
+		// Exécution d'une seule requête pour toutes les modifications  
+		await new Promise((resolve, reject) => {
+			client.modify(dn, changes, (err) => {
+				if (err) {
+						console.error(`Erreur lors de l'application des changements :`, err);
+						reject(err); // Rejeter la promesse en cas d'erreur  
+				} else {
+						resolve(); // Résoudre la promesse si la modification réussit  
+				}
+			});
+		});
+/* Si la base LDAP ne sait pas faire ce qui précède : 
 		const promises = changes.map(change => {
 			return new Promise((resolve, reject) => {
 				changes.forEach(change => {
@@ -160,6 +173,7 @@ return true; // pour debug
 
 		// Attendre que toutes les modifications soient terminées
 		await Promise.all(promises);
+*/
 		return true;
 	} catch(err) {
 		console.error(`Erreur dans de mise à jour de la base LDAP : ${err.message}`);
