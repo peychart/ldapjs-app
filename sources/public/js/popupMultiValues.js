@@ -81,5 +81,18 @@
                     popupOptions.style.display = 'none'; // Fermer la popup après sélection  
                 }
             });
+
+			addButton.addEventListener('click', () => {
+				const newValue = editInput.value.trim(); // Récupérer la valeur du champ de saisie et enlever les espaces vides
+				if (newValue) {
+					if (!options.includes('')) { options.push(''); }
+					index = options.length - 1; // Positionner l'index sur la nouvelle ligne blanche
+					hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché
+					editInput.value = ''; // Réinitialiser le champ de saisie pour une nouvelle entrée
+					renderOptions(); // Mettre à jour le rendu des options
+				} else {
+					alert("Veuillez entrer une valeur valide."); // Alerte si la valeur est vide
+				}
+			});
         });
     });
