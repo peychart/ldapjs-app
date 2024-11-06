@@ -334,7 +334,7 @@
 				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
 
 				// Excution des scripts personnailisés
-				if (objectAttribute.valueCheck[0]) {
+				if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
 					eval(objectAttribute.valueCheck[0]);
 					check(input, objectClassesDetails, input.defaultValue);
 				}
