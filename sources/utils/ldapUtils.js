@@ -475,7 +475,12 @@ const getObjectClass = async (config, objectClassName) => {
 			})
 		);
 
-	return objectClass; // Retourner l'objet résultat
+		return {
+			...objectClass,
+			enrichObjectClassWithAttributeDetails: async () => {
+				return await enrichObjectClassWithAttributeDetails(config, objectClass);
+			}
+		};
 	
 	} catch (error) {
 		console.error('Erreur de recherche pour', objectClassName, ':', error);
@@ -485,14 +490,186 @@ const getObjectClass = async (config, objectClassName) => {
 	}
 };
 
+async function attributeTypeDefToJson(inputString) {
+    return new Promise((resolve, reject) => {
+        if (typeof inputString !== 'string') {
+            reject(new Error("inputString doit être une chaîne de caractères."));
+            return;
+        }
+
+        // Nettoyer l'entrée pour se concentrer sur la partie pertinente  
+        const cleanedInput = inputString.replace(/^.*?(\(\s*[\w.:]+.*)/, '$1').trim();
+
+        // Vérification d'une entrée valide d'attribut  
+        if (!cleanedInput.startsWith("olcAttributeTypes:")) {
+            reject(new Error("L'entrée fournie n'est pas une définition d'attribut valide."));
+            return;
+        }
+
+        // Expressions régulières pour extraire les composants  
+        const oidRegex = /\(\s*([\w.:]+)/;
+        const nameRegex = /NAME\s+'([^']+)'|NAME\s+\(([^)]+)\)/; // Gérer les noms uniques et multiples  
+        const descRegex = /DESC\s+'([^']+)'/;
+        const equalityRegex = /EQUALITY\s+([^ ]+)/;
+        const orderingRegex = /ORDERING\s+([^ ]+)/;
+        const syntaxRegex = /SYNTAX\s+([^ ]+)(\s*\{(\d+)\})?/; // Extraire SYNTAX avec une limite éventuelle  
+        const singleValueRegex = /SINGLE-VALUE/;
+        const noUserModificationRegex = /NO-USER-MODIFICATION/;
+        const usageRegex = /USAGE\s+([^ ]+)/;
+        const xOrderedRegex = /X-ORDERED\s+'([^']+)'/; // Pour l'option X-ORDERED  
+        const supRegex = /SUP\s+([^ ]+)/; // Pour SUP
+
+        // Extraire l'OID  
+        const oid = cleanedInput.match(oidRegex)?.[1] || null;
+
+        // Extraire le(s) nom(s)
+        const nameMatches = cleanedInput.match(nameRegex);
+        const names = nameMatches ? (nameMatches[1] ? [nameMatches[1]] : nameMatches[2].split("'").map(n => n.trim()).filter(Boolean)) : null;
+
+        const desc = cleanedInput.match(descRegex)?.[1] || null;
+        const equality = cleanedInput.match(equalityRegex)?.[1] || null;
+        const ordering = cleanedInput.match(orderingRegex)?.[1] || null; // Extraire ORDERING  
+        const syntaxMatch = cleanedInput.match(syntaxRegex);
+        const syntax = syntaxMatch ? syntaxMatch[1] : null;
+        const syntaxLimit = syntaxMatch && syntaxMatch[3] ? parseInt(syntaxMatch[3]) : null; // Extraire la limite si présente  
+        const isSingleValue = singleValueRegex.test(cleanedInput);
+        const isNoUserModification = noUserModificationRegex.test(cleanedInput);
+        const usageMatches = cleanedInput.match(usageRegex);
+        const usage = usageMatches ? usageMatches[1] : null;
+        const xOrdered = cleanedInput.match(xOrderedRegex)?.[1] || null; // Extraire X-ORDERED
+
+        // Gérer SUP si présent  
+        const supMatch = cleanedInput.match(supRegex);
+        const sup = supMatch ? supMatch[1] : null;
+
+        // Construire l'objet attributeType  
+        const attributeType = {
+            OID: oid,
+            NAME: names,
+            DESCRIPTION: desc,
+            EQUALITY: equality,
+            ORDERING: ordering, // Ajout de l'ORDERING  
+            SYNTAX: syntax,
+            SYNTAX_LIMIT: syntaxLimit, // Ajout de la limite de SYNTAX  
+            SINGLE_VALUE: isSingleValue,
+            NO_USER_MODIFICATION: isNoUserModification,
+            USAGE: usage,
+            X_ORDERED: xOrdered, // Ajout de la gestion X-ORDERED  
+            SUP: sup // Ajout de la gestion SUP  
+        };
+
+        resolve(attributeType);
+    });
+}
+
+const getOlcAttributeTypes = async (config, attributName) => {
+    // Créer un client pour interroger le schéma
+    const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+
+    try {
+        // Effectuer le bind avec le DN et le mot de passe d'accès au schéma LDAP
+        await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
+
+        if (!attributName || attributName.length === 0) {
+            throw new Error(`Nom d'attribut non fourni`); // Lancer une erreur vers le catch
+        }
+
+        // Options de recherche pour obtenir les définitions d'attributs
+        const options = {
+            filter: `(olcAttributeTypes=* NAME '${attributName}' *)`,
+            scope: 'sub',
+            attributes: ['olcAttributeTypes']
+        };
+
+        // Appel à searchLDAP pour effectuer la recherche
+        const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
+            .catch(() => {
+                throw new Error(`Aucun attribut trouvé pour: '${attributName}'`);
+            });
+
+        // Convertir le résultat brut en JSON
+        const attributeType = await attributeTypeDefToJson(result[0].olcAttributeTypes.find(str => {
+            const regex = new RegExp(`\\s*NAME\\s+'${attributName}'\\s+`);
+            return regex.test(str);
+        }));
+
+        return attributeType; // Retourner l'objet résultat
+
+    } catch (error) {
+        console.error('Erreur de recherche pour', attributName, ':', error);
+        throw error; // Relancer l'erreur pour que l'appelant puisse la gérer
+    } finally {
+        schemaClient.unbind(); // Fermer la connexion au client du schéma, même en cas d'erreur
+    }
+};
+
+const enrichObjectClassWithAttributeDetails = async (config, objectClass) => {
+/* Utilisaion :
+getObjectClass(config, 'yourObjectClassName')
+    .then(objectClass => {
+        return objectClass.enrichObjectClassWithAttributeDetails(); // Appel de la méthode  
+    })
+    .then(enrichedResult => {
+        console.log('Enriched Object Class with Attribute Details:', JSON.stringify(enrichedResult, null, 2));
+    })
+    .catch(error => {
+        console.error('Error retrieving enriched object class with attribute details:', error);
+    });
+*/
+    try {
+        // Vérification que l'objectClass est fourni  
+        if (!objectClass) {
+            throw new Error("Aucune définition d'objectClass fournie.");
+        }
+
+        // Pour chaque attribut MUST, appeler getOlcAttributeTypes pour obtenir sa définition  
+        const enrichedMustAttributes = await Promise.all(
+            Object.keys(objectClass.MUST).map(async (attribute) => {
+                try {
+                    const attributeDetails = await getOlcAttributeTypes(config, attribute);
+                    return { [attribute]: attributeDetails }; // Remplacer par un objet { "nom_d'attribut": { ...propriétés } }  
+                } catch (error) {
+                    console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
+                    return { [attribute]: { error: error.message } }; // En cas d'erreur, retourner un objet avec un message d'erreur.
+                }
+            })
+        );
+
+        // Pour chaque attribut MAY, appeler getOlcAttributeTypes pour obtenir sa définition  
+        const enrichedMayAttributes = await Promise.all(
+            Object.keys(objectClass.MAY).map(async (attribute) => {
+                try {
+                    const attributeDetails = await getOlcAttributeTypes(config, attribute);
+                    return { [attribute]: attributeDetails }; // Remplacer par un objet { "nom_d'attribut": { ...propriétés } }  
+                } catch (error) {
+                    console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
+                    return { [attribute]: { error: error.message } }; // En cas d'erreur, retourner un objet avec un message d'erreur.
+                }
+            })
+        );
+
+        // Construire l'objet de classe avec les attributs enrichis  
+        return {
+            ...objectClass,
+            MUST: Object.assign({}, ...enrichedMustAttributes), // Réassembler les attributs MUST  
+            MAY: Object.assign({}, ...enrichedMayAttributes) // Réassembler les attributs MAY  
+        };
+
+    } catch (error) {
+        console.error('Erreur lors de la récupération des détails de l\'objectClass enrichie:', error);
+        throw error; // Relancer l'erreur pour que l'appelant puisse la gérer 
+    }
+};
 
 module.exports = {
 	bindClient,
 	searchLDAP,
-	updateLDAP,
 	rawSearchLDAP,
 	getUserRoleFromDatabase,
 	getObjectClass,
+	getOlcAttributeTypes,
+	enrichObjectClassWithAttributeDetails,
 	getAllMustAttributes,
+	updateLDAP,
 	updateAttributeConfigInLDAP
 };
