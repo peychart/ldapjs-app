@@ -11,12 +11,14 @@ const winston = require('winston');
 const {
 	bindClient,
 	searchLDAP,
-	updateLDAP,
 	rawSearchLDAP,
 	getUserRoleFromDatabase,
 	getObjectClass,
+	getOlcAttributeTypes,
+	enrichObjectClassWithAttributeDetails,
 	getAllMustAttributes,
-	updateAttributeConfigInLDAP,
+	updateLDAP,
+	updateAttributeConfigInLDAP
 } = require('./utils/ldapUtils');
 const {
 	loadConfig
@@ -224,13 +226,6 @@ app.post('/search', async (req, res) => {
 		return res.render('search', { results: null, searchTerm: null, error: error.message });
 	}
 });
-
-// Nouvelle route pour le Reset du formulaire search (POST)
-app.post('/search-reset', (req, res) => {
-	// Renvoyer la vue de recherche avec des résultats vides
-	res.render('search', { results: null, searchTerm: req.body.searchTerm, error: null });
-});
-
 // ***********************************************************
 // Route pour éditer un objet  
 app.get('/edit/:dn', async (req, res) => {
