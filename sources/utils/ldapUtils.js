@@ -490,77 +490,80 @@ const getObjectClass = async (config, objectClassName) => {
 	}
 };
 
-async function attributeTypeDefToJson(inputString) {
+async function attributeTypeDefToJson(attributeDef) {
     return new Promise((resolve, reject) => {
-        if (typeof inputString !== 'string') {
-            reject(new Error("inputString doit être une chaîne de caractères."));
+        // Vérifier que l'input est une chaîne de caractères  
+        if (typeof attributeDef !== 'string') {
+            reject(new Error("attributeDef doit être une chaîne de caractères."));
             return;
         }
 
-        // Nettoyer l'entrée pour se concentrer sur la partie pertinente  
-        const cleanedInput = inputString.replace(/^.*?(\(\s*[\w.:]+.*)/, '$1').trim();
+console.log('attributeDef: ', attributeDef);
+
+        // Mettre à jour la ligne de nettoyage pour mieux capturer les définitions  
+        //const cleanedInput = attributeDef.replace(/^olcAttributeTypes:\s+.*?\(\s(\s.*)\s\)/, '$1').trim();
+        const cleanedInput = attributeDef.replace(/^.*?(\(.*\))/, '$1').trim();
+
+console.log('cleanedInput: ', cleanedInput);
 
         // Vérification d'une entrée valide d'attribut  
-        if (!cleanedInput.startsWith("olcAttributeTypes:")) {
+        if (!cleanedInput.startsWith("(") || !cleanedInput.endsWith(")")) {
             reject(new Error("L'entrée fournie n'est pas une définition d'attribut valide."));
             return;
         }
 
         // Expressions régulières pour extraire les composants  
-        const oidRegex = /\(\s*([\w.:]+)/;
-        const nameRegex = /NAME\s+'([^']+)'|NAME\s+\(([^)]+)\)/; // Gérer les noms uniques et multiples  
-        const descRegex = /DESC\s+'([^']+)'/;
-        const equalityRegex = /EQUALITY\s+([^ ]+)/;
-        const orderingRegex = /ORDERING\s+([^ ]+)/;
-        const syntaxRegex = /SYNTAX\s+([^ ]+)(\s*\{(\d+)\})?/; // Extraire SYNTAX avec une limite éventuelle  
-        const singleValueRegex = /SINGLE-VALUE/;
-        const noUserModificationRegex = /NO-USER-MODIFICATION/;
-        const usageRegex = /USAGE\s+([^ ]+)/;
-        const xOrderedRegex = /X-ORDERED\s+'([^']+)'/; // Pour l'option X-ORDERED  
-        const supRegex = /SUP\s+([^ ]+)/; // Pour SUP
+        const oidRegex = /^\(\s*([\w.:]+)/; // OID  
+        const nameRegex = /NAME\s+'([^']+)'/; // Gérer les noms multiples entre apostrophes  
+        const descRegex = /DESC\s+'([^']+)'/; // Description, entre apostrophes  
+        const supRegex = /SUP\s+([\w]+)/; // Supertype  
+        const mustRegex = /MUST\s+\(([^)]+)\)/; // Attributs obligatoires  
+        const mayRegex = /MAY\s+\(([^)]+)\)/; // Attributs optionnels  
+        const syntaxRegex = /SYNTAX\s+([^ ]+)(\s*\{(\d+)\})?/; // SYNTAX avec une limite éventuelle  
 
         // Extraire l'OID  
-        const oid = cleanedInput.match(oidRegex)?.[1] || null;
+        const oidMatch = cleanedInput.match(oidRegex);
+        const oid = oidMatch ? oidMatch[1] : null;
 
         // Extraire le(s) nom(s)
-        const nameMatches = cleanedInput.match(nameRegex);
-        const names = nameMatches ? (nameMatches[1] ? [nameMatches[1]] : nameMatches[2].split("'").map(n => n.trim()).filter(Boolean)) : null;
+        const nameMatch = cleanedInput.match(nameRegex);
+        const names = nameMatch ? nameMatch[1].split(/\s+\$\s+/).map(name => name.trim()) : null; // Séparer par $ pour obtenir un tableau
 
+        // Extraire la description  
         const desc = cleanedInput.match(descRegex)?.[1] || null;
-        const equality = cleanedInput.match(equalityRegex)?.[1] || null;
-        const ordering = cleanedInput.match(orderingRegex)?.[1] || null; // Extraire ORDERING  
-        const syntaxMatch = cleanedInput.match(syntaxRegex);
-        const syntax = syntaxMatch ? syntaxMatch[1] : null;
-        const syntaxLimit = syntaxMatch && syntaxMatch[3] ? parseInt(syntaxMatch[3]) : null; // Extraire la limite si présente  
-        const isSingleValue = singleValueRegex.test(cleanedInput);
-        const isNoUserModification = noUserModificationRegex.test(cleanedInput);
-        const usageMatches = cleanedInput.match(usageRegex);
-        const usage = usageMatches ? usageMatches[1] : null;
-        const xOrdered = cleanedInput.match(xOrderedRegex)?.[1] || null; // Extraire X-ORDERED
 
-        // Gérer SUP si présent  
-        const supMatch = cleanedInput.match(supRegex);
-        const sup = supMatch ? supMatch[1] : null;
+        // Extraire le supertype  
+        const sup = cleanedInput.match(supRegex)?.[1] || null;
+
+        // Extraire les attributs obligatoires et optionnels  
+        const mustMatch = cleanedInput.match(mustRegex);
+        const must = mustMatch ? mustMatch[1].split(/\s+\$\s+/).map(attr => attr.trim()) : null;
+
+        const mayMatch = cleanedInput.match(mayRegex);
+        const may = mayMatch ? mayMatch[1].split(/\s+\$\s+/).map(attr => attr.trim()) : null;
+
+        // Extraire la syntaxe et la limite  
+        const syntaxMatch = cleanedInput.match(syntaxRegex);
+        const syntax = syntaxMatch ? syntaxMatch[1] : null; // Syntaxe de l'attribut  
+        const syntaxLimit = syntaxMatch && syntaxMatch[3] ? parseInt(syntaxMatch[3]) : null; // Limite de longueur si présente
 
         // Construire l'objet attributeType  
         const attributeType = {
             OID: oid,
             NAME: names,
             DESCRIPTION: desc,
-            EQUALITY: equality,
-            ORDERING: ordering, // Ajout de l'ORDERING  
+            SUP: sup,
+            MUST: must,
+            MAY: may,
             SYNTAX: syntax,
-            SYNTAX_LIMIT: syntaxLimit, // Ajout de la limite de SYNTAX  
-            SINGLE_VALUE: isSingleValue,
-            NO_USER_MODIFICATION: isNoUserModification,
-            USAGE: usage,
-            X_ORDERED: xOrdered, // Ajout de la gestion X-ORDERED  
-            SUP: sup // Ajout de la gestion SUP  
+            SYNTAX_LIMIT: syntaxLimit // Ajout de la limite de SYNTAX  
         };
 
+        // Résoudre la promesse avec l'objet construit  
         resolve(attributeType);
     });
 }
+
 
 const getOlcAttributeTypes = async (config, attributName) => {
     // Créer un client pour interroger le schéma
@@ -604,18 +607,6 @@ const getOlcAttributeTypes = async (config, attributName) => {
 };
 
 const enrichObjectClassWithAttributeDetails = async (config, objectClass) => {
-/* Utilisaion :
-getObjectClass(config, 'yourObjectClassName')
-    .then(objectClass => {
-        return objectClass.enrichObjectClassWithAttributeDetails(); // Appel de la méthode  
-    })
-    .then(enrichedResult => {
-        console.log('Enriched Object Class with Attribute Details:', JSON.stringify(enrichedResult, null, 2));
-    })
-    .catch(error => {
-        console.error('Error retrieving enriched object class with attribute details:', error);
-    });
-*/
     try {
         // Vérification que l'objectClass est fourni  
         if (!objectClass) {
@@ -623,37 +614,37 @@ getObjectClass(config, 'yourObjectClassName')
         }
 
         // Pour chaque attribut MUST, appeler getOlcAttributeTypes pour obtenir sa définition  
-        const enrichedMustAttributes = await Promise.all(
+        await Promise.all(
             Object.keys(objectClass.MUST).map(async (attribute) => {
                 try {
                     const attributeDetails = await getOlcAttributeTypes(config, attribute);
-                    return { [attribute]: attributeDetails }; // Remplacer par un objet { "nom_d'attribut": { ...propriétés } }  
+                    // Enrichir directement l'objet objectClass  
+                    objectClass.MUST[attribute] = attributeDetails;
                 } catch (error) {
                     console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
-                    return { [attribute]: { error: error.message } }; // En cas d'erreur, retourner un objet avec un message d'erreur.
+                    // Lancer une erreur au lieu de stocker un message d'erreur  
+                    throw new Error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}: ${error.message}`);
                 }
             })
         );
 
         // Pour chaque attribut MAY, appeler getOlcAttributeTypes pour obtenir sa définition  
-        const enrichedMayAttributes = await Promise.all(
+        await Promise.all(
             Object.keys(objectClass.MAY).map(async (attribute) => {
                 try {
                     const attributeDetails = await getOlcAttributeTypes(config, attribute);
-                    return { [attribute]: attributeDetails }; // Remplacer par un objet { "nom_d'attribut": { ...propriétés } }  
+                    // Enrichir directement l'objet objectClass  
+                    objectClass.MAY[attribute] = attributeDetails;
                 } catch (error) {
                     console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
-                    return { [attribute]: { error: error.message } }; // En cas d'erreur, retourner un objet avec un message d'erreur.
+                    // Lancer une erreur au lieu de stocker un message d'erreur  
+                    throw new Error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}: ${error.message}`);
                 }
             })
         );
 
-        // Construire l'objet de classe avec les attributs enrichis  
-        return {
-            ...objectClass,
-            MUST: Object.assign({}, ...enrichedMustAttributes), // Réassembler les attributs MUST  
-            MAY: Object.assign({}, ...enrichedMayAttributes) // Réassembler les attributs MAY  
-        };
+        // A ce stade, objectClass a été modifié en place avec les attributs enrichis  
+        return objectClass; // Retourner l'objet modifié
 
     } catch (error) {
         console.error('Erreur lors de la récupération des détails de l\'objectClass enrichie:', error);
