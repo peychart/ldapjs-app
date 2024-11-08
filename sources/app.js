@@ -14,9 +14,6 @@ const {
 	rawSearchLDAP,
 	getUserRoleFromDatabase,
 	getObjectClass,
-	getOlcAttributeTypes,
-	enrichObjectClassWithAttributeDetails,
-	getAllMustAttributes,
 	updateLDAP,
 	updateAttributeConfigInLDAP
 } = require('./utils/ldapUtils');
@@ -231,20 +228,22 @@ app.post('/search', async (req, res) => {
 app.get('/edit/:dn', async (req, res) => {
 	const dn = req.params.dn; // Récupérer le DN des paramètres de l'URL
 	const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+	const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
 	const options = {
-	scope: 'base', // Recherche unique sur le DN spécifié  
-	attributes: ['*'] // Attributs à récupérer  
+		scope: 'base', // Recherche unique sur le DN spécifié  
+		attributes: ['*'] // Attributs à récupérer  
 	};
 
 	try {
 		// Liaison au client LDAP  
 		await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
+		await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
 
 		// Récupration de l'entrée à éditer
 		const objectData = (await searchLDAP(client, dn, options)
-		.catch(() => {
-			throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
+			.catch(() => {
+				throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
 			})
 		)[0];
 
@@ -254,23 +253,17 @@ app.get('/edit/:dn', async (req, res) => {
 		// Récupérer la définition de chaque objectClass
 		const searchPromises = await Promise.all(objectClassesToSearch.map(async objectClassName => {
 			try {
-				const objectClass = await getObjectClass(config, objectClassName);
-
-//console.log('objectClass: ', objectClass);
-				await enrichObjectClassWithAttributeDetails(config, objectClass);
-//console.log('\n\nobjectClass: ', objectClass);
-				objectClass.MUST = await getAllMustAttributes(config, objectClass);
-
-				return objectClass;
+				return await getObjectClass(schemaClient, config, objectClassName);
 			} catch (error) {
 				console.error(`Erreur lors de la récupération de ${objectClassName} :`, error);
-				return {}; // Ou une valeur par défaut, si nécessaire  
+				return null; // Ou une valeur par défaut, si nécessaire  
 			}
 		}));
 
 		// Filtrer les résultats pour enlever les valeurs nulles  
-		const objectClassesDetails = searchPromises.filter(classDetails => classDetails !== {});
+		const objectClassesDetails = searchPromises.filter(classDetails => classDetails !== null && Object.keys(classDetails).length > 0);
 
+//console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		// Rechercher des contrôles d'attributs dans l'arborescence LDAP config.configDn.attributs+root
 		const attrDefDN = config.configDn.attributs + ',' + config.configDn.root;
 		const attrDefOptions = {
@@ -320,8 +313,22 @@ app.get('/edit/:dn', async (req, res) => {
 		console.error('Fiche non trouvée:', error);
 		return res.status(500).send(error.message); // Renvoyer le message d'erreur  
 	} finally {
-	if (client) {
-			client.unbind(); // Assurez-vous que le client est délié  
+		// Déconnexion du schemaClient  
+		if (schemaClient) {
+			try {
+				await schemaClient.unbind();
+			} catch (unbindError) {
+				console.error('Erreur lors de la déconnexion du schemaClient:', unbindError);
+			}
+		}
+
+		// Déconnexion du client principal  
+		if (client) {
+			try {
+				await client.unbind();
+			} catch (unbindError) {
+				console.error('Erreur lors de la déconnexion du client:', unbindError);
+			}
 		}
 	}
 });
