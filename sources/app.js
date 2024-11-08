@@ -255,7 +255,12 @@ app.get('/edit/:dn', async (req, res) => {
 		const searchPromises = await Promise.all(objectClassesToSearch.map(async objectClassName => {
 			try {
 				const objectClass = await getObjectClass(config, objectClassName);
+
+//console.log('objectClass: ', objectClass);
+				await enrichObjectClassWithAttributeDetails(config, objectClass);
+//console.log('\n\nobjectClass: ', objectClass);
 				objectClass.MUST = await getAllMustAttributes(config, objectClass);
+
 				return objectClass;
 			} catch (error) {
 				console.error(`Erreur lors de la récupération de ${objectClassName} :`, error);
