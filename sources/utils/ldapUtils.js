@@ -1,5 +1,4 @@
 const ldap = require('ldapjs');
-const config = require('../config.json'); // Assurez-vous d'importer votre fichier de configuration
 const {
 	isEqual
 } = require('../utils/utils');
@@ -75,14 +74,17 @@ async function rawSearchLDAP(client, baseDN, searchOptions) {
 	});
 }
 
+/*
+ * Génération du LDIF de mise à jour de la base LDAP
+ */
 function generateLDIF(oldObject, newObject, dn) {
 	const changes = [];
 
-	// Parcourir les propriétés de l'ancien objet  
+	// Parcourir les propriétés de l'ancien objet
 	if (oldObject !== null && typeof oldObject === 'object') Object.keys(oldObject).forEach(key => {
 		if (oldObject.hasOwnProperty(key) && key !== 'dn' && key !== 'objectClass') {
 			if (!newObject || !newObject.hasOwnProperty(key)) {
-				// Si la clé n'est pas dans le nouvel objet, elle a été supprimée  
+				// Si la clé n'est pas dans le nouvel objet, elle a été supprimée
 				changes.push({
 					operation: 'delete',
 					modification: {
@@ -97,7 +99,7 @@ function generateLDIF(oldObject, newObject, dn) {
 						: (Array.isArray(oldObject[key]) ? oldObject[key][0] : oldObject[key]);
 
 				if (!isEqual(oldValue, newValue)) {
-					// Si la clé existe dans les deux objets mais avec des valeurs différentes  
+					// Si la clé existe dans les deux objets mais avec des valeurs différentes
 					changes.push({
 						operation: 'replace',
 						modification: {
@@ -110,7 +112,7 @@ function generateLDIF(oldObject, newObject, dn) {
 		}
 	});
 
-	// Parcourir les propriétés du nouvel objet pour trouver les ajouts  
+	// Parcourir les propriétés du nouvel objet pour trouver les ajouts
 	if (newObject !== null && typeof newObject === 'object') Object.keys(newObject).forEach(key => {
 		if (newObject.hasOwnProperty(key)
 			&& (!oldObject || !oldObject.hasOwnProperty(key))
@@ -120,7 +122,7 @@ function generateLDIF(oldObject, newObject, dn) {
 			&& !(Array.isArray(newObject[key]) && newObject[key].length === 0)
 			&& !isEmptyObject(newObject[key])
 			) {
-			// Si la clé est dans le nouvel objet mais pas dans l'ancien, c'est un ajout  
+			// Si la clé est dans le nouvel objet mais pas dans l'ancien, c'est un ajout
 			changes.push({
 				operation: 'add',
 				modification: {
@@ -131,11 +133,13 @@ function generateLDIF(oldObject, newObject, dn) {
 		}
 	});
 
-	// Convertir les changements en format compatible pour client.modify  
+	// Convertir les changements en format compatible pour client.modify
 	return { dn, changes };
 }
 
-// Mise a jour d'un dn LDAP
+/*
+ * Mise a jour d'un dn LDAP
+ */
 async function updateLDAP(client, dn, newObject) {
 	// Validation des paramètres
 	if (!client || !dn || !newObject) {
@@ -158,14 +162,14 @@ async function updateLDAP(client, dn, newObject) {
 //console.log('\n\nChanges to be submitted:', JSON.stringify(changes, null, 2));	//pour debug
 //return true; // pour debug
 
-		// Exécution d'une seule requête pour toutes les modifications  
+		// Exécution d'une seule requête pour toutes les modifications
 		if (changes.length) await new Promise((resolve, reject) => {
 			client.modify(dn, changes, (err) => {
 				if (err) {
 						console.error(`Erreur lors de l'application des changements :`, err);
-						reject(err); // Rejeter la promesse en cas d'erreur  
+						reject(err); // Rejeter la promesse en cas d'erreur
 				} else {
-						resolve(); // Résoudre la promesse si la modification réussit  
+						resolve(); // Résoudre la promesse si la modification réussit
 				}
 			});
 		});
@@ -345,8 +349,115 @@ async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
 	}
 }
 
+/*
+ * Parse de la défiition d'attribut extraite du schema de la base
+ */
+async function attributeTypeDefToJson(attributeDef) {
+	return new Promise((resolve, reject) => {
+		// Vérifier que l'input est une chaîne de caractères
+		if (typeof attributeDef !== 'string') {
+			return reject(new Error("attributeDef doit être une chaîne de caractères."));
+		}
+
+		const cleanedInput = attributeDef.trim();
+		const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
+		const nameRegex = /NAME\s+\(([^)]+)\)/; // Support pour plusieurs noms
+		const singleNameRegex = /NAME\s+'([^']+)'/; // Support pour un seul nom
+		const descRegex = /DESC\s+'([^']+)'/;
+		const equalityRegex = /EQUALITY\s+([^ ]+)/;
+		const orderingRegex = /ORDERING\s+([^ ]+)/;
+		const syntaxRegex = /SYNTAX\s+([^ ]+)/;
+		const singleValueRegex = /SINGLE-VALUE/;
+		const noUserModificationRegex = /NO-USER-MODIFICATION/;
+		const usageRegex = /USAGE\s+([^ ]+)/;
+		const xOrderedRegex = /X-ORDERED\s+([^\s]+)/; // Support pour X-ORDERED
+		const supRegex = /SUP\s+([^ ]+)/; // Support pour SUP
+
+		// Extraction des valeurs
+		const oid = cleanedInput.match(oidRegex)?.[1] || null;
+		const namesMatch = cleanedInput.match(nameRegex) || cleanedInput.match(singleNameRegex);
+		const names = namesMatch 
+			? namesMatch[1].split("'").map(name => name.trim()).filter(name => name !== "") 
+			: null;
+		const desc = cleanedInput.match(descRegex)?.[1] || null;
+		const equality = cleanedInput.match(equalityRegex)?.[1] || null;
+		const ordering = cleanedInput.match(orderingRegex)?.[1] || null;
+		const syntax = cleanedInput.match(syntaxRegex)?.[1] || null;
+		const isSingleValue = singleValueRegex.test(cleanedInput);
+		const isNoUserModification = noUserModificationRegex.test(cleanedInput);
+		const usage = cleanedInput.match(usageRegex)?.[1] || null;
+		const xOrdered = cleanedInput.match(xOrderedRegex)?.[1] || null;
+		const sup = cleanedInput.match(supRegex)?.[1] || null; // Extraction de SUP
+
+		// Créer l'objet JSON
+		const attributeType = {
+				OID: oid,
+				NAME: names,
+				DESCRIPTION: desc,
+				EQUALITY: equality,
+				ORDERING: ordering || null, // Peut être null si non spécifié
+				SYNTAX: syntax,
+				SINGLE_VALUE: isSingleValue,
+				NO_USER_MODIFICATION: isNoUserModification,
+				USAGE: usage,
+				X_ORDERED: xOrdered || null, // Ajouter le champ X-ORDERED s'il existe
+				SUP: sup || null // Ajouter le champ SUP s'il existe
+		};
+
+		// Résoudre la promesse avec l'objet d'attribut
+		resolve(attributeType);
+	 });
+}
+
+const getOlcAttributeTypes = async (schemaClient, config, attributeName) => {
+	 try {
+		if (!attributeName || attributeName.length === 0) {
+				throw new Error(`Nom d'attribut non fourni`);
+		}
+
+		// Options de recherche ajustées pour récupérer les définitions d'attributs
+		const options = {
+				filter: `(olcAttributeTypes=*NAME*'${attributeName}'*)`, // Obtenez toutes les définitions d'attributs
+				scope: 'sub',
+				attributes: ['olcAttributeTypes']
+		};
+
+		const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
+
+		if (!result || result.length === 0 || !result[0].olcAttributeTypes) {
+			throw new Error(`Aucun attribut ou olcAttributeTypes trouvé pour: '${attributeName}'`);
+		}
+
+		const olcAttributeTypes = result[0].olcAttributeTypes;
+
+		if (!Array.isArray(olcAttributeTypes) || olcAttributeTypes.length === 0) {
+			throw new Error(`La propriété 'olcAttributeTypes' n'est pas un tableau ou est vide.`);
+		}
+
+		// Rechercher la définition d'attribut spécifique avec un regex plus précis
+		const regexCase1 = new RegExp(`NAME\\s*\\(\\s*['"]?${attributeName}['"]?(?:\\s+['"]?[^'"]*['"]?)*\\s*\\)`, 'i');
+		const regexCase2 = new RegExp(`NAME\\s*['"]?${attributeName}['"]?`, 'i');
+		const regexCase3 = new RegExp(`NAME\\s*\\(\\s*['"]?${attributeName}['"]?\\s*\\)`, 'i');
+		const attributeTypeDef = olcAttributeTypes.find(str => {
+			 return regexCase1.test(str) || regexCase2.test(str) || regexCase3.test(str);
+		});
+
+		if (!attributeTypeDef) {
+			throw new Error(`Aucune définition trouvée pour l'attribut: '${attributeName}'`);
+		}
+
+		// JSON parse
+		const attributeType = await attributeTypeDefToJson(attributeTypeDef);
+
+		return attributeType;
+	 } catch (error) {
+		console.error('Erreur de recherche pour', attributeName, ':', error);
+		throw error; 
+	 }
+};
+
 /**
- * Fonction pour convertir la définition text d'un objectClass en object JS
+ * Parse de la définition text d'un objectClass en object JS
  */
 async function objectClassDefToJson(inputString) {
 	return new Promise((resolve, reject) => {
@@ -399,257 +510,95 @@ async function objectClassDefToJson(inputString) {
 }
 
 /**
- * Fonction pour récupérer les attributs MUST des objectClasses SUP
+ * Fonction pour récupérer la dénition complète d'un objectClass dans le schema de la base
  */
-const getAllMustAttributes = async (config, objectClass) => {
-	// Vérifier que objectClass est valide
-	if (!objectClass || typeof objectClass !== 'object') {
-		console.error('Invalid objectClass provided');
-		return {};
-	}
-
-	const supAttributes = {};
+const getObjectClass = async (schemaClient, config, objectClassName) => {
 
 	try {
-		// Vérifier si MUST est un objet et l'ajouter au supAttributes
-		if (objectClass.MUST && typeof objectClass.MUST === 'object') {
-			Object.keys(objectClass.MUST).forEach(attr => {
-				supAttributes[attr] = objectClass.MUST[attr]; // Sauvegarder les détails de l'attribut
-			});
+		if (!objectClassName) {
+			throw new Error(`ObjetClass non trouvé`);
 		}
 
-		if (!objectClass.SUP || objectClass.SUP === 'top') {
-			return supAttributes;
-		}
-
-		// Récupérer la classe supérieure
-		const supClass = await getObjectClass(config, objectClass.SUP).catch(() => (null));
-
-		// Ajouter les attributs de MUST de la classe supérieure
-		if (supClass) {
-			const supSupAttributes = await getAllMustAttributes(config, supClass);
-			// Fusionner les attributs retournés par la sous-classe
-			Object.keys(supSupAttributes).forEach(attr => {
-				supAttributes[attr] = supSupAttributes[attr]; // Sauvegarder les détails de l'attribut
-			});
-		}
-	} catch (error) {
-		console.error(`Erreur lors de la récupération des attributs de la super classe de ${JSON.stringify(objectClass)} :`, error);
-	}
-
-	return supAttributes; // Retourner l'objet contenant les attributs obligatoires
-}
-
-/**
- * Fonction pour récupérer les attributs de chaque objectClass dans le schéma
- */
-const getObjectClass = async (config, objectClassName) => {
-	// Créer un client pour interroger le schéma
-	const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
-
-	try {
-		// Effectuer le bind avec le DN et le mot de passe d'accès au schéma LDAP
-		await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
-
-		if (!objectClassName || objectClassName.length === 0) {
-			throw new Error(`ObjetClass non trouvé`); // Lancer une erreur vers le catch
-		}
-
-		// Utilisation de map pour lancer des recherches asynchrones pour chaque objectClass
 		const options = {
 			filter: `(olcObjectClasses=* NAME '${objectClassName}' *)`,
 			scope: 'sub',
 			attributes: ['olcObjectClasses']
 		};
 
-		// Appel à searchLDAP pour effectuer la recherche
 		const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
 			.catch(() => {
-				throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`)
+				throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`);
 			});
 
-		// Convertir le résultat brut en JSON
-		const objectClass = await objectClassDefToJson(result[0].olcObjectClasses.find(str => {
-				const regex = new RegExp(`\\s*NAME\\s+'${objectClassName}'\\s+`);
-				return regex.test(str);
-			})
-		);
+		const objectClass = await objectClassDefToJson(result[0].olcObjectClasses.find(str => 
+			new RegExp(`\\s*NAME\\s+'${objectClassName}'\\s+`).test(str)
+		));
 
-		return {
-			...objectClass,
-			enrichObjectClassWithAttributeDetails: async () => {
-				return await enrichObjectClassWithAttributeDetails(config, objectClass);
+		// Fonction pour récupérer les attributs MUST hérités
+		const getAllMustAttributes = async (cls) => {
+			if (!cls || typeof cls !== 'object') {
+				console.error('Invalid objectClass provided');
+				return {};
 			}
+
+			let results = { ...cls.MUST }; // Initialiser avec les attributs MUST actuels
+			if (cls.SUP && cls.SUP !== 'top') {
+				const supClass = await getObjectClass(schemaClient, config, cls.SUP).catch(() => null);
+				if (supClass) {
+					const supMustAttributes = await getAllMustAttributes(supClass);
+					results = { ...results, ...supMustAttributes }; // Fusionner les attributs
+				}
+			}
+			return results;
 		};
-	
+
+		// Obtenir et assigner les attributs MUST à objectClass
+		objectClass.MUST = await getAllMustAttributes(objectClass);
+
+		// Ajour des définitions d'attributs
+		await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
+
+		return objectClass;
 	} catch (error) {
 		console.error('Erreur de recherche pour', objectClassName, ':', error);
-	throw error; // Relancer l'erreur pour que l'appelant puisse la gérer 
-	} finally {
-	schemaClient.unbind(); // Fermer la connexion au client du schéma, même en cas d'erreur
+		throw error;
 	}
 };
 
-async function attributeTypeDefToJson(attributeDef) {
-    return new Promise((resolve, reject) => {
-        // Vérifier que l'input est une chaîne de caractères  
-        if (typeof attributeDef !== 'string') {
-            reject(new Error("attributeDef doit être une chaîne de caractères."));
-            return;
-        }
+/*
+ * Recherche dans le schema des définitions d'attributs et mise à jour dans l'objectClass
+ */
+const enrichObjectClassWithAttributeDetails = async (schemaClient, config, objectClass) => {
+	 try {
+		// Vérification que l'objectClass est fourni
+		if (!objectClass) {
+			throw new Error("Aucune définition d'objectClass fournie.");
+		}
 
-console.log('attributeDef: ', attributeDef);
+		// Pour chaque attribut, obtenir sa définition
+		await Promise.all(
+			['MUST', 'MAY'].flatMap(key =>
+				Object.keys(objectClass[key]).map(async (attribute) => {
+					try {
+						const attributeDetails = await getOlcAttributeTypes(schemaClient, config, attribute);
+						// Enrichir directement l'objet objectClass
+						objectClass[key][attribute] = attributeDetails;
+					} catch (error) {
+						console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
+						// Lancer une erreur au lieu de stocker un message d'erreur
+						throw new Error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}: ${error.message}`);
+					}
+				})
+			)
+		);
 
-        // Mettre à jour la ligne de nettoyage pour mieux capturer les définitions  
-        //const cleanedInput = attributeDef.replace(/^olcAttributeTypes:\s+.*?\(\s(\s.*)\s\)/, '$1').trim();
-        const cleanedInput = attributeDef.replace(/^.*?(\(.*\))/, '$1').trim();
+		// A ce stade, objectClass a été modifié en place avec les attributs enrichis
+		return objectClass; // Retourner l'objet modifié
 
-console.log('cleanedInput: ', cleanedInput);
-
-        // Vérification d'une entrée valide d'attribut  
-        if (!cleanedInput.startsWith("(") || !cleanedInput.endsWith(")")) {
-            reject(new Error("L'entrée fournie n'est pas une définition d'attribut valide."));
-            return;
-        }
-
-        // Expressions régulières pour extraire les composants  
-        const oidRegex = /^\(\s*([\w.:]+)/; // OID  
-        const nameRegex = /NAME\s+'([^']+)'/; // Gérer les noms multiples entre apostrophes  
-        const descRegex = /DESC\s+'([^']+)'/; // Description, entre apostrophes  
-        const supRegex = /SUP\s+([\w]+)/; // Supertype  
-        const mustRegex = /MUST\s+\(([^)]+)\)/; // Attributs obligatoires  
-        const mayRegex = /MAY\s+\(([^)]+)\)/; // Attributs optionnels  
-        const syntaxRegex = /SYNTAX\s+([^ ]+)(\s*\{(\d+)\})?/; // SYNTAX avec une limite éventuelle  
-
-        // Extraire l'OID  
-        const oidMatch = cleanedInput.match(oidRegex);
-        const oid = oidMatch ? oidMatch[1] : null;
-
-        // Extraire le(s) nom(s)
-        const nameMatch = cleanedInput.match(nameRegex);
-        const names = nameMatch ? nameMatch[1].split(/\s+\$\s+/).map(name => name.trim()) : null; // Séparer par $ pour obtenir un tableau
-
-        // Extraire la description  
-        const desc = cleanedInput.match(descRegex)?.[1] || null;
-
-        // Extraire le supertype  
-        const sup = cleanedInput.match(supRegex)?.[1] || null;
-
-        // Extraire les attributs obligatoires et optionnels  
-        const mustMatch = cleanedInput.match(mustRegex);
-        const must = mustMatch ? mustMatch[1].split(/\s+\$\s+/).map(attr => attr.trim()) : null;
-
-        const mayMatch = cleanedInput.match(mayRegex);
-        const may = mayMatch ? mayMatch[1].split(/\s+\$\s+/).map(attr => attr.trim()) : null;
-
-        // Extraire la syntaxe et la limite  
-        const syntaxMatch = cleanedInput.match(syntaxRegex);
-        const syntax = syntaxMatch ? syntaxMatch[1] : null; // Syntaxe de l'attribut  
-        const syntaxLimit = syntaxMatch && syntaxMatch[3] ? parseInt(syntaxMatch[3]) : null; // Limite de longueur si présente
-
-        // Construire l'objet attributeType  
-        const attributeType = {
-            OID: oid,
-            NAME: names,
-            DESCRIPTION: desc,
-            SUP: sup,
-            MUST: must,
-            MAY: may,
-            SYNTAX: syntax,
-            SYNTAX_LIMIT: syntaxLimit // Ajout de la limite de SYNTAX  
-        };
-
-        // Résoudre la promesse avec l'objet construit  
-        resolve(attributeType);
-    });
-}
-
-
-const getOlcAttributeTypes = async (config, attributName) => {
-    // Créer un client pour interroger le schéma
-    const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
-
-    try {
-        // Effectuer le bind avec le DN et le mot de passe d'accès au schéma LDAP
-        await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
-
-        if (!attributName || attributName.length === 0) {
-            throw new Error(`Nom d'attribut non fourni`); // Lancer une erreur vers le catch
-        }
-
-        // Options de recherche pour obtenir les définitions d'attributs
-        const options = {
-            filter: `(olcAttributeTypes=* NAME '${attributName}' *)`,
-            scope: 'sub',
-            attributes: ['olcAttributeTypes']
-        };
-
-        // Appel à searchLDAP pour effectuer la recherche
-        const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
-            .catch(() => {
-                throw new Error(`Aucun attribut trouvé pour: '${attributName}'`);
-            });
-
-        // Convertir le résultat brut en JSON
-        const attributeType = await attributeTypeDefToJson(result[0].olcAttributeTypes.find(str => {
-            const regex = new RegExp(`\\s*NAME\\s+'${attributName}'\\s+`);
-            return regex.test(str);
-        }));
-
-        return attributeType; // Retourner l'objet résultat
-
-    } catch (error) {
-        console.error('Erreur de recherche pour', attributName, ':', error);
-        throw error; // Relancer l'erreur pour que l'appelant puisse la gérer
-    } finally {
-        schemaClient.unbind(); // Fermer la connexion au client du schéma, même en cas d'erreur
-    }
-};
-
-const enrichObjectClassWithAttributeDetails = async (config, objectClass) => {
-    try {
-        // Vérification que l'objectClass est fourni  
-        if (!objectClass) {
-            throw new Error("Aucune définition d'objectClass fournie.");
-        }
-
-        // Pour chaque attribut MUST, appeler getOlcAttributeTypes pour obtenir sa définition  
-        await Promise.all(
-            Object.keys(objectClass.MUST).map(async (attribute) => {
-                try {
-                    const attributeDetails = await getOlcAttributeTypes(config, attribute);
-                    // Enrichir directement l'objet objectClass  
-                    objectClass.MUST[attribute] = attributeDetails;
-                } catch (error) {
-                    console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
-                    // Lancer une erreur au lieu de stocker un message d'erreur  
-                    throw new Error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}: ${error.message}`);
-                }
-            })
-        );
-
-        // Pour chaque attribut MAY, appeler getOlcAttributeTypes pour obtenir sa définition  
-        await Promise.all(
-            Object.keys(objectClass.MAY).map(async (attribute) => {
-                try {
-                    const attributeDetails = await getOlcAttributeTypes(config, attribute);
-                    // Enrichir directement l'objet objectClass  
-                    objectClass.MAY[attribute] = attributeDetails;
-                } catch (error) {
-                    console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
-                    // Lancer une erreur au lieu de stocker un message d'erreur  
-                    throw new Error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}: ${error.message}`);
-                }
-            })
-        );
-
-        // A ce stade, objectClass a été modifié en place avec les attributs enrichis  
-        return objectClass; // Retourner l'objet modifié
-
-    } catch (error) {
-        console.error('Erreur lors de la récupération des détails de l\'objectClass enrichie:', error);
-        throw error; // Relancer l'erreur pour que l'appelant puisse la gérer 
-    }
+	 } catch (error) {
+		console.error('Erreur lors de la récupération des détails de l\'objectClass enrichie:', error);
+		throw error; // Relancer l'erreur pour que l'appelant puisse la gérer 
+	 }
 };
 
 module.exports = {
@@ -658,9 +607,6 @@ module.exports = {
 	rawSearchLDAP,
 	getUserRoleFromDatabase,
 	getObjectClass,
-	getOlcAttributeTypes,
-	enrichObjectClassWithAttributeDetails,
-	getAllMustAttributes,
 	updateLDAP,
 	updateAttributeConfigInLDAP
 };
