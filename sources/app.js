@@ -263,7 +263,7 @@ app.get('/edit/:dn', async (req, res) => {
 		// Filtrer les résultats pour enlever les valeurs nulles  
 		const objectClassesDetails = searchPromises.filter(classDetails => classDetails !== null && Object.keys(classDetails).length > 0);
 
-//console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		// Rechercher des contrôles d'attributs dans l'arborescence LDAP config.configDn.attributs+root
 		const attrDefDN = config.configDn.attributs + ',' + config.configDn.root;
 		const attrDefOptions = {
@@ -282,20 +282,29 @@ app.get('/edit/:dn', async (req, res) => {
 			['MUST', 'MAY'].forEach(key => {
 				Object.keys(objectClass[key]).forEach(attr => {
 					const forceMultiValue = attributes.find(item => item.cn.includes(attr))?.ou ?? null;
-					const multiValue = (forceMultiValue && forceMultiValue[0] === 'MULTI-VALUE') || !!objectClass[key][attr]?.MULTIVALUE;
+					const singleValue = (objectClass[key][attr] ?!!(objectClass[key][attr].SINGLE_VALUE) :false);
+					const multiValue = !singleValue
+						&& ((forceMultiValue && forceMultiValue[0] === 'MULTI-VALUE') || !!objectClass[key][attr]?.MULTIVALUE);
 
-					// Ajout valuer(s) ajustée(s) du format SINGLE-VALUE ou MULTI-VALUE
+					// Ajout valeur(s) ajustée(s) du format SINGLE-VALUE ou MULTI-VALUE
+					let values;
 					if (multiValue) {
-						const values = Array.isArray(objectData[attr]) ? objectData[attr] : (objectData[attr] !== undefined ? [objectData[attr]] : []);
-						objectClass['ATTRIBUTE'][attr] = { type: key, values: values };
+						values = Array.isArray(objectData[attr])
+							? objectData[attr]
+							: (objectData[attr] !== undefined ? [objectData[attr]] : []
+							);
 					} else {
-						const value = Array.isArray(objectData[attr]) 
-						// Si le tableau n'est pas vide, prendre le premier élément, sinon null  
-						? (objectData[attr].length > 0 ? objectData[attr][0] : null)
-						// Retourne null si undefined  
-						: objectData[attr] !== undefined ? objectData[attr] : null;
-						objectClass['ATTRIBUTE'][attr] = { type: key, values: value };
+						values = Array.isArray(objectData[attr]) 
+							// Si le tableau n'est pas vide, prendre le premier élément, sinon null  
+							? (objectData[attr].length > 0 ? objectData[attr][0] : null)
+							// Retourne null si undefined  
+							: objectData[attr] !== undefined ? objectData[attr] : null;
 					}
+					objectClass['ATTRIBUTE'][attr] = {
+						type: key,
+						values: values,
+						SINGLE_VALUE: singleValue
+					};
 
 					// Ajout de la propriété customType à chaque attribut
 					objectClass['ATTRIBUTE'][attr].customWording = attributes.find(item => item.cn.includes(attr))?.l || null;
@@ -306,7 +315,7 @@ app.get('/edit/:dn', async (req, res) => {
 			});
 		});
 
-//console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
 	} catch (error) {
