@@ -119,7 +119,7 @@ function generateLDIF(oldObject, newObject, dn) {
 			&& newObject[key] !== null
 			&& newObject[key] !== undefined
 			&& newObject[key] !== ''
-			&& !(Array.isArray(newObject[key]) && newObject[key].length === 0)
+			&& !(Array.isArray(newObject[key]) && (newObject[key].length === 0 || newObject[key][0] === ''))
 			&& !isEmptyObject(newObject[key])
 			) {
 			// Si la clé est dans le nouvel objet mais pas dans l'ancien, c'est un ajout
