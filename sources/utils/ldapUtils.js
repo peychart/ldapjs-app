@@ -297,7 +297,7 @@ async function createOrganizationalUnit(client, dn) {
  * @param {Object} updates - Les modifications à appliquer.
  * @returns {Promise<void>}
  */
-async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
+async function updateAttributeConfigInLDAP(client, config, attrName, attrConf) {
 	try {
 		const root = config.configDn.attributs + ',' + config.configDn.root;
 		await checkAndCreateOrganizationalUnit(client, root);
@@ -310,12 +310,11 @@ async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
 			entry.l = attrConf.customWording; 
 		}
 		if (attrConf.MULTIVALUE != null) {
-			entry.ou = attrConf.MULTIVALUE ?'MULTI-VALUE' :'SINGLE-VALUE'; 
+			entry.ou = !attrConf.MULTIVALUE ?'SINGLE-VALUE' :'MULTI-VALUE'; 
 		}
 		if (attrConf.valueCheck) {
 			entry.description = attrConf.valueCheck; 
 		}
-//console.log('entry: ', JSON.stringify(entry)); // Pour debug
 
 		const dnExists = await checkDNExists(client, dn);
 		if (dnExists) {
@@ -330,7 +329,7 @@ async function updateAttributeConfigInLDAP(client, attrName, attrConf) {
 			});
 		}
 
-		if (Object.entries(entry).length > 0) {
+		if (Object.entries(entry).length > 2) {
 			// Ajouter la nouvelle entrée d'attribut
 			await new Promise((resolve, reject) => {
 				client.add(dn, entry, (err) => {
@@ -393,15 +392,15 @@ async function attributeTypeDefToJson(attributeDef) {
 		const attributeType = {
 				OID: oid,
 				NAME: names,
-				DESCRIPTION: desc,
-				EQUALITY: equality,
-				ORDERING: ordering || null, // Peut être null si non spécifié
-				SYNTAX: syntax,
-				SINGLE_VALUE: isSingleValue,
-				NO_USER_MODIFICATION: isNoUserModification,
-				USAGE: usage,
-				X_ORDERED: xOrdered || null, // Ajouter le champ X-ORDERED s'il existe
-				SUP: sup || null // Ajouter le champ SUP s'il existe
+				...(desc && { DESC: desc }),
+				...(equality && { EQUALITY: equality }),
+				...(ordering && { ORDERING: ordering }),
+				...(syntax && { SYNTAX: syntax }),
+				...(isSingleValue && { SINGLE_VALUE: isSingleValue }),
+				...(isNoUserModification && { NO_USER_MODIFICATION: isNoUserModification }),
+				...(usage && { USAGE: usage, }),
+				...(xOrdered && { X_ORDERED: xOrdered }),
+				...(sup && { SUP: sup })
 		};
 
 		// Résoudre la promesse avec l'objet d'attribut
@@ -496,11 +495,11 @@ async function objectClassDefToJson(inputString) {
 		const objectClass = {
 			OID: oid,
 			NAME: name,
-			DESCRIPTION: desc,
+			...(desc && { DESC: desc }),
 			SUP: sup,
-			AUXILIARY: isAuxiliary,
-			STRUCTURAL: isStructural,
-			ABSTRACT: isAbstract,
+			...(isStructural && { STRUCTURAL: isStructural }),
+			...(isAuxiliary && { AUXILIARY: isAuxiliary }),
+			...(isAbstract && { ABSTRACT: isAbstract }),
 			MUST: mustAttributes,
 			MAY: mayAttributes
 		};
@@ -542,7 +541,7 @@ const getObjectClass = async (schemaClient, config, objectClassName) => {
 			}
 
 			let results = { ...cls.MUST }; // Initialiser avec les attributs MUST actuels
-			if (cls.SUP && cls.SUP !== 'top') {
+			if (cls?.SUP !== 'top') {
 				const supClass = await getObjectClass(schemaClient, config, cls.SUP).catch(() => null);
 				if (supClass) {
 					const supMustAttributes = await getAllMustAttributes(supClass);
