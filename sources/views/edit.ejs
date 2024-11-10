@@ -215,7 +215,8 @@
                                     <button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
-                                    <% if (objectAttribute.values && Array.isArray(objectAttribute.values)) { %>
+                                    <!--% if (objectAttribute.values && Array.isArray(objectAttribute.values)) { %-->
+                                    <% if (objectAttribute.SINGLE_VALUE!==true && objectAttribute.MULTIVALUE !== false) { %>
                                         <!-- popupMultiValues -->
                                         <div class="popupContainer" data-attr-name="<%= attrName %>">
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
@@ -229,8 +230,8 @@
                                                     id="<%= attrName %>"
                                                     class="hiddenInput"
                                                     name="<%= attrName %>"
-                                                    value="<%= objectAttribute.values ?JSON.stringify(objectAttribute.values) :[] %>">
-                                                <!-- Bouton d'ajout d'une valeur à l'attribut -->
+                                            		value="<%= JSON.stringify(Array.isArray(objectAttribute.values) ?(objectAttribute.values.length ?objectAttribute.values :['']) :Array.of(objectAttribute.values || '')) %>"
+                                                <!-- Bouton d ajout d une valeur à l attribut -->
                                                 <button type="button" class="add-button">+</button>
                                             </div>
                                             <div class="popup" style="display: none;"></div> <!-- Initialisation des options -->
@@ -238,7 +239,7 @@
                                     <% } else { %>
                                         <input type="text"
                                             name="<%= attrName %>"
-                                            value="<%= objectAttribute.values || '' %>"
+                                            value="<%= (Array.isArray(objectAttribute.values) ?objectAttribute.values[0] :objectAttribute.values) || '' %>"
                                             class="form-control"
                                             data-object-class-index = '<%= objectClassIndex %>'
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
@@ -290,13 +291,13 @@
                                         <input class="form-check-input" type="radio" name="attributeType" id="singleValue" value="SINGLE-VALUE">
                                         <label class="form-check-label" for="singleValue">SINGLE-VALUE</label>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="attributeType" id="schema" value="SCHEMA" checked>
-                                        <label class="form-check-label" for="schema">cf. SCHEMA</label>
+                                    <div class="form-check" hidden>
+                                        <input class="form-check-input" type="radio" name="attributeType" id="schema" value="SCHEMA" disabled>
+                                        <label class="form-check-label" for="schema">SCHEMA</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="attributeType" id="multiValue" value="MULTI-VALUE">
-                                        <label class="form-check-label" for="multiValue">MULTI-VALUE</label>
+                                        <input class="form-check-input" type="radio" name="attributeType" id="multiValue" value="MULTI-VALUE" checked>
+                                        <label class="form-check-label" for="schema">MULTI-VALUES</label>
                                     </div>
                                 </div>
                             </div>
@@ -313,7 +314,7 @@
                             </div>
                             <div>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                <button type="submit" class="btn btn-primary">Valider</button>
+                                <button type="button" class="btn btn-primary" id="validerModale" onclick="submitModal(this)">Valider</button>
                             </div>
                         </div>
                     </form>
@@ -326,8 +327,8 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script src="/js/popupMultiValues.js"></script>
         <script>
+			let activeTabId = localStorage.getItem('activeTab');
 			const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
-			let activeTabId;
 
 			function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
@@ -374,7 +375,7 @@
 			function saveCurrentTab(){
 				const activeTab = document.querySelector('.nav-link.active');
 				if (activeTab ? activeTab.id : null) {
-					localStorage.setItem('activeTab', activeTabId);
+					localStorage.setItem('activeTab', activeTab.id);
 				}
 			}
 
@@ -429,18 +430,28 @@
 			function openEditModal(button, attrName) {
 				const objectClassIndex = parseInt(button.dataset.objectClassIndex);
 				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
+				document.getElementById('validerModale').dataset.objectClassIndex = objectClassIndex;
 				if (!document.getElementById('saveButton').disabled) {
 					alert("Opération impossible : il y a des modifications d'attributs en cours !");
 					return;
 				}
 
+				// Label d'attribut
 				const newLabelInputField = document.getElementById('newLabel');
 				newLabelInputField.value = objectAttribute.customWording || '';
 				newLabelInputField.placeholder = attrName;
 
-				const radio = (objectAttribute.MULTIVALUE === undefined) ?'schema' : (objectAttribute.MULTIVALUE ?'multiValue' :'singleValue');
+				// Bontons radio SINGLE-VALUE/MULTI-VALUES:
+				//	- OpenLDAP schema : not SINGLE-VALUE -> MULTI-VALUES,
+				//	- this appli: can force SINGLE-VALUE.
+				const radio = !!objectAttribute?.SINGLE_VALUE
+						? 'singleValue'
+						:objectAttribute.MULTIVALUE == null ?'multiValue' :'singleValue';
+				document.getElementById('multiValue').disabled = objectAttribute?.SINGLE_VALUE;
 				document.getElementById(radio).checked = true;
+				document.getElementById('schema').disabled = true;
 
+				// Script de validation des saisies
 				document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
 				document.getElementById('attributeName').textContent = attrName;
@@ -448,6 +459,17 @@
 
 				saveCurrentTab();
 				$('#editModal').modal('show');
+			}
+
+			function submitModal(submitButton) {
+				const attrName = document.getElementById('attributeId').value;
+				const multiValue = document.getElementById('multiValue').checked;
+				const objectClassIndex = parseInt(submitButton.dataset.objectClassIndex);
+				const singleValue = !!objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName]?.SINGLE_VALUE
+									|| !!objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName]?.SINGLE_VALUE;
+				if (singleValue || (!singleValue && multiValue))
+					document.getElementById('schema').checked = !(document.getElementById('schema').disabled = false);
+				document.getElementById('attrForm').submit();
 			}
 
 			function changeModalSize(increase) {
@@ -525,13 +547,12 @@
 
 			// Gestion de la soumission du formulaire
 			const form = document.querySelector('form'); // Sélection formulaire
-			if (form && form.id === 'mainForm') {
+			if ( form?.id === 'mainForm') {
 				form.addEventListener('submit', (event) => {
 					// Validation des données modifiées
 					if (!validateMainForm(form)) {
 						// Eviter la soumission du formulaire
 						event.preventDefault();
-
 						return; // Sortir de la fonction pour éviter la soumission
 					}
 				});
@@ -548,7 +569,7 @@
 				}
 			};
 
-		</script>
-	</div>
+        </script>
+    </div>
 </body>
 </html>
