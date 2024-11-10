@@ -1,48 +1,3 @@
-const express = require('express');
-const ldap = require('ldapjs');
-const path = require('path');
-const configPath = path.join(__dirname, 'config.json');
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const passport = require('passport');
-const { Strategy: LdapStrategy } = require('passport-ldapauth');
-const winston = require('winston');
-const {
-	bindClient,
-	searchLDAP,
-	rawSearchLDAP,
-	getUserRoleFromDatabase,
-	getObjectClass,
-	updateLDAP,
-	updateAttributeConfigInLDAP
-} = require('./utils/ldapUtils');
-const {
-	loadConfig
-} = require('./utils/ldapConfig');
-const {
-	isEqual
-} = require('./utils/utils');
-const createLogger = require('./utils/log');
-
-const app = express();
-
-// Chargement initial de la configuration  
-const config = loadConfig();
-const logger = createLogger();
-
-// Middleware  
-app.use('/js', express.static(path.join(__dirname, 'public/js')));
-app.use(bodyParser.json()); // Pour traiter les JSON 
-app.use(bodyParser.urlencoded({ extended: true })); // Pour parser les données de formulaire
-app.use(cookieParser());
-app.use(session({
-	secret: config.sessionSecret,
-	resave: false,
-	saveUninitialized: true,
-	cookie: { maxAge: 4 * 60 * 60 * 1000 } // Durée de vie du cookie de session
-}));
-app.use(passport.initialize());
 app.use(passport.session());
 app.set('view engine', 'ejs');
 
@@ -263,7 +218,7 @@ app.get('/edit/:dn', async (req, res) => {
 		// Filtrer les résultats pour enlever les valeurs nulles  
 		const objectClassesDetails = searchPromises.filter(classDetails => classDetails !== null && Object.keys(classDetails).length > 0);
 
-console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+//console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		// Rechercher des contrôles d'attributs dans l'arborescence LDAP config.configDn.attributs+root
 		const attrDefDN = config.configDn.attributs + ',' + config.configDn.root;
 		const attrDefOptions = {
@@ -281,10 +236,10 @@ console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClas
 			objectClass['ATTRIBUTE'] = {};
 			['MUST', 'MAY'].forEach(key => {
 				Object.keys(objectClass[key]).forEach(attr => {
+					const singleValue = !!(objectClass[key][attr]?.SINGLE_VALUE);
 					const forceMultiValue = attributes.find(item => item.cn.includes(attr))?.ou ?? null;
-					const singleValue = (objectClass[key][attr] ?!!(objectClass[key][attr].SINGLE_VALUE) :false);
 					const multiValue = !singleValue
-						&& ((forceMultiValue && forceMultiValue[0] === 'MULTI-VALUE') || !!objectClass[key][attr]?.MULTIVALUE);
+						&& (forceMultiValue == null || forceMultiValue[0] === 'MULTI-VALUE');
 
 					// Ajout valeur(s) ajustée(s) du format SINGLE-VALUE ou MULTI-VALUE
 					let values;
@@ -303,7 +258,9 @@ console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClas
 					objectClass['ATTRIBUTE'][attr] = {
 						type: key,
 						values: values,
-						SINGLE_VALUE: singleValue
+						SINGLE_VALUE: singleValue,
+						DESCRIPTION: objectClass[key][attr].DESCRIPTION,
+						NO_USER_MODIFICATION: objectClass[key][attr].NO_USER_MODIFICATION
 					};
 
 					// Ajout de la propriété customType à chaque attribut
@@ -315,7 +272,7 @@ console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClas
 			});
 		});
 
-console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+//console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
 	} catch (error) {
@@ -465,7 +422,7 @@ app.post('/update-attributeCtl/:dn', async (req, res) => {
 		}
 
 		// Mise à jour dans la base LDAP
-		await updateAttributeConfigInLDAP(client, attrName, attrConf);
+		await updateAttributeConfigInLDAP(client, config, attrName, attrConf);
 
 		return res.redirect(`/edit/${dn}`);
 
