@@ -1,18 +1,65 @@
+const express = require('express');
+const ldap = require('ldapjs');
+const path = require('path');
+const configPath = path.join(__dirname, 'config.json');
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const passport = require('passport');
+const { Strategy: LdapStrategy } = require('passport-ldapauth');
+const winston = require('winston');
+const {
+	bindClient,
+	searchLDAP,
+	rawSearchLDAP,
+	getUserRoleFromDatabase,
+	getObjectClass,
+	getInheritedMustAttributes,
+	extractObjectClasses,
+	updateLDAP,
+	updateAttributeConfigInLDAP
+} = require('./utils/ldapUtils');
+const {
+	loadConfig
+} = require('./utils/ldapConfig');
+const {
+	isEqual
+} = require('./utils/utils');
+const createLogger = require('./utils/log');
+
+const app = express();
+
+// Chargement initial de la configuration
+const config = loadConfig();
+const logger = createLogger();
+
+// Middleware
+app.use('/js', express.static(path.join(__dirname, 'public/js')));
+app.use(bodyParser.json()); // Pour traiter les JSON
+app.use(bodyParser.urlencoded({ extended: true })); // Pour parser les données de formulaire
+app.use(cookieParser());
+app.use(session({
+	secret: config.sessionSecret,
+	resave: false,
+	saveUninitialized: true,
+	cookie: { maxAge: 4 * 60 * 60 * 1000 } // Durée de vie du cookie de session
+}));
+app.use(passport.initialize());
 app.use(passport.session());
 app.set('view engine', 'ejs');
 
 // Middleware de journalisation des actions
 app.use((req, res, next) => {
-	const user = req.session.user ? req.session.user : { dn: 'Anonyme', role: 'Invité' }; // Valeurs par défaut pour les utilisateurs non authentifiés  
+	const user = req.session.user ? req.session.user : { dn: 'Anonyme', role: 'Invité' }; // Valeurs par défaut pour les utilisateurs non authentifiés
 	const logMessage = {
-		userDn: user.dn, // Distinguished Name de l'utilisateur  
-		userRole: user.role, // Rôle de l'utilisateur  
-		path: req.path, // Chemin de la requête  
-		method: req.method, // Méthode de la requête  
-		time: new Date().toISOString() // Heure de la requête  
+		userDn: user.dn, // Distinguished Name de l'utilisateur
+		userRole: user.role, // Rôle de l'utilisateur
+		path: req.path, // Chemin de la requête
+		method: req.method, // Méthode de la requête
+		time: new Date().toISOString() // Heure de la requête
 	};
 
-	// Journaliser le message  
+	// Journaliser le message
 	logger.info(logMessage);
 	next();
 });
@@ -36,82 +83,82 @@ app.get('/', (req, res) => {
 
 
 // ***********************************************************
-// Route pour traiter la soumission du formulaire de connexion  
+// Route pour traiter la soumission du formulaire de connexion
 app.post('/login', async (req, res) => {
 	const { login, password } = req.body; // Récupération du login et du mot de passe
 	const appClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 	let client;
 
 	try {
-		// Créer un client LDAP  
+		// Créer un client LDAP
 		await bindClient(appClient, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-		// Définir les attributs à rechercher  
-		const attributesToSearch = ['uid', 'mail', 'employeeNumber', 'sn', 'givenName',  'cn'];
+		// Définir les attributs à rechercher
+		const attributesToSearch = ['uid', 'mail', 'employeeNumber', 'sn', 'givenName', 'cn'];
 
 		const searchPromises = attributesToSearch.map(attr => {
 			const searchOptions = {
-				filter: `(${attr}=${login})`, // Filtrer par chaque attribut  
+				filter: `(${attr}=${login})`, // Filtrer par chaque attribut
 				scope: 'sub',
-				attributes: ['dn'], // N'inclure que le DN dans le résultat  
+				attributes: ['dn'], // N'inclure que le DN dans le résultat
 				sizeLimit: 15
 			};
 
 			return rawSearchLDAP(appClient, config.ldap.data.baseDN, searchOptions).catch(err => {
-				return []; // Retourner un tableau vide en cas d'erreur  
+				return []; // Retourner un tableau vide en cas d'erreur
 			});;
 		});
 
-		// Attendre que toutes les recherches soient terminées  
+		// Attendre que toutes les recherches soient terminées
 		const searchResults = await Promise.all(searchPromises);
 
-		// Filtrer les résultats pour obtenir le DN  : extraire objectName pour le dn ...
+		// Filtrer les résultats pour obtenir le DN : extraire objectName pour le dn ...
 		const validResults = searchResults.flat().map(result => result.objectName).filter(dn => dn);
 
-		// Vérifier si une entrée a été trouvée  
+		// Vérifier si une entrée a été trouvée
 		if (validResults.length === 0) {
-			throw new Error('Nom d\'utilisateur ou mot de passe incorrect.'); // Gérer l'erreur ici  
+			throw new Error('Nom d\'utilisateur ou mot de passe incorrect.'); // Gérer l'erreur ici
 		} else if (validResults.length > 1) {
-	  		const allEqual = validResults.every(dn => dn === validResults[0]);
+			const allEqual = validResults.every(dn => dn === validResults[0]);
 			if (!allEqual) {
-				throw new Error('Plus d\'une occurrence d\'identifiant trouvée ! Veuillez préciser davantage votre login.'); // Gérer l'erreur ici  
+				throw new Error('Plus d\'une occurrence d\'identifiant trouvée ! Veuillez préciser davantage votre login.'); // Gérer l'erreur ici
 			}
 		}
 
-		// Extraire le DN de l'utilisateur à partir du résultat de la recherche  
+		// Extraire le DN de l'utilisateur à partir du résultat de la recherche
 		const bindDN = validResults[0]; // Récupérer le DN de la première entrée
 
-		// Tenter de se connecter au serveur LDAP avec le DN récupéré  
+		// Tenter de se connecter au serveur LDAP avec le DN récupéré
 		client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 		await bindClient(client, bindDN, password);
 
-		// Authentification réussie, récupérer le rôle de l'utilisateur 
+		// Authentification réussie, récupérer le rôle de l'utilisateur
 		const role = await getUserRoleFromDatabase(bindDN); // Utiliser le DN récupéré
 
-		// Stocker les informations de l'utilisateur dans la session  
+		// Stocker les informations de l'utilisateur dans la session
 		req.session.user = {
 			dn: bindDN,
-			role  
+			role
 		};
 
-		// Authentification de l'application réussie  
+		// Authentification de l'application réussie
 		req.session.appClient = appClient;
 
-		// Mémoriser le dernier login dans un cookie  
+		// Mémoriser le dernier login dans un cookie
 		res.cookie('login', login, { maxAge: 24 * 60 * 60 * 1000 }); // Expire dans 1 jour
 
 		// Rediriger vers la page d'accueil
 		return res.redirect('/search');
 
-	} catch (err) {
-		// Gestion des erreurs : ne pas afficher d'erreur dans la console  
+	} catch(err) {
+		// Gestion des erreurs : ne pas afficher d'erreur dans la console
 		return res.render('login', {
-			login: login, // Garder la valeur du login pré-rempli  
+			login: login, // Garder la valeur du login pré-rempli
 			error: err.message || 'Nom d\'utilisateur ou mot de passe incorrect.',
 		ldapUrl: `${config.ldap.url}:${config.ldap.port}`
 		});
 	} finally {
-		// S'assurer que le client LDAP est déconnecté  
+		// S'assurer que le client LDAP est déconnecté
 	if (client)
 		client.unbind();
 		appClient.unbind();
@@ -119,9 +166,9 @@ app.post('/login', async (req, res) => {
 });
 
 // ***********************************************************
-// Route de déconnexion  
+// Route de déconnexion
 app.get('/logout', (req, res) => {
-	// Libérer le client de l'application  
+	// Libérer le client de l'application
 	if (req.session.appClient) {
 		req.session.appClient.unbind((err) => {
 			if (err) {
@@ -134,24 +181,25 @@ app.get('/logout', (req, res) => {
 		if (err) {
 			console.error('Erreur lors de la destruction de la session:', err);
 		}
-		return res.redirect('/'); // Rediriger vers la page de connexion  
+		return res.redirect('/'); // Rediriger vers la page de connexion
 	});
 });
 
 // ***********************************************************
-// Routes de recherche  
-// Route de recherche (GET)  
+// Routes de recherche
+// Route de recherche (GET)
 app.get('/search', async (req, res) => {
 	// Rendre la vue de recherche
 	res.render('search', { results: null, searchTerm: req.body.searchTerm, error: null });
 });
 
-// Route de recherche (POST)  
+// Route de recherche (POST)
 app.post('/search', async (req, res) => {
 	const searchTerm = req.body.searchTerm;
 
-	// Créer un client LDAP  
+	// Créer un client LDAP
 	const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+//	const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
 	const opts = {
 		filter: `(&(objectClass=person)(|(uid=${searchTerm})(cn=${searchTerm})(sn=${searchTerm})(givenName=${searchTerm})(employeeNumber=${searchTerm})))`,
@@ -161,37 +209,63 @@ app.post('/search', async (req, res) => {
 
 	try {
 		await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
+//		await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
 
 		// Récupérer les résultats de la recherche LDAP
 		const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
-		client.unbind();
+/*
+		const structuralClasses = await extractObjectClasses(schemaClient, config, 'STRUCTURAL').catch(err => {
+			throw new Error(`Erreur lors de l'extraction des classes d'objets STRUCTURAL : ${err.message}`);
+		});
 
-		// Passer le searchTerm à la vue  
+console.log('structuralClasses: ', JSON.stringify(structuralClasses, null, 2));
+*/
+
+		// Passer le searchTerm à la vue
 		return res.render('search', { results, searchTerm: searchTerm, error: null });
 
-	} catch (error) {
+	} catch(error) {
 			console.error('Erreur:', error);
 		if (client) {
-			client.unbind(); // Assurez-vous que le client est délié  
+			client.unbind(); // Assurez-vous que le client est délié
 		}
 		return res.render('search', { results: null, searchTerm: null, error: error.message });
+	} finally {
+/*		// Déconnexion du schemaClient
+		if (schemaClient) {
+			try {
+				await schemaClient.unbind();
+			} catch(unbindError) {
+				console.error('Erreur lors de la déconnexion du schemaClient:', unbindError);
+			}
+		}
+*/
+		// Déconnexion du client principal
+		if (client) {
+			try {
+				await client.unbind();
+			} catch(unbindError) {
+				console.error('Erreur lors de la déconnexion du client:', unbindError);
+			}
+		}
 	}
 });
+
 // ***********************************************************
-// Route pour éditer un objet  
+// Route pour éditer un objet
 app.get('/edit/:dn', async (req, res) => {
 	const dn = req.params.dn; // Récupérer le DN des paramètres de l'URL
 	const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 	const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
 	const options = {
-		scope: 'base', // Recherche unique sur le DN spécifié  
-		attributes: ['*'] // Attributs à récupérer  
+		scope: 'base', // Recherche unique sur le DN spécifié
+		attributes: ['*'] // Attributs à récupérer
 	};
 
 	try {
-		// Liaison au client LDAP  
+		// Liaison au client LDAP
 		await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 		await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
 
@@ -208,14 +282,15 @@ app.get('/edit/:dn', async (req, res) => {
 		// Récupérer la définition de chaque objectClass
 		const searchPromises = await Promise.all(objectClassesToSearch.map(async objectClassName => {
 			try {
-				return await getObjectClass(schemaClient, config, objectClassName);
-			} catch (error) {
+				const objectClass = await getObjectClass(schemaClient, config, objectClassName);
+				return await getInheritedMustAttributes(schemaClient, config, objectClass);
+			} catch(error) {
 				console.error(`Erreur lors de la récupération de ${objectClassName} :`, error);
-				return null; // Ou une valeur par défaut, si nécessaire  
+				return null; // Ou une valeur par défaut, si nécessaire
 			}
 		}));
 
-		// Filtrer les résultats pour enlever les valeurs nulles  
+		// Filtrer les résultats pour enlever les valeurs nulles
 		const objectClassesDetails = searchPromises.filter(classDetails => classDetails !== null && Object.keys(classDetails).length > 0);
 
 //console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
@@ -227,7 +302,7 @@ app.get('/edit/:dn', async (req, res) => {
 			attributes: [ 'cn', 'l', 'description', 'ou' ]
 		};
 
-		const attributes = await searchLDAP(client, attrDefDN, attrDefOptions).catch (err => {
+		const attributes = await searchLDAP(client, attrDefDN, attrDefOptions).catch(err => {
 			return [];
 		});
 
@@ -249,10 +324,10 @@ app.get('/edit/:dn', async (req, res) => {
 							: (objectData[attr] !== undefined ? [objectData[attr]] : []
 							);
 					} else {
-						values = Array.isArray(objectData[attr]) 
-							// Si le tableau n'est pas vide, prendre le premier élément, sinon null  
+						values = Array.isArray(objectData[attr])
+							// Si le tableau n'est pas vide, prendre le premier élément, sinon null
 							? (objectData[attr].length > 0 ? objectData[attr][0] : null)
-							// Retourne null si undefined  
+							// Retourne null si undefined
 							: objectData[attr] !== undefined ? objectData[attr] : null;
 					}
 					objectClass['ATTRIBUTE'][attr] = {
@@ -275,24 +350,24 @@ app.get('/edit/:dn', async (req, res) => {
 //console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
 
-	} catch (error) {
+	} catch(error) {
 		console.error('Fiche non trouvée:', error);
-		return res.status(500).send(error.message); // Renvoyer le message d'erreur  
+		return res.status(500).send(error.message); // Renvoyer le message d'erreur
 	} finally {
-		// Déconnexion du schemaClient  
+		// Déconnexion du schemaClient
 		if (schemaClient) {
 			try {
 				await schemaClient.unbind();
-			} catch (unbindError) {
+			} catch(unbindError) {
 				console.error('Erreur lors de la déconnexion du schemaClient:', unbindError);
 			}
 		}
 
-		// Déconnexion du client principal  
+		// Déconnexion du client principal
 		if (client) {
 			try {
 				await client.unbind();
-			} catch (unbindError) {
+			} catch(unbindError) {
 				console.error('Erreur lors de la déconnexion du client:', unbindError);
 			}
 		}
@@ -305,10 +380,10 @@ app.post('/edit/:dn', async (req, res) => {
 	let dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
 
 	try {
-		// Connexion au serveur LDAP 
+		// Connexion au serveur LDAP
 		await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-		// Traitement de la réponse  
+		// Traitement de la réponse
 		const results = Object.keys(req.body).reduce((acc, key) => {
 			// Dédoubler les champs input de la réponse (répartis sur les onglets)) :
 			const value = Array.isArray(req.body[key]) ? req.body[key][0] : req.body[key];
@@ -317,18 +392,18 @@ app.post('/edit/:dn', async (req, res) => {
 			const safeParse = (val) => {
 				try {
 					return JSON.parse(val);
-				} catch (error) {
-					return val; // Retourne la valeur d'origine en cas d'erreur  
+				} catch(error) {
+					return val; // Retourne la valeur d'origine en cas d'erreur
 				}
 			};
 
-			if (key.endsWith('_hidden')  || key === 'businessCategory') {
-				const baseKey = key.slice(0, -7); // Enlever '[]' du nom de clé  
+			if (key.endsWith('_hidden') || key === 'businessCategory') {
+				const baseKey = key.slice(0, -7); // Enlever '[]' du nom de clé
 
-				// Si la valeur est un tableau, parser chaque élément  
+				// Si la valeur est un tableau, parser chaque élément
 				acc[baseKey] = Array.isArray(value) ? value.map(safeParse) : safeParse(value);
 			} else {
-				// Pour les autres champs, conserver la valeur  
+				// Pour les autres champs, conserver la valeur
 				acc[key] = value;
 			}
 
@@ -340,11 +415,11 @@ app.post('/edit/:dn', async (req, res) => {
 
 		return res.redirect(`/edit/${dn}`);
 
-	} catch (error) {
+	} catch(error) {
 		console.error('Erreur:', error);
 		res.status(500).send({ error: error.message });
 	} finally {
-		// Déconnexion du client LDAP  
+		// Déconnexion du client LDAP
 		if (client) {
 			client.unbind();
 		}
@@ -357,15 +432,15 @@ app.post('/delete/:dn', async (req, res) => {
 	const dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
 
 	try {
-		// Connexion au serveur LDAP 
+		// Connexion au serveur LDAP
 		await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-		// Validation du DN avant de supprimer  
+		// Validation du DN avant de supprimer
 		if (!dn) {
 			return res.status(400).send({ error: 'DN est requis.' });
 		}
 
-		// Suppression de l'entrée LDAP  
+		// Suppression de l'entrée LDAP
 		await new Promise((resolve, reject) => {
 			client.del(dn, (err) => {
 				if (err) {
@@ -377,12 +452,12 @@ app.post('/delete/:dn', async (req, res) => {
 
 		// Répondre avec un message de succès
 		return res.json({ message: 'Entrée supprimée avec succès.', redirect: '/search' });
-	} catch (error) {
+	} catch(error) {
 		console.error('Erreur:', error);
 		return res.status(500).send({ error: 'Erreur lors de la suppression de l\'entrée LDAP : ' + error.message });
 	} finally {
-		// Déconnexion du client LDAP  
-	   	client.unbind();
+		// Déconnexion du client LDAP
+		client.unbind();
 	}
 });
 
@@ -397,7 +472,7 @@ app.post('/update-attributeCtl/:dn', async (req, res) => {
 	let attrConf = {}; // Initialisation d'un objet pour stocker les configurations de l'attribut
 
 	try {
-		// Connexion au serveur LDAP 
+		// Connexion au serveur LDAP
 		await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
 		// Récupérer les clés du corps de la requête
@@ -414,9 +489,9 @@ app.post('/update-attributeCtl/:dn', async (req, res) => {
 			} else if (key === 'jsValidation' && req.body[key]) {
 				attrConf.valueCheck = req.body[key];
 			}
-		}  
+		}
 
-		// Validation des données  
+		// Validation des données
 		if (!attrName) {
 			return res.status(400).send('Données manquantes dans \'/update-attributeCtl/:dn\'.');
 		}
@@ -426,18 +501,18 @@ app.post('/update-attributeCtl/:dn', async (req, res) => {
 
 		return res.redirect(`/edit/${dn}`);
 
-	} catch (error) {
+	} catch(error) {
 		console.error('Erreur:', error);
 		res.status(500).send({ message: 'Erreur lors de la mise à jour de l\'attribut', error: error.message });
 	} finally {
-		// Déconnexion du client LDAP  
+		// Déconnexion du client LDAP
 		if (client) {
 			client.unbind();
 		}
 	}
 });
 
-// Lancer le serveur  
+// Lancer le serveur
 app.listen(config.nodeJsPort, () => {
 	console.log(`Serveur en écoute sur http://localhost:${config.nodeJsPort}`);
 });
