@@ -459,61 +459,69 @@ const getOlcAttributeTypes = async (schemaClient, config, attributeName) => {
  * Parse de la définition text d'un objectClass en object JS
  */
 async function objectClassDefToJson(inputString) {
-	return new Promise((resolve, reject) => {
-		if (typeof inputString !== 'string') {
-			reject(new Error("inputString doit être une chaîne de caractères."));
-			return;
-		}
+    return new Promise((resolve, reject) => {
+        // Vérification du type d'entrée  
+        if (typeof inputString !== 'string') {
+            reject(new Error("inputString doit être une chaîne de caractères."));
+            return;
+        }
 
-		const cleanedInput = inputString.trim();
-		const oidRegex = /\(?\s*([\d.]+)/;
-		const nameRegex = /NAME\s+\(([^)]+)\)/;
-		const singleNameRegex = /NAME\s+'([^']+)'/;
-		const descRegex = /DESC\s+'([^']+)'/;
-		const supRegex = /SUP\s+([^ ]+)/;
-		const auxiliaryRegex = /AUXILIARY/;
-		const structuralRegex = /STRUCTURAL/;
-		const abstractRegex = /ABSTRACT/;
-		const mustRegex = /MUST \((.*?)\)/;
-		const mayRegex = /MAY \((.*?)\)/;
+        const cleanedInput = inputString.trim();
+        
+        // Définitions des expressions régulières  
+        const oidRegex = /\(?\s*([\d.]+)/;
+        const nameRegex = /NAME\s+\((.*?)\)|NAME\s+'([^']+)'/; // Capture les noms entre parenthèses ou un seul nom  
+        const descRegex = /DESC\s+'([^']+)'/;
+        const supRegex = /SUP\s+([^ ]+)/;
+        const auxiliaryRegex = /AUXILIARY/;
+        const structuralRegex = /STRUCTURAL/;
+        const abstractRegex = /ABSTRACT/;
 
-		// Extraction des valeurs
-		const oid = cleanedInput.match(oidRegex)?.[1] || null;
-		const namesMatch = cleanedInput.match(nameRegex) || cleanedInput.match(singleNameRegex);
-		const names = namesMatch
-			? namesMatch[1].split("'").map(name => name.trim()).filter(name => name !== "")
-			: [];
-		const desc = cleanedInput.match(descRegex)?.[1] || null;
-		const supMatches = cleanedInput.match(supRegex);
-		const sup = supMatches ? supMatches[1] : null;
-		const isAuxiliary = auxiliaryRegex.test(cleanedInput);
-		const isStructural = structuralRegex.test(cleanedInput);
-		const isAbstract = abstractRegex.test(cleanedInput);
-		const must = cleanedInput.match(mustRegex)?.[1] || null;
-		const may = cleanedInput.match(mayRegex)?.[1] || null;
-		const mustAttributes = must ? Object.fromEntries(must.split(' $ ').map(attr => [attr.trim(), null])) : {};
-		const mayAttributes = may ? Object.fromEntries(may.split(' $ ').map(attr => [attr.trim(), null])) : {};
+        // Extraction des valeurs  
+        const oid = cleanedInput.match(oidRegex)?.[1] || null;
 
-		const objectClass = {
-			OID: oid,
-			NAME: names,
-			...(desc && { DESC: desc }),
-			SUP: sup,
-			...(isStructural && { STRUCTURAL: isStructural }),
-			...(isAuxiliary && { AUXILIARY: isAuxiliary }),
-			...(isAbstract && { ABSTRACT: isAbstract }),
-			MUST: mustAttributes,
-			MAY: mayAttributes
-		};
+        const nameMatch = cleanedInput.match(nameRegex);
+        const names = nameMatch  ?(nameMatch[1] || nameMatch[2]).split(",").map(name => name.trim()) :[];
 
-		resolve(objectClass);
-	});
+        const desc = cleanedInput.match(descRegex)?.[1] || null;
+        const supMatches = cleanedInput.match(supRegex);
+        const sup = supMatches ? supMatches[1] : null;
+        const isAuxiliary = auxiliaryRegex.test(cleanedInput);
+        const isStructural = structuralRegex.test(cleanedInput);
+        const isAbstract = abstractRegex.test(cleanedInput);
+
+        const mustRegex = /MUST\s+\((.*?)\)|MUST\s+(\w+)/;
+        const mustMatch = cleanedInput.match(mustRegex);
+        const must = mustMatch ? (mustMatch[1] || mustMatch[2]) : null;
+        const mustAttributes = must ?Object.fromEntries(must.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
+
+        const mayRegex = /MAY\s+\((.*?)\)|MAY\s+(\w+)/;
+        const mayMatch = cleanedInput.match(mayRegex);
+        const may = mayMatch ? (mayMatch[1] || mayMatch[2]) : null;
+        const mayAttributes = may ?Object.fromEntries(may.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
+
+        // Construction de l'objet final  
+        const objectClass = {
+            OID: oid,
+            NAME: names,
+            ...(desc && { DESC: desc }),
+            SUP: sup,
+            ...(isStructural && { STRUCTURAL: isStructural }),
+            ...(isAuxiliary && { AUXILIARY: isAuxiliary }),
+            ...(isAbstract && { ABSTRACT: isAbstract }),
+            MUST: mustAttributes,
+            MAY: mayAttributes  
+        };
+
+        resolve(objectClass);
+    });
 }
+
 
 /*
  * Recherche les objectClasses selon filter
  */
-async function extractAllObjectClasses(schemaClient, config, filter) {
+async function getAllObjectClasses(schemaClient, config, filter) {
 	try {
 		// Définir les options pour la recherche dans le schéma LDAP
 		const options = {
@@ -559,7 +567,7 @@ async function extractAllObjectClasses(schemaClient, config, filter) {
 /*
  * Recherche les objectClass STRUCTURAL, AUXILIARY ou ABSTRACT, ... ou tout autre filtre
  */
-async function extractObjectClassesByType(schemaClient, config, CLASSTYPE) {
+async function getObjectClassesByType(schemaClient, config, CLASSTYPE) {
 	try {
 		if (!CLASSTYPE) {
 			throw new Error(`Type de classe non spécifié`);
@@ -569,7 +577,7 @@ async function extractObjectClassesByType(schemaClient, config, CLASSTYPE) {
 		const filter = `\\s+${CLASSTYPE}\\s*`;
 
 		// Récupérer toutes les classes d'objet qui correspondent au type  
-		return await extractAllObjectClasses(schemaClient, config, filter);
+		return await getAllObjectClasses(schemaClient, config, filter);
 	} catch (error) {
 		console.error('Erreur lors de l\'extraction des classes d\'objet par type :', error);
 		throw error; // Laisser l'erreur remonter  
@@ -588,7 +596,7 @@ const getObjectClass = async (schemaClient, config, objectClassName) => {
 		// Filtre de recherche d'une classe d'objet par son nom
 		const filter = `\\s*NAME\\s+'${objectClassName}'\\s+`;
 
-		const objectClasses = await extractAllObjectClasses(schemaClient, config, filter);
+		const objectClasses = await getAllObjectClasses(schemaClient, config, filter);
 
 		if (objectClasses.length === 0) {
 			throw new Error(`Classe non trouvée`);
@@ -672,7 +680,7 @@ module.exports = {
 	getUserRoleFromDatabase,
 	getObjectClass,
 	getInheritedMustAttributes,
-	extractObjectClassesByType,
+	getObjectClassesByType,
 	updateLDAP,
 	updateAttributeConfigInLDAP
 };
