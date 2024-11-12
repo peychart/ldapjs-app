@@ -60,7 +60,7 @@
 
     <div class="header-buttons">
         <form action="/search" method="post">
-            <input type="text" name="searchTerm" placeholder="Recherche : ( including * ) ..." required value="<%= searchTerm || '' %>">
+            <input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : ( including * ) ..." required value="<%= searchTerm || '' %>">
             <button type="submit">Rechercher</button>
         </form>
         
@@ -109,10 +109,21 @@
         </tbody>
     </table>
     <script>
+		// Mettre le focus sur le champ de recherche lors du chargement de la page  
+		window.onload = function() {
+        	// Placer le focus sur le champ de recherche lors du chargement de la page  
+			document.getElementById("searchTerm").focus();
+		};
+
         function handleHeaderClick(header) {
             // Votre logique pour gérer le clic sur l'en-tête  
             alert("Vous avez cliqué sur : " + header.innerText);
         }
+
+        // Sélectionner le contenu du champ input lorsque celui-ci reçoit le focus  
+        document.getElementById("searchTerm").addEventListener("focus", function() {
+            this.select();
+        });
     </script>
 </body>
 </html>
