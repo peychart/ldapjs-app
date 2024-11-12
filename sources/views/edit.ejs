@@ -157,6 +157,35 @@
         .btn-delete:hover {
             background-color: #c82333; /* Couleur plus foncée au survol */
         }
+        .auxiliariesContainer {
+            display: flex; /* Utilisation de flexbox pour la mise en page */
+            justify-content: space-between; /* Espace entre les colonnes */
+            align-items: flex-start; /* Alignement en haut des colonnes */
+        }
+        .list {
+            width: 45%; /* Largeur de chaque colonne */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .list-item {
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 5px;
+        }
+        .list-item:hover {
+            background-color: #f0f0f0;
+        }
+        .highlight {
+            background-color: #ffeb3b; /* Couleur de surbrillance */
+        }
+        .placeholder {
+            color: #888; /* Couleur grisée pour les messages d'instruction */
+            font-style: italic; /* Italique pour le style */
+            text-align: center; /* Centrer le texte */
+            margin-top: 10px; /* Espace au-dessus du message */
+        }
     </style>
 </head>
 <body>
@@ -254,14 +283,21 @@
 
                 <!-- Tab pour ajouter une nouvelle objectClass -->
                 <div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
-                    <h3>Ajouter une nouvelle objectClass</h3>
-                    <div class="form-group">
-                        <label for="objectClassName">Nom de l'objectClass</label>
-                        <input type="text" id="objectClassName" name="objectClassName" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label for="attributes">Attributs (JSON)</label>
-                        <textarea id="attributes" name="attributes" class="form-control" rows="5" placeholder='{"MUST": [], "MAY": []}'></textarea>
+                    <h3>ObjectClasses AUXILIARY et Attributs</h3>
+                    <div class="tab-content">
+                        <div class="auxiliariesContainer">
+                            <div class="list" id="objectClassList">
+                                <h4>ObjectClasses AUXILIARY</h4>
+                                <!-- La liste des objectClasses sera générée ici -->
+                            </div>
+                            <div class="list" id="attributeList">
+                                <h4>Attributs</h4>
+                                <div id="attributePlaceholder" class="placeholder">
+			                        Cliquer sur un objectClass pour afficher les attributs ...
+                                </div>
+                                <!-- La liste des attributs sera affichée ici -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -329,6 +365,7 @@
         <script>
 			let activeTabId = localStorage.getItem('activeTab');
 			const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
+			const auxiliaryObjectClasses = <%- JSON.stringify(auxiliaryObjectClasses) %>;
 
 			function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
@@ -569,6 +606,65 @@
 				}
 			};
 
+			// AFFICHAGE de l'onglet "+"
+			const objectClassList = document.getElementById('objectClassList');
+			const attributeList = document.getElementById('attributeList');
+			const attributePlaceholder = document.getElementById('attributePlaceholder');
+
+			// Remplir la liste des objectClasses  
+			auxiliaryObjectClasses.forEach((objectClass) => {
+				const listItem = document.createElement('div');
+				listItem.className = 'list-item';
+
+				// Vérifier si l'objectClass est présente dans objectClassesDetails  
+				const isChecked = objectClassesDetails.some(detail => detail.NAME.includes(objectClass.NAME[0]));
+				listItem.innerHTML = `
+					<input type="checkbox" class="checkbox" ${isChecked ? 'checked' : ''}>
+					${objectClass.NAME[0]}
+				`;
+
+				// Événement de clic pour mettre en surbrillance l'objectClass et afficher les attributs  
+				listItem.onclick = function() {
+					let hasAttributes = false;
+
+					// Vérifiez si l'item est déjà surligné
+					const isHighlighted = listItem.classList.contains('highlight');
+
+					// Surbrillance de l'objectClass cliqué  
+					const highlighted = objectClassList.getElementsByClassName('highlight');
+					Array.from(highlighted).forEach(item => {
+						item.classList.remove('highlight');
+					});
+
+					// Vider la liste des attributs  
+					attributeList.innerHTML = `<h4>Attributs</h4>`;
+					attributeList.appendChild(attributePlaceholder);
+
+					if (!isHighlighted) {
+						listItem.classList.add('highlight');
+						attributePlaceholder.innerText = 'Aucun attribut pour cet objectClass.';
+
+						// Ajouter les attributs MUST et MAY correspondants
+						['MUST', 'MAY'].forEach(key => {
+							for (const attrKey in objectClass[key]) {
+								const attrItem = document.createElement('div');
+								attrItem.className = 'list-item';
+								attrItem.innerText = `${attrKey} (${key})`; // Le nom de l'attribut  
+								attributeList.appendChild(attrItem);
+								hasAttributes = true; // Indiquer qu'il y a des attributs  
+							}
+						});
+					} else {
+						listItem.classList.remove('highlight');
+						attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher les attributs ...';
+					}
+
+					// Si aucun attribut n'est trouvé, afficher le message approprié  
+					attributePlaceholder.style.display = hasAttributes ?'none' :'block';
+				}
+
+				objectClassList.appendChild(listItem);
+			});
         </script>
     </div>
 </body>
