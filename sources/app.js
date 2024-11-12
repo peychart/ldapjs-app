@@ -15,7 +15,7 @@ const {
 	getUserRoleFromDatabase,
 	getObjectClass,
 	getInheritedMustAttributes,
-	extractObjectClassesByType,
+	getObjectClassesByType,
 	updateLDAP,
 	updateAttributeConfigInLDAP
 } = require('./utils/ldapUtils');
@@ -199,7 +199,6 @@ app.post('/search', async (req, res) => {
 
 	// Créer un client LDAP
 	const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
-//	const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
 	const opts = {
 		filter: `(&(objectClass=person)(|(uid=${searchTerm})(cn=${searchTerm})(sn=${searchTerm})(givenName=${searchTerm})(employeeNumber=${searchTerm})))`,
@@ -209,18 +208,9 @@ app.post('/search', async (req, res) => {
 
 	try {
 		await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
-//		await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
 
 		// Récupérer les résultats de la recherche LDAP
 		const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
-
-/*
-		const structuralClasses = await extractObjectClassesByType(schemaClient, config, 'STRUCTURAL').catch(err => {
-			throw new Error(`Erreur lors de l'extraction des classes d'objets STRUCTURAL : ${err.message}`);
-		});
-
-console.log('structuralClasses: ', JSON.stringify(structuralClasses, null, 2));
-*/
 
 		// Passer le searchTerm à la vue
 		return res.render('search', { results, searchTerm: searchTerm, error: null });
@@ -232,15 +222,6 @@ console.log('structuralClasses: ', JSON.stringify(structuralClasses, null, 2));
 		}
 		return res.render('search', { results: null, searchTerm: null, error: error.message });
 	} finally {
-/*		// Déconnexion du schemaClient
-		if (schemaClient) {
-			try {
-				await schemaClient.unbind();
-			} catch(unbindError) {
-				console.error('Erreur lors de la déconnexion du schemaClient:', unbindError);
-			}
-		}
-*/
 		// Déconnexion du client principal
 		if (client) {
 			try {
@@ -348,7 +329,16 @@ app.get('/edit/:dn', async (req, res) => {
 		});
 
 //console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
-		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails});
+
+		// Recherche des objectClass AUXILIARY du schéma en cours
+		const auxiliaryObjectClasses = await getObjectClassesByType(schemaClient, config, 'AUXILIARY').catch(err => {
+			throw new Error(`Erreur lors de l'extraction des classes d'objets AUXILIARY : ${err.message}`);
+		});
+
+//console.log('\n\n*************************************************************************');
+//console.log('auxiliaryObjectClasses: ', JSON.stringify(auxiliaryObjectClasses, null, 2));
+
+		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, auxiliaryObjectClasses});
 
 	} catch(error) {
 		console.error('Fiche non trouvée:', error);
