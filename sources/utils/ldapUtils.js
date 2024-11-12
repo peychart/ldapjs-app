@@ -511,30 +511,70 @@ async function objectClassDefToJson(inputString) {
 }
 
 /*
- * Ajouter tous les attributs MUST hérités
+ * Recherche les objectClasses selon filter
  */
-const getInheritedMustAttributes = async (schemaClient, config, objectClass) => {
-	if (!objectClass || typeof objectClass !== 'object') {
-		throw new Error('Invalid objectClass provided');
+async function extractAllObjectClasses(schemaClient, config, filter) {
+	try {
+		// Définir les options pour la recherche dans le schéma LDAP
+		const options = {
+			filter: '(olcObjectClasses=*)',		// Cherche toutes les définitions d'objectClasses
+			scope: 'sub',						// Définit la profondeur de la recherche
+			attributes: ['olcObjectClasses']	// Attributs à récupérer
+		};
+
+		// Effectuer la recherche LDAP pour récupérer toutes les définitions d'objectClasses
+		const searchResult = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
+
+		const results = [];
+
+		// Créer un tableau de promesses pour toutes les opérations asynchrones  
+		const promises = searchResult.map(async (entry) => {
+			return Promise.all(entry.olcObjectClasses.map(async (objectClassDefinition) => {
+				// Vérifier si le filtre est fourni et tester si la définition correspond  
+				if (filter && !new RegExp(filter).test(objectClassDefinition)) {
+					return; // Ne pas inclure cette définition si elle ne correspond pas  
+				}
+
+				// Convertir la définition en objet avec la fonction objectClassDefToJson  
+				const objectClass = await objectClassDefToJson(objectClassDefinition);
+
+				// Enrichir l'objet class avec les détails des attributs  
+				await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
+
+				// Ajouter l'objet class à la liste des résultats  
+				results.push(objectClass);
+			}));
+		});
+
+		// Attendre que toutes les promesses soient résolues
+		await Promise.all(promises);
+
+		return results; // Retourner le tableau des objets objectClass
+	} catch (error) {
+		console.error('Erreur lors de l\'extraction des classes d\'objet :', error);
+		throw error; // Laisser l'erreur remonter
 	}
+}
 
-	const getInheritedMustAttributesFromSuperClasses = async (cls) => {
-		let results = { ...cls.MUST }; // Initialiser avec les attributs MUST actuels
-		if (cls?.SUP !== 'top') {
-			const supClass = await getObjectClass(schemaClient, config, cls.SUP).catch(() => null);
-			if (supClass) {
-				const supMustAttributes = await getInheritedMustAttributesFromSuperClasses(supClass);
-				results = { ...results, ...supMustAttributes }; // Fusionner les attributs
-			}
+/*
+ * Recherche les objectClass STRUCTURAL, AUXILIARY ou ABSTRACT, ... ou tout autre filtre
+ */
+async function extractObjectClassesByType(schemaClient, config, CLASSTYPE) {
+	try {
+		if (!CLASSTYPE) {
+			throw new Error(`Type de classe non spécifié`);
 		}
-		return results;
-	};
 
-	objectClass.MUST = await getInheritedMustAttributesFromSuperClasses(objectClass);
+		// Filtre de recherche des classes d'objet par type  
+		const filter = `\\s+${CLASSTYPE}\\s*`;
 
-	// Ajout des définitions d'attributs
-	return await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
-};
+		// Récupérer toutes les classes d'objet qui correspondent au type  
+		return await extractAllObjectClasses(schemaClient, config, filter);
+	} catch (error) {
+		console.error('Erreur lors de l\'extraction des classes d\'objet par type :', error);
+		throw error; // Laisser l'erreur remonter  
+	}
+}
 
 /**
  * Récupération de la dénition complète d'un objectClass dans le schema de la base
@@ -542,30 +582,21 @@ const getInheritedMustAttributes = async (schemaClient, config, objectClass) => 
 const getObjectClass = async (schemaClient, config, objectClassName) => {
 	try {
 		if (!objectClassName) {
-			throw new Error(`ObjetClass non trouvé`);
+			throw new Error(`ObjetClass non spécifié`);
 		}
 
-		const options = {
-			filter: `(olcObjectClasses=* NAME '${objectClassName}' *)`,
-			scope: 'sub',
-			attributes: ['olcObjectClasses']
-		};
+		// Filtre de recherche d'une classe d'objet par son nom
+		const filter = `\\s*NAME\\s+'${objectClassName}'\\s+`;
 
-		const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options)
-			.catch(() => {
-				throw new Error(`Aucune classe d'objet trouvée pour: '${objectClassName}'`);
-			});
+		const objectClasses = await extractAllObjectClasses(schemaClient, config, filter);
 
-		const objectClass = await objectClassDefToJson(result[0].olcObjectClasses.find(str =>
-			new RegExp(`\\s*NAME\\s+'${objectClassName}'\\s+`).test(str)
-		));
+		if (objectClasses.length === 0) {
+			throw new Error(`Classe non trouvée`);
+		}
 
-		// Ajout des définitions d'attributs
-		await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
-
-		return objectClass;
+		return objectClasses[0];
 	} catch (error) {
-		console.error('Erreur de recherche pour', objectClassName, ':', error);
+		console.error('Erreur de recherche pour la classe ', objectClassName, ':', error);
 		throw error;
 	}
 };
@@ -609,48 +640,30 @@ const enrichObjectClassWithAttributeDetails = async (schemaClient, config, objec
 };
 
 /*
- * Recherche les objectClass STRUCTURAL, AUXILIARY ou ABSTRACT
+ * Ajouter tous les attributs MUST hérités
  */
-async function extractObjectClasses(schemaClient, config, CLASSTYPE) {
-	try {
-		// Définir les options pour la recherche dans le schéma LDAP
-		const options = {
-			filter: '(olcObjectClasses=*)',		// Cherche toutes les définitions d'objectClasses
-			scope: 'sub',						// Définit la profondeur de la recherche
-			attributes: ['olcObjectClasses']	// Attributs à récupérer
-		};
-
-		// Effectuer la recherche LDAP pour récupérer toutes les définitions d'objectClasses
-		const searchResult = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
-
-		const results = [];
-
-		// Créer un tableau de promesses pour toutes les opérations asynchrones
-		const promises = searchResult.map(async (entry) => {
-			return Promise.all(entry.olcObjectClasses.map(async (objectClassDefinition) => {
-
-				if (objectClassDefinition.includes(CLASSTYPE)) {
-					// Convertir la définition en objet avec la fonction objectClassDefToJson
-					const objectClass = await objectClassDefToJson(objectClassDefinition);
-
-					// Enrichir l'objet class avec les détails des attributs
-					await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
-					
-					// Ajouter l'objet class à la liste des résultats
-					results.push(objectClass);
-				}
-			}));
-		});
-
-		// Attendre que toutes les promesses soient résolues
-		await Promise.all(promises);
-
-		return results; // Retourner le tableau des objets objectClass
-	} catch (error) {
-		console.error('Erreur lors de l\'extraction des classes d\'objet STRUCTURAL :', error);
-		throw error; // Laisser l'erreur remonter
+const getInheritedMustAttributes = async (schemaClient, config, objectClass) => {
+	if (!objectClass || typeof objectClass !== 'object') {
+		throw new Error('Invalid objectClass provided');
 	}
-}
+
+	const getInheritedMustAttributesFromSuperClasses = async (cls) => {
+		let results = { ...cls.MUST }; // Initialiser avec les attributs MUST actuels
+		if (cls?.SUP !== 'top') {
+			const supClass = await getObjectClass(schemaClient, config, cls.SUP).catch(() => null);
+			if (supClass) {
+				const supMustAttributes = await getInheritedMustAttributesFromSuperClasses(supClass);
+				results = { ...results, ...supMustAttributes }; // Fusionner les attributs
+			}
+		}
+		return results;
+	};
+
+	objectClass.MUST = await getInheritedMustAttributesFromSuperClasses(objectClass);
+
+	// Ajout des définitions d'attributs
+	return await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
+};
 
 module.exports = {
 	bindClient,
@@ -659,7 +672,7 @@ module.exports = {
 	getUserRoleFromDatabase,
 	getObjectClass,
 	getInheritedMustAttributes,
-	extractObjectClasses,
+	extractObjectClassesByType,
 	updateLDAP,
 	updateAttributeConfigInLDAP
 };
