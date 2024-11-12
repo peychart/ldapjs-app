@@ -177,6 +177,8 @@ Recherche :
 Edition :
  ![](doc/images/edit.png)
 
+Edition d'objectClasses :
+ ![](doc/images/addObjectClass.png)
 
 ## Contribuer
 
