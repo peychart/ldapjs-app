@@ -15,7 +15,7 @@ const {
 	getUserRoleFromDatabase,
 	getObjectClass,
 	getInheritedMustAttributes,
-	extractObjectClasses,
+	extractObjectClassesByType,
 	updateLDAP,
 	updateAttributeConfigInLDAP
 } = require('./utils/ldapUtils');
@@ -215,7 +215,7 @@ app.post('/search', async (req, res) => {
 		const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
 /*
-		const structuralClasses = await extractObjectClasses(schemaClient, config, 'STRUCTURAL').catch(err => {
+		const structuralClasses = await extractObjectClassesByType(schemaClient, config, 'STRUCTURAL').catch(err => {
 			throw new Error(`Erreur lors de l'extraction des classes d'objets STRUCTURAL : ${err.message}`);
 		});
 
