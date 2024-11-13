@@ -359,9 +359,9 @@ async function attributeTypeDefToJson(attributeDef) {
 		}
 
 		const cleanedInput = attributeDef.trim();
+        //const oidRegex = /\(\s*([\d.]+)\s/;
 		const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
-		const nameRegex = /NAME\s+\(([^)]+)\)/; // Support pour plusieurs noms
-		const singleNameRegex = /NAME\s+'([^']+)'/; // Support pour un seul nom
+		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')\s/;
 		const descRegex = /DESC\s+'([^']+)'/;
 		const equalityRegex = /EQUALITY\s+([^ ]+)/;
 		const orderingRegex = /ORDERING\s+([^ ]+)/;
@@ -374,10 +374,8 @@ async function attributeTypeDefToJson(attributeDef) {
 
 		// Extraction des valeurs
 		const oid = cleanedInput.match(oidRegex)?.[1] || null;
-		const namesMatch = cleanedInput.match(nameRegex) || cleanedInput.match(singleNameRegex);
-		const names = namesMatch
-			? namesMatch[1].split("'").map(name => name.trim()).filter(name => name !== "")
-			: null;
+        const nameMatch = cleanedInput.match(nameRegex);
+		const names = nameMatch ? (nameMatch[1] || nameMatch[2]).match(/'([^']+)'/g).map(name => name.replace(/'/g, '').trim()) : [];
 		const desc = cleanedInput.match(descRegex)?.[1] || null;
 		const equality = cleanedInput.match(equalityRegex)?.[1] || null;
 		const ordering = cleanedInput.match(orderingRegex)?.[1] || null;
@@ -467,10 +465,12 @@ async function objectClassDefToJson(inputString) {
         }
 
         const cleanedInput = inputString.trim();
+//console.log('\ncleanedInput: ', cleanedInput);
         
         // Définitions des expressions régulières  
-        const oidRegex = /\(?\s*([\d.]+)/;
-        const nameRegex = /NAME\s+\((.*?)\)|NAME\s+'([^']+)'/; // Capture les noms entre parenthèses ou un seul nom  
+		//const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
+        const oidRegex = /\(\s*([\d.]+)\s/;
+		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')\s/;
         const descRegex = /DESC\s+'([^']+)'/;
         const supRegex = /SUP\s+([^ ]+)/;
         const auxiliaryRegex = /AUXILIARY/;
@@ -479,9 +479,8 @@ async function objectClassDefToJson(inputString) {
 
         // Extraction des valeurs  
         const oid = cleanedInput.match(oidRegex)?.[1] || null;
-
         const nameMatch = cleanedInput.match(nameRegex);
-        const names = nameMatch  ?(nameMatch[1] || nameMatch[2]).split(",").map(name => name.trim()) :[];
+		const names = nameMatch ? (nameMatch[1] || nameMatch[2]).match(/'([^']+)'/g).map(name => name.replace(/'/g, '').trim()) : [];
 
         const desc = cleanedInput.match(descRegex)?.[1] || null;
         const supMatches = cleanedInput.match(supRegex);
@@ -550,7 +549,8 @@ async function getAllObjectClasses(schemaClient, config, filter) {
 				await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
 
 				// Ajouter l'objet class à la liste des résultats  
-				results.push(objectClass);
+				if (objectClass.OID)	// Filtrer les 'OLcfgGlAt'
+					results.push(objectClass);
 			}));
 		});
 
@@ -623,7 +623,6 @@ const enrichObjectClassWithAttributeDetails = async (schemaClient, config, objec
 		// Pour chaque attribut, obtenir sa définition
 		await Promise.all(
 			['MUST', 'MAY'].flatMap(key => {
-console.error('Objet objectClass avant enrichissement:', JSON.stringify(objectClass, null, 2));
 				Object.keys(objectClass[key]).map(async (attribute) => {
 					try {
 						if (!objectClass[key][attribute]) {
