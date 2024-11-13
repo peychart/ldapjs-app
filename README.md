@@ -179,12 +179,16 @@ Edition :
 
 Edition d'objectClasses :
 
- <div style="display: inline-block; margin-right: 10px;">
-    <img src="doc/images/addObjectClass.png" alt="Description de la première image" width="300"/>
-</div>
-<div style="display: inline-block;">
-    <img src="doc/images/addObjectClass2.png" alt="Description de la seconde image" width="300"/>
-</div>
+<table>
+    <tr>
+        <td>
+            <img src="doc/images/addObjectClass.png" alt="Description de la première image" width="300"/>
+        </td>
+        <td>
+            <img src="doc/images/addObjectClass2.png" alt="Description de la seconde image" width="300"/>
+        </td>
+    </tr>
+</table>
 
 ## Contribuer
 
