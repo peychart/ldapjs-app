@@ -103,8 +103,12 @@
             <% } %>
         </form>
     </div>
-
     <script>
+        window.onload = function() {
+            // Placer le focus sur le champ de recherche lors du chargement de la page  
+            document.getElementById("login").focus();
+        };
+
         // Écoute l'événement focus sur le champ login ou de mot de passe  
         document.getElementById('login').addEventListener('focus', function() {
             // Efface le message d'erreur  
