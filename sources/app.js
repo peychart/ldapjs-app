@@ -330,15 +330,22 @@ app.get('/edit/:dn', async (req, res) => {
 
 //console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
+		// Recherche des objectClass STRUCTURAL du schéma en cours
+		const structuralObjectClasses = await getObjectClassesByType(schemaClient, config, 'STRUCTURAL').catch(err => {
+			throw new Error(`Erreur lors de l'extraction des classes d'objets AUXILIARY : ${err.message}`);
+		});
+		await getInheritedMustAttributes(schemaClient, config, structuralObjectClasses);
+
 		// Recherche des objectClass AUXILIARY du schéma en cours
 		const auxiliaryObjectClasses = await getObjectClassesByType(schemaClient, config, 'AUXILIARY').catch(err => {
 			throw new Error(`Erreur lors de l'extraction des classes d'objets AUXILIARY : ${err.message}`);
 		});
+		await getInheritedMustAttributes(schemaClient, config, auxiliaryObjectClasses);
 
 //console.log('\n\n*************************************************************************');
 //console.log('auxiliaryObjectClasses: ', JSON.stringify(auxiliaryObjectClasses, null, 2));
 
-		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, auxiliaryObjectClasses});
+		return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, structuralObjectClasses, auxiliaryObjectClasses});
 
 	} catch(error) {
 		console.error('Fiche non trouvée:', error);
