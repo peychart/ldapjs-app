@@ -160,14 +160,16 @@
         .auxiliariesContainer {
             display: flex; /* Utilisation de flexbox pour la mise en page */
             justify-content: space-between; /* Espace entre les colonnes */
-            align-items: flex-start; /* Alignement en haut des colonnes */
+            align-items: stretch; /* Alignement en haut des colonnes */
+            height: calc(70vh - 100px); /* Hauteur fixe pour le conteneur */
         }
         .list {
-            width: 48%;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
+            flex: 1; /* Permet aux listes de prendre une part égale de l'espace */
+            overflow-y: auto; /* Activer le défilement si le contenu déborde */
+            border: 1px solid #ccc; /* Bordure pour les listes */
+            border-radius: 4px; /* Coins arrondis pour les listes */
+            padding: 10px; /* Rembourrage intérieur */
+            margin-top: 10px; /* Espace au-dessus des listes */
         }
         .list-item {
             margin: 5px 0;
@@ -200,6 +202,12 @@
         }
 		.auxiliaryCheckbox {
             margin-right: 10px; /* Ajustez la valeur pour plus ou moins d'espace */
+        }
+        h4 {
+            margin: 0; /* Réinitialiser la marge */
+            padding: 10px; /* Ajouter un peu de rembourrage pour le style */
+            background-color: #fffacd; /* Couleur de fond pour les titres (jaune un peu plus foncé) */
+            border-bottom: 1px solid #ccc; /* Bordure pour séparer le titre du contenu */
         }
     </style>
 </head>
@@ -690,7 +698,7 @@
 								const attrItem = document.createElement('div');
 								attrItem.className = 'list-item';
 								attrItem.innerText = `${attrKey} (${key})`; // Le nom de l'attribut
-								attrItem.title = objectClass[key][attrKey].DESC || "Pas de description disponible";
+								attrItem.title = objectClass[key][attrKey]?.DESC || "Pas de description disponible";
 								attributeList.appendChild(attrItem);
 								hasAttributes = true; // Indiquer qu'il y a des attributs
 							}
@@ -701,8 +709,8 @@
 					}
 
 					// Si aucun attribut n'est trouvé, afficher le message approprié
+					attributeList.innerHTML = '<h4>Attributs' + (hasAttributes ?' de \''+objectClass.NAME[0]+'\'' :'') + ':</h4>' + attributeList.innerHTML;
 					attributePlaceholder.style.display = hasAttributes ?'none' :'block';
-					attributeList.innerHTML = '<h4>Attributs' + (hasAttributes ?' de l\'objectClass \''+objectClass.NAME[0]+'\'' :'') + ':</h4>' + attributeList.innerHTML;
 				}
 
 				objectClassList.appendChild(listItem);
