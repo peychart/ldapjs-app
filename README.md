@@ -178,7 +178,13 @@ Edition :
  ![](doc/images/edit.png)
 
 Edition d'objectClasses :
- <img src="doc/images/addObjectClass.png" alt="Description de l'image" width="300"/>
+
+ <div style="display: inline-block; margin-right: 10px;">
+    <img src="doc/images/addObjectClass.png" alt="Description de la première image" width="400"/>
+</div>
+<div style="display: inline-block;">
+    <img src="doc/images/addObjectClass2.png" alt="Description de la seconde image" width="400"/>
+</div>
 
 ## Contribuer
 
