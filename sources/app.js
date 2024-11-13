@@ -334,13 +334,13 @@ app.get('/edit/:dn', async (req, res) => {
 		const structuralObjectClasses = await getObjectClassesByType(schemaClient, config, 'STRUCTURAL').catch(err => {
 			throw new Error(`Erreur lors de l'extraction des classes d'objets AUXILIARY : ${err.message}`);
 		});
-		await getInheritedMustAttributes(schemaClient, config, structuralObjectClasses);
+//		await getInheritedMustAttributes(schemaClient, config, structuralObjectClasses);
 
 		// Recherche des objectClass AUXILIARY du schéma en cours
 		const auxiliaryObjectClasses = await getObjectClassesByType(schemaClient, config, 'AUXILIARY').catch(err => {
 			throw new Error(`Erreur lors de l'extraction des classes d'objets AUXILIARY : ${err.message}`);
 		});
-		await getInheritedMustAttributes(schemaClient, config, auxiliaryObjectClasses);
+//		await getInheritedMustAttributes(schemaClient, config, auxiliaryObjectClasses);
 
 //console.log('\n\n*************************************************************************');
 //console.log('auxiliaryObjectClasses: ', JSON.stringify(auxiliaryObjectClasses, null, 2));
