@@ -619,9 +619,11 @@ const enrichObjectClassWithAttributeDetails = async (schemaClient, config, objec
 			throw new Error("Aucune définition d'objectClass fournie.");
 		}
 
+
 		// Pour chaque attribut, obtenir sa définition
 		await Promise.all(
-			['MUST', 'MAY'].flatMap(key =>
+			['MUST', 'MAY'].flatMap(key => {
+console.error('Objet objectClass avant enrichissement:', JSON.stringify(objectClass, null, 2));
 				Object.keys(objectClass[key]).map(async (attribute) => {
 					try {
 						if (!objectClass[key][attribute]) {
@@ -634,8 +636,8 @@ const enrichObjectClassWithAttributeDetails = async (schemaClient, config, objec
 						// Lancer une erreur au lieu de stocker un message d'erreur
 						throw new Error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}: ${error.message}`);
 					}
-				})
-			)
+				});
+			})
 		);
 
 		// A ce stade, objectClass a été modifié en place avec les attributs enrichis
@@ -657,7 +659,7 @@ const getInheritedMustAttributes = async (schemaClient, config, objectClass) => 
 
 	const getInheritedMustAttributesFromSuperClasses = async (cls) => {
 		let results = { ...cls.MUST }; // Initialiser avec les attributs MUST actuels
-		if (cls?.SUP !== 'top') {
+		if (cls.SUP && cls.SUP !== 'top') {
 			const supClass = await getObjectClass(schemaClient, config, cls.SUP).catch(() => null);
 			if (supClass) {
 				const supMustAttributes = await getInheritedMustAttributesFromSuperClasses(supClass);
