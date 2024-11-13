@@ -163,7 +163,7 @@
             align-items: flex-start; /* Alignement en haut des colonnes */
         }
         .list {
-            width: 45%; /* Largeur de chaque colonne */
+            width: 48%;
             border: 1px solid #ccc;
             border-radius: 4px;
             padding: 10px;
@@ -185,6 +185,21 @@
             font-style: italic; /* Italique pour le style */
             text-align: center; /* Centrer le texte */
             margin-top: 10px; /* Espace au-dessus du message */
+        }
+		.attributeList {
+            position: sticky; /* L'élément reste fixe dans la fenêtre */
+            top: 10px; /* Distance depuis le haut de la fenêtre */
+            right: 20px; /* Distance depuis le bord droit de la fenêtre */
+            width: 48%;
+            max-height: 80vh; /* Hauteur maximale pour le défilement */
+            overflow-y: auto; /* Activer le défilement si le contenu déborde */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            z-index: 10; /* Assurez-vous que l'élément est au-dessus des autres éléments */
+        }
+		.auxiliaryCheckbox {
+            margin-right: 10px; /* Ajustez la valeur pour plus ou moins d'espace */
         }
     </style>
 </head>
@@ -287,11 +302,11 @@
                     <div class="tab-content">
                         <div class="auxiliariesContainer">
                             <div class="list" id="objectClassList">
-                                <h4>ObjectClasses AUXILIARY</h4>
+                                <h4>ObjectClasses AUXILIARY:</h4>
                                 <!-- La liste des objectClasses sera générée ici -->
                             </div>
-                            <div class="list" id="attributeList">
-                                <h4>Attributs</h4>
+                            <div class="list attributeList" id="attributeList">
+                                <h4>Attributs:</h4>
                                 <div id="attributePlaceholder" class="placeholder">
 			                        Cliquer sur un objectClass pour afficher les attributs ...
                                 </div>
@@ -365,6 +380,7 @@
         <script>
 			let activeTabId = localStorage.getItem('activeTab');
 			const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
+			const structuralObjectClasses = <%- JSON.stringify(structuralObjectClasses) %>;
 			const auxiliaryObjectClasses = <%- JSON.stringify(auxiliaryObjectClasses) %>;
 
 			function checkInputFunction(input, attrName) {
@@ -582,6 +598,16 @@
 				}
 			}
 
+			function objectClassesEdit(checkbox, checkbox) {
+				let msg = 'Êtes-vous sûr de vouloir ' + (checkbox.checked ? 'ajouter' : 'supprimé')
+				    + ' cet objetClass ' + (checkbox.checked ? 'au' : 'du') + ' DN en cours d\'édition ?'
+					+ (checkbox.checked ? '' : '\n(certaines données seront probablement perdues ...)');
+				if (confirm(msg)) {
+					alert('Désolé pour ce contre temps : cette fonctionnalité est encore en cours d\'implémentation.');
+				}
+				checkbox.checked = !checkbox.checked;
+			}
+
 			// Gestion de la soumission du formulaire
 			const form = document.querySelector('form'); // Sélection formulaire
 			if ( form?.id === 'mainForm') {
@@ -611,33 +637,47 @@
 			const attributeList = document.getElementById('attributeList');
 			const attributePlaceholder = document.getElementById('attributePlaceholder');
 
-			// Remplir la liste des objectClasses  
+			// Remplir la liste des objectClasses
 			auxiliaryObjectClasses.forEach((objectClass) => {
 				const listItem = document.createElement('div');
 				listItem.className = 'list-item';
 
-				// Vérifier si l'objectClass est présente dans objectClassesDetails  
+				// Vérifier si l'objectClass est présente dans objectClassesDetails
 				const isChecked = objectClassesDetails.some(detail => detail.NAME.includes(objectClass.NAME[0]));
-				listItem.innerHTML = `
-					<input type="checkbox" class="checkbox" ${isChecked ? 'checked' : ''}>
-					${objectClass.NAME[0]}
-				`;
 
-				// Événement de clic pour mettre en surbrillance l'objectClass et afficher les attributs  
+				// Créer la case à cocher
+				const checkbox = document.createElement('input');
+				checkbox.type = 'checkbox';
+				checkbox.className = 'checkbox';
+				checkbox.className = 'auxiliaryCheckbox';
+				checkbox.checked = isChecked;
+
+				// Ajouter la case à cocher et le nom de l'ObjectClass dans l'élément de liste
+				listItem.appendChild(checkbox);
+				listItem.appendChild(document.createTextNode(objectClass.NAME[0]));
+				listItem.title = objectClass.DESC || "Pas de description disponible";
+
+				// Événement de clic pour gérer l'état de la case à cocher
+				checkbox.onclick = function(event) {
+					event.stopPropagation(); // Empêche la propagation du clic pour ne pas déclencher la surbrillance
+					objectClassesEdit(objectClass.NAME[0], checkbox);
+				};
+
+				// Événement de clic pour mettre en surbrillance l'objectClass et afficher les attributs
 				listItem.onclick = function() {
 					let hasAttributes = false;
 
 					// Vérifiez si l'item est déjà surligné
 					const isHighlighted = listItem.classList.contains('highlight');
 
-					// Surbrillance de l'objectClass cliqué  
+					// Surbrillance de l'objectClass cliqué
 					const highlighted = objectClassList.getElementsByClassName('highlight');
 					Array.from(highlighted).forEach(item => {
 						item.classList.remove('highlight');
 					});
 
-					// Vider la liste des attributs  
-					attributeList.innerHTML = `<h4>Attributs</h4>`;
+					// Vider la liste des attributs
+					attributeList.innerHTML = '';
 					attributeList.appendChild(attributePlaceholder);
 
 					if (!isHighlighted) {
@@ -649,9 +689,10 @@
 							for (const attrKey in objectClass[key]) {
 								const attrItem = document.createElement('div');
 								attrItem.className = 'list-item';
-								attrItem.innerText = `${attrKey} (${key})`; // Le nom de l'attribut  
+								attrItem.innerText = `${attrKey} (${key})`; // Le nom de l'attribut
+								attrItem.title = objectClass[key][attrKey].DESC || "Pas de description disponible";
 								attributeList.appendChild(attrItem);
-								hasAttributes = true; // Indiquer qu'il y a des attributs  
+								hasAttributes = true; // Indiquer qu'il y a des attributs
 							}
 						});
 					} else {
@@ -659,8 +700,9 @@
 						attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher les attributs ...';
 					}
 
-					// Si aucun attribut n'est trouvé, afficher le message approprié  
+					// Si aucun attribut n'est trouvé, afficher le message approprié
 					attributePlaceholder.style.display = hasAttributes ?'none' :'block';
+					attributeList.innerHTML = '<h4>Attributs' + (hasAttributes ?' de l\'objectClass \''+objectClass.NAME[0]+'\'' :'') + ':</h4>' + attributeList.innerHTML;
 				}
 
 				objectClassList.appendChild(listItem);
