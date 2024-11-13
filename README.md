@@ -178,7 +178,7 @@ Edition :
  ![](doc/images/edit.png)
 
 Edition d'objectClasses :
- ![](doc/images/addObjectClass.png)
+ <img src="doc/images/addObjectClass.png" alt="Description de l'image" width="300"/>
 
 ## Contribuer
 
