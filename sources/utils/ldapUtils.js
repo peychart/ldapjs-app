@@ -359,9 +359,9 @@ async function attributeTypeDefToJson(attributeDef) {
 		}
 
 		const cleanedInput = attributeDef.trim();
-        //const oidRegex = /\(\s*([\d.]+)\s/;
-		const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
-		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')\s/;
+		//const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
+		const oidRegex = /\(\s*([\d.]+)\s/;
+		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')/;
 		const descRegex = /DESC\s+'([^']+)'/;
 		const equalityRegex = /EQUALITY\s+([^ ]+)/;
 		const orderingRegex = /ORDERING\s+([^ ]+)/;
@@ -374,7 +374,7 @@ async function attributeTypeDefToJson(attributeDef) {
 
 		// Extraction des valeurs
 		const oid = cleanedInput.match(oidRegex)?.[1] || null;
-        const nameMatch = cleanedInput.match(nameRegex);
+		const nameMatch = cleanedInput.match(nameRegex);
 		const names = nameMatch ? (nameMatch[1] || nameMatch[2]).match(/'([^']+)'/g).map(name => name.replace(/'/g, '').trim()) : [];
 		const desc = cleanedInput.match(descRegex)?.[1] || null;
 		const equality = cleanedInput.match(equalityRegex)?.[1] || null;
@@ -406,281 +406,234 @@ async function attributeTypeDefToJson(attributeDef) {
 	 });
 }
 
-const getOlcAttributeTypes = async (schemaClient, config, attributeName) => {
-	 try {
-		if (!attributeName || attributeName.length === 0) {
-				throw new Error(`Nom d'attribut non fourni`);
-		}
-
-		// Options de recherche ajustées pour récupérer les définitions d'attributs
-		const options = {
-				filter: `(olcAttributeTypes=*NAME*'${attributeName}'*)`, // Obtenez toutes les définitions d'attributs
-				scope: 'sub',
-				attributes: ['olcAttributeTypes']
-		};
-
-		const result = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
-
-		if (!result || result.length === 0 || !result[0].olcAttributeTypes) {
-			throw new Error(`Aucun attribut ou olcAttributeTypes trouvé pour: '${attributeName}'`);
-		}
-
-		const olcAttributeTypes = result[0].olcAttributeTypes;
-
-		if (!Array.isArray(olcAttributeTypes) || olcAttributeTypes.length === 0) {
-			throw new Error(`La propriété 'olcAttributeTypes' n'est pas un tableau ou est vide.`);
-		}
-
-		// Rechercher la définition d'attribut spécifique avec un regex plus précis
-		const regexCase1 = new RegExp(`NAME\\s*\\(\\s*(?:['"]?[^'"]*['"]?\\s+)*['"]?${attributeName}['"]?(?:\\s+['"]?[^'"]*['"]?)*\\)`, 'i'); // Cas où attributeName est dans une liste 
-		const regexCase2 = new RegExp(`NAME\\s*['"]?${attributeName}['"]?`, 'i'); // Cas où attributeName est seul
-		const regexCase3 = new RegExp(`NAME\\s*\\(\\s*['"]?${attributeName}['"]?\\s*\\)`, 'i'); // Cas où attributeName est le seul dans les parenthèses
-		const attributeTypeDef = olcAttributeTypes.find(str => {
-			 return regexCase1.test(str) || regexCase2.test(str) || regexCase3.test(str);
-		});
-
-		if (!attributeTypeDef) {
-			throw new Error(`Aucune définition trouvée pour l'attribut: '${attributeName}'`);
-		}
-
-		// JSON parse
-		const attributeType = await attributeTypeDefToJson(attributeTypeDef);
-
-		return attributeType;
-	 } catch (error) {
-		console.error('Erreur de recherche pour', attributeName, ':', error);
-		throw error;
-	 }
-};
-
 /**
  * Parse de la définition text d'un objectClass en object JS
  */
 async function objectClassDefToJson(inputString) {
-    return new Promise((resolve, reject) => {
-        // Vérification du type d'entrée  
-        if (typeof inputString !== 'string') {
-            reject(new Error("inputString doit être une chaîne de caractères."));
-            return;
-        }
+	return new Promise((resolve, reject) => {
+		// Vérification du type d'entrée
+		if (typeof inputString !== 'string') {
+			reject(new Error("inputString doit être une chaîne de caractères."));
+			return;
+		}
 
-        const cleanedInput = inputString.trim();
+		const cleanedInput = inputString.trim();
 //console.log('\ncleanedInput: ', cleanedInput);
-        
-        // Définitions des expressions régulières  
+		
+		// Définitions des expressions régulières
 		//const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
-        const oidRegex = /\(\s*([\d.]+)\s/;
-		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')\s/;
-        const descRegex = /DESC\s+'([^']+)'/;
-        const supRegex = /SUP\s+([^ ]+)/;
-        const auxiliaryRegex = /AUXILIARY/;
-        const structuralRegex = /STRUCTURAL/;
-        const abstractRegex = /ABSTRACT/;
+		const oidRegex = /\(\s*([\d.]+)\s/;
+		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')/;
+		const descRegex = /DESC\s+'([^']+)'/;
+		const supRegex = /SUP\s+([^ ]+)/;
+		const auxiliaryRegex = /AUXILIARY/;
+		const structuralRegex = /STRUCTURAL/;
+		const abstractRegex = /ABSTRACT/;
 
-        // Extraction des valeurs  
-        const oid = cleanedInput.match(oidRegex)?.[1] || null;
-        const nameMatch = cleanedInput.match(nameRegex);
+		// Extraction des valeurs
+		const oid = cleanedInput.match(oidRegex)?.[1] || null;
+		const nameMatch = cleanedInput.match(nameRegex);
 		const names = nameMatch ? (nameMatch[1] || nameMatch[2]).match(/'([^']+)'/g).map(name => name.replace(/'/g, '').trim()) : [];
 
-        const desc = cleanedInput.match(descRegex)?.[1] || null;
-        const supMatches = cleanedInput.match(supRegex);
-        const sup = supMatches ? supMatches[1] : null;
-        const isAuxiliary = auxiliaryRegex.test(cleanedInput);
-        const isStructural = structuralRegex.test(cleanedInput);
-        const isAbstract = abstractRegex.test(cleanedInput);
+		const desc = cleanedInput.match(descRegex)?.[1] || null;
+		const supMatches = cleanedInput.match(supRegex);
+		const sup = supMatches ? supMatches[1] : null;
 
-        const mustRegex = /MUST\s+\((.*?)\)|MUST\s+(\w+)/;
-        const mustMatch = cleanedInput.match(mustRegex);
-        const must = mustMatch ? (mustMatch[1] || mustMatch[2]) : null;
-        const mustAttributes = must ?Object.fromEntries(must.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
+		const isAuxiliary = auxiliaryRegex.test(cleanedInput);
+		const isStructural = structuralRegex.test(cleanedInput);
+		const isAbstract = abstractRegex.test(cleanedInput);
 
-        const mayRegex = /MAY\s+\((.*?)\)|MAY\s+(\w+)/;
-        const mayMatch = cleanedInput.match(mayRegex);
-        const may = mayMatch ? (mayMatch[1] || mayMatch[2]) : null;
-        const mayAttributes = may ?Object.fromEntries(may.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
+		const type = isStructural ?'STRUCTURAL' :isAuxiliary ?'AUXILIARY' :isAbstract ?'ABSTRACT' :'';
 
-        // Construction de l'objet final  
-        const objectClass = {
-            OID: oid,
-            NAME: names,
-            ...(desc && { DESC: desc }),
-            SUP: sup,
-            ...(isStructural && { STRUCTURAL: isStructural }),
-            ...(isAuxiliary && { AUXILIARY: isAuxiliary }),
-            ...(isAbstract && { ABSTRACT: isAbstract }),
-            MUST: mustAttributes,
-            MAY: mayAttributes  
-        };
+		const mustRegex = /MUST\s+\((.*?)\)|MUST\s+(\w+)/;
+		const mustMatch = cleanedInput.match(mustRegex);
+		const must = mustMatch ? (mustMatch[1] || mustMatch[2]) : null;
+		//const mustAttributes = must ?Object.fromEntries(must.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
+		const mustAttributes = must ? must.replace(/\$/g, '').trim().split(/\s+/) : [];
 
-        resolve(objectClass);
-    });
+		const mayRegex = /MAY\s+\((.*?)\)|MAY\s+(\w+)/;
+		const mayMatch = cleanedInput.match(mayRegex);
+		const may = mayMatch ? (mayMatch[1] || mayMatch[2]) : null;
+		//const mayAttributes = may ?Object.fromEntries(may.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
+		const mayAttributes = may ? may.replace(/\$/g, '').trim().split(/\s+/) : [];
+
+		// Construction de l'objet final
+		const objectClass = {
+			OID: oid,
+			NAME: names,
+			...(desc && { DESC: desc }),
+			SUP: sup,
+			TYPE: type,
+			MUST: mustAttributes,
+			MAY: mayAttributes
+		};
+
+		resolve(objectClass);
+	});
 }
-
 
 /*
  * Recherche les objectClasses selon filter
  */
-async function getAllObjectClasses(schemaClient, config, filter) {
+async function loadSchema(ldap, config) {
+	const schemaClient = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+
 	try {
+		// Liaison au client LDAP
+		await bindClient(schemaClient, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
+		
 		// Définir les options pour la recherche dans le schéma LDAP
 		const options = {
 			filter: '(olcObjectClasses=*)',		// Cherche toutes les définitions d'objectClasses
 			scope: 'sub',						// Définit la profondeur de la recherche
-			attributes: ['olcObjectClasses']	// Attributs à récupérer
+			attributes: ['olcObjectClasses', 'olcAttributeTypes']	// Attributs à récupérer
 		};
 
-		// Effectuer la recherche LDAP pour récupérer toutes les définitions d'objectClasses
 		const searchResult = await searchLDAP(schemaClient, config.ldap.schema.baseDN, options);
 
-		const results = [];
+		let result = {
+			attributes: [],
+			objectClasses: []
+		};
 
-		// Créer un tableau de promesses pour toutes les opérations asynchrones  
-		const promises = searchResult.map(async (entry) => {
-			return Promise.all(entry.olcObjectClasses.map(async (objectClassDefinition) => {
-				// Vérifier si le filtre est fourni et tester si la définition correspond  
-				if (filter && !new RegExp(filter).test(objectClassDefinition)) {
-					return; // Ne pas inclure cette définition si elle ne correspond pas  
-				}
+		for (const schema of searchResult) {
+			if (schema.olcAttributeTypes) {
+				const attributePromises = schema.olcAttributeTypes.map(async (entry) => {
+					try {
+						const a = await attributeTypeDefToJson(entry);
+						if (a.OID)						// Filtrer les 'OLcfgGlAt'
+							return a;
+					} catch (error) {
+						console.error(`Erreur lors de la conversion de l'attribut : ${error}`);
+					}
+				});
 
-				// Convertir la définition en objet avec la fonction objectClassDefToJson  
-				const objectClass = await objectClassDefToJson(objectClassDefinition);
+				const attributes = await Promise.all(attributePromises);
+				result.attributes.push(...attributes.filter(Boolean));
+			}
 
-				// Enrichir l'objet class avec les détails des attributs  
-				await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
+			if (schema.olcObjectClasses) {
+				const objectClassPromises = schema.olcObjectClasses.map(async (entry) => {
+					try {
+						const o = await objectClassDefToJson(entry);
+						if (o.OID)						// Filtrer les 'OLcfgDbOc'
+							return o;
+					} catch (error) {
+						console.error(`Erreur lors de la conversion de la classe d'objet : ${error}`);
+					}
+				});
 
-				// Ajouter l'objet class à la liste des résultats  
-				if (objectClass.OID)	// Filtrer les 'OLcfgGlAt'
-					results.push(objectClass);
-			}));
-		});
+				const objectClasses = await Promise.all(objectClassPromises);
+				result.objectClasses.push(...objectClasses.filter(Boolean));
+			}
+		}
 
-		// Attendre que toutes les promesses soient résolues
-		await Promise.all(promises);
+		return result; // Retournez le bon résultat
 
-		return results; // Retourner le tableau des objets objectClass
 	} catch (error) {
-		console.error('Erreur lors de l\'extraction des classes d\'objet :', error);
+		console.error('Erreur lors de l\'extraction du schema :', error);
 		throw error; // Laisser l'erreur remonter
+	} finally {
+		// Déconnexion du schemaClient
+		if (schemaClient) {
+			try {
+				await schemaClient.unbind();
+			} catch (unbindError) {
+				console.error('Erreur lors de la déconnexion du schemaClient:', unbindError);
+			}
+		}
 	}
 }
 
 /*
  * Recherche les objectClass STRUCTURAL, AUXILIARY ou ABSTRACT, ... ou tout autre filtre
  */
-async function getObjectClassesByType(schemaClient, config, CLASSTYPE) {
-	try {
-		if (!CLASSTYPE) {
-			throw new Error(`Type de classe non spécifié`);
-		}
-
-		// Filtre de recherche des classes d'objet par type  
-		const filter = `\\s+${CLASSTYPE}\\s*`;
-
-		// Récupérer toutes les classes d'objet qui correspondent au type  
-		return await getAllObjectClasses(schemaClient, config, filter);
-	} catch (error) {
-		console.error('Erreur lors de l\'extraction des classes d\'objet par type :', error);
-		throw error; // Laisser l'erreur remonter  
+function getObjectClassesByType(ldapSchema, type) {
+	if (typeof type !== 'string') {
+		throw new Error("type doit être une chaîne de caractères.");
 	}
+	return ldapSchema.filter(objectClass => objectClass.TYPE === type);
 }
 
 /**
- * Récupération de la dénition complète d'un objectClass dans le schema de la base
+ * Récupération de la définition complète d'un objectClass dans le schema de la base
  */
-const getObjectClass = async (schemaClient, config, objectClassName) => {
-	try {
-		if (!objectClassName) {
-			throw new Error(`ObjetClass non spécifié`);
-		}
+function getObjectClassByName(ldapSchema, name) {
+	const objectClass = ldapSchema.objectClasses.find(schema => schema.NAME.includes(name));
+	return objectClass ? objectClass : null;
+}
 
-		// Filtre de recherche d'une classe d'objet par son nom
-		const filter = `\\s*NAME\\s+'${objectClassName}'\\s+`;
-
-		const objectClasses = await getAllObjectClasses(schemaClient, config, filter);
-
-		if (objectClasses.length === 0) {
-			throw new Error(`Classe non trouvée`);
-		}
-
-		return objectClasses[0];
-	} catch (error) {
-		console.error('Erreur de recherche pour la classe ', objectClassName, ':', error);
-		throw error;
+/*
+ * Ajouter tous les attributs MUST hérités
+ */
+function setInheritedMustAttributes(ldapSchema, objectClass) {
+	if (!objectClass || typeof objectClass !== 'object') {
+		throw new Error('Invalid objectClass provided');
 	}
-};
+
+	const setInheritedMustAttributesFromSuperClasses = (cls) => {
+		 let results = [...(cls.MUST || [])]; // Initialiser avec les attributs MUST actuels sous forme de tableau
+
+		if (cls.SUP && cls.SUP !== 'top') {
+			const supClass = getObjectClassByName(ldapSchema, cls.SUP);
+			if (supClass) {
+				const supMustAttributes = setInheritedMustAttributesFromSuperClasses(supClass);
+				results = Array.from(new Set([...results, ...supMustAttributes]));
+			}
+		}
+		return results; // Retourner le tableau des attributs MUST  
+	};
+
+	return {
+		...objectClass,
+		MUST: setInheritedMustAttributesFromSuperClasses(objectClass)
+	};
+}
 
 /*
  * Recherche dans le schema des définitions d'attributs et mise à jour dans l'objectClass
  */
-const enrichObjectClassWithAttributeDetails = async (schemaClient, config, objectClass) => {
+function enrichObjectClassWithAttributes(ldapSchema, objectClass) {
 	 try {
 		// Vérification que l'objectClass est fourni
 		if (!objectClass) {
 			throw new Error("Aucune définition d'objectClass fournie.");
 		}
 
-
 		// Pour chaque attribut, obtenir sa définition
-		await Promise.all(
-			['MUST', 'MAY'].flatMap(key => {
-				Object.keys(objectClass[key]).map(async (attribute) => {
-					try {
-						if (!objectClass[key][attribute]) {
-							const attributeDetails = await getOlcAttributeTypes(schemaClient, config, attribute);
-							// Enrichir directement l'objectClass
-							objectClass[key][attribute] = attributeDetails;
-						}
-					} catch (error) {
-						console.error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}:`, error);
-						// Lancer une erreur au lieu de stocker un message d'erreur
-						throw new Error(`Erreur lors de la récupération des détails pour l'attribut ${attribute}: ${error.message}`);
-					}
-				});
-			})
-		);
+		['MUST', 'MAY'].forEach(key => {
+				const enrichedAttributes = objectClass[key].map(attribute => {
+                    const attributeDetails = ldapSchema.attributes.find(attr =>
+                        attr.NAME.some(name => name.toLowerCase() === attribute.toLowerCase())
+                    );
+
+				if (attributeDetails)
+						return { ...attributeDetails };	// Cloner l'objet d'attribut 
+				else	throw new Error(`Pas de définition d'attribut correcte dans le schema pour ${attribute}.`);
+			});
+
+			// Remplacer le tableau d'attributs par le tableau enrichi  
+			objectClass[key] = enrichedAttributes;
+		});
 
 		// A ce stade, objectClass a été modifié en place avec les attributs enrichis
 		return objectClass; // Retourner l'objet modifié
 
-	 } catch (error) {
-		console.error('Erreur lors de la récupération des détails de l\'objectClass enrichie:', error);
+	} catch (error) {
+		console.error('Erreur lors de la récupération des détails de l\'objectClass à enrichir:', error);
 		throw error; // Relancer l'erreur pour que l'appelant puisse la gérer
-	 }
-};
-
-/*
- * Ajouter tous les attributs MUST hérités
- */
-const getInheritedMustAttributes = async (schemaClient, config, objectClass) => {
-	if (!objectClass || typeof objectClass !== 'object') {
-		throw new Error('Invalid objectClass provided');
 	}
-
-	const getInheritedMustAttributesFromSuperClasses = async (cls) => {
-		let results = { ...cls.MUST }; // Initialiser avec les attributs MUST actuels
-		if (cls.SUP && cls.SUP !== 'top') {
-			const supClass = await getObjectClass(schemaClient, config, cls.SUP).catch(() => null);
-			if (supClass) {
-				const supMustAttributes = await getInheritedMustAttributesFromSuperClasses(supClass);
-				results = { ...results, ...supMustAttributes }; // Fusionner les attributs
-			}
-		}
-		return results;
-	};
-
-	objectClass.MUST = await getInheritedMustAttributesFromSuperClasses(objectClass);
-
-	// Ajout des définitions d'attributs
-	return await enrichObjectClassWithAttributeDetails(schemaClient, config, objectClass);
-};
+}
 
 module.exports = {
 	bindClient,
 	searchLDAP,
 	rawSearchLDAP,
+	loadSchema,
 	getUserRoleFromDatabase,
-	getObjectClass,
-	getInheritedMustAttributes,
+	setInheritedMustAttributes,
+	enrichObjectClassWithAttributes,
+	getObjectClassByName,
 	getObjectClassesByType,
 	updateLDAP,
 	updateAttributeConfigInLDAP
