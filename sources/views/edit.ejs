@@ -270,7 +270,7 @@
                                     <button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
-									<% if (currentAttr.MULTI_VALUE === true) { %>
+									<% if (currentAttr.MULTI_VALUE !== 'SINGLE-VALUE') { %>
                                         <!-- popupMultiValues -->
                                         <div class="popupContainer" data-attr-name="<%= attrName %>">
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
@@ -394,7 +394,9 @@
 
 			function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
-				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
+				const objectClass = objectClassesDetails[objectClassIndex];
+				const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
+                    || objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 
 				// Excution des scripts personnailisés
 				if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
@@ -492,7 +494,6 @@
 			function openEditModal(button, attrName) {
 				const objectClassIndex = parseInt(button.dataset.objectClassIndex);
 				const objectClass = objectClassesDetails[objectClassIndex];
-				//const objectAttribute = objectClass.MUST?.[attrName] || objectClass.MAY?.[attrName];
 				const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
 					|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 				document.getElementById('validerModale').dataset.objectClassIndex = objectClassIndex;
@@ -511,7 +512,8 @@
 				//	- this appli: can force SINGLE-VALUE.
 				const radio = !!objectAttribute?.SINGLE_VALUE
 						? 'singleValue'
-						:objectAttribute.MULTIVALUE == null ?'multiValue' :'singleValue';
+						:(objectAttribute.MULTI_VALUE == null && objectAttribute.MULTI_VALUE !== 'SINGLE-VALUE')
+							?'multiValue' :'singleValue';
 				document.getElementById('multiValue').disabled = objectAttribute.SINGLE_VALUE;
 				document.getElementById(radio).checked = true;
 				document.getElementById('schema').disabled = true;
