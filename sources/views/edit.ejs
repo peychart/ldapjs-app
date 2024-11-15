@@ -233,16 +233,18 @@
 
             <!-- Nav tabs -->
             <ul class="nav nav-tabs" id="myTab" role="tablist">
-                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => { %>
+                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
+                        const objName = objectClass.NAME[0];
+                    %>
                     <li class="nav-item">
                         <a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>"
-                            id="<%= objectClass.NAME %>-tab"
+                            id="<%= objName %>-tab"
                             data-toggle="tab"
-                            href="#<%= objectClass.NAME %>"
+                            href="#<%= objName %>"
                             role="tab"
-                            aria-controls="<%= objectClass.NAME %>"
+                            aria-controls="<%= objName %>"
                             aria-selected="<%= objectClassIndex === 0 %>">
-                                <%= objectClass.NAME %>
+                                <%= objName %>
                             </a>
                     </li>
                 <% }) %>
@@ -253,22 +255,22 @@
 
             <!-- Tab panes -->
             <div class="tab-content" id="myTabContent">
-                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => { %>
-                    <div class="tab-pane fade <%= objectClassIndex === 0 ? 'show active' : '' %>" id="<%= objectClass.NAME %>" role="tabpanel" aria-labelledby="<%= objectClass.NAME %>-tab">
-                        <% ['MUST', 'MAY'].forEach(type => { %>
-                            <h3 class="underline">Attributs <%= (type === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
+                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
+                    const objName = objectClass.NAME[0];
+                %>
+                    <div class="tab-pane fade <%= objectClassIndex === 0 ? 'show active' : '' %>" id="<%= objName %>" role="tabpanel" aria-labelledby="<%= objName %>-tab">
+                        <% ['MUST', 'MAY'].forEach(TYPE => { %>
+                            <h3 class="underline">Attributs <%= (TYPE === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
                             <ul>
-                                <% if (objectClass.ATTRIBUTE) Object.keys(objectClass.ATTRIBUTE).forEach(attrName => {
-                                    if (objectClass.ATTRIBUTE[attrName].type === type) {
-                                        const objectAttribute = objectClass.ATTRIBUTE[attrName];
+                                <% objectClass[TYPE].forEach(currentAttr => {
+                                        const attrName = currentAttr.NAME[0];
                                 %>
                                 <li>
-                                    <strong><%= objectAttribute.customWording || attrName %>:</strong>
+                                    <strong><%= currentAttr.customWording || attrName %>:</strong>
                                     <button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
                                         <i class="fas fa-pencil-alt"></i>
                                     </button>
-                                    <!--% if (objectAttribute.values && Array.isArray(objectAttribute.values)) { %-->
-                                    <% if (objectAttribute.SINGLE_VALUE!==true && objectAttribute.MULTIVALUE !== false) { %>
+									<% if (currentAttr.MULTI_VALUE === true) { %>
                                         <!-- popupMultiValues -->
                                         <div class="popupContainer" data-attr-name="<%= attrName %>">
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
@@ -282,7 +284,7 @@
                                                     id="<%= attrName %>"
                                                     class="hiddenInput"
                                                     name="<%= attrName %>"
-                                            		value="<%= JSON.stringify(Array.isArray(objectAttribute.values) ?(objectAttribute.values.length ?objectAttribute.values :['']) :Array.of(objectAttribute.values || '')) %>"
+                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?(currentAttr.VALUES.length ?currentAttr.VALUES :['']) :Array.of(currentAttr.VALUES || [])) %>"
                                                 <!-- Bouton d ajout d une valeur à l attribut -->
                                                 <button type="button" class="add-button">+</button>
                                             </div>
@@ -291,14 +293,14 @@
                                     <% } else { %>
                                         <input type="text"
                                             name="<%= attrName %>"
-                                            value="<%= (Array.isArray(objectAttribute.values) ?objectAttribute.values[0] :objectAttribute.values) || '' %>"
+                                            value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) || '' %>"
                                             class="form-control"
                                             data-object-class-index = '<%= objectClassIndex %>'
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
                                             oninput="checkInputFunction(this, '<%= attrName %>');" />
                                     <% } %>
                                 </li>
-                                <% } }) %>
+                                <% }) %>
                             </ul>
                         <% }) %>
                     </div>
@@ -388,8 +390,7 @@
         <script>
 			let activeTabId = localStorage.getItem('activeTab');
 			const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
-			const structuralObjectClasses = <%- JSON.stringify(structuralObjectClasses) %>;
-			const auxiliaryObjectClasses = <%- JSON.stringify(auxiliaryObjectClasses) %>;
+			const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 
 			function checkInputFunction(input, attrName) {
 				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
@@ -490,7 +491,10 @@
 			// Edition des propriétés d'attribut
 			function openEditModal(button, attrName) {
 				const objectClassIndex = parseInt(button.dataset.objectClassIndex);
-				const objectAttribute = objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName];
+				const objectClass = objectClassesDetails[objectClassIndex];
+				//const objectAttribute = objectClass.MUST?.[attrName] || objectClass.MAY?.[attrName];
+				const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
+					|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 				document.getElementById('validerModale').dataset.objectClassIndex = objectClassIndex;
 				if (!document.getElementById('saveButton').disabled) {
 					alert("Opération impossible : il y a des modifications d'attributs en cours !");
@@ -508,7 +512,7 @@
 				const radio = !!objectAttribute?.SINGLE_VALUE
 						? 'singleValue'
 						:objectAttribute.MULTIVALUE == null ?'multiValue' :'singleValue';
-				document.getElementById('multiValue').disabled = objectAttribute?.SINGLE_VALUE;
+				document.getElementById('multiValue').disabled = objectAttribute.SINGLE_VALUE;
 				document.getElementById(radio).checked = true;
 				document.getElementById('schema').disabled = true;
 
@@ -516,18 +520,20 @@
 				document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
 				document.getElementById('attributeName').textContent = attrName;
-				document.getElementById('attributeId').value = attrName; // Pour envoi par le formulaire lors de la soumission
+				document.getElementById('attributeId').value = objectAttribute.OID; // Pour envoi par le formulaire lors de la soumission
 
 				saveCurrentTab();
 				$('#editModal').modal('show');
 			}
 
 			function submitModal(submitButton) {
-				const attrName = document.getElementById('attributeId').value;
+				const attrName = document.getElementById('newLabel').placeholder;
 				const multiValue = document.getElementById('multiValue').checked;
 				const objectClassIndex = parseInt(submitButton.dataset.objectClassIndex);
-				const singleValue = !!objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName]?.SINGLE_VALUE
-									|| !!objectClassesDetails[objectClassIndex].ATTRIBUTE[attrName]?.SINGLE_VALUE;
+				const objectClass = objectClassesDetails[objectClassIndex];
+				const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
+					|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
+				const singleValue = !!objectAttribute.SINGLE_VALUE;
 				if (singleValue || (!singleValue && multiValue))
 					document.getElementById('schema').checked = !(document.getElementById('schema').disabled = false);
 				document.getElementById('attrForm').submit();
@@ -640,13 +646,21 @@
 				}
 			};
 
+			function findAttrPropertyByName(name, property) {
+				const attribute = ldapSchema.attributes.find(attr => 
+					attr.NAME.includes(name) // Vérifie si le NAME contient le nom recherché  
+				);
+				return attribute ?attribute[property] || null :null;
+			}
+
 			// AFFICHAGE de l'onglet "+"
 			const objectClassList = document.getElementById('objectClassList');
 			const attributeList = document.getElementById('attributeList');
 			const attributePlaceholder = document.getElementById('attributePlaceholder');
 
 			// Remplir la liste des objectClasses
-			auxiliaryObjectClasses.forEach((objectClass) => {
+			ldapSchema.objectClasses.forEach((objectClass) => {
+				if (objectClass.TYPE !== 'AUXILIARY') return;
 				const listItem = document.createElement('div');
 				listItem.className = 'list-item';
 
@@ -690,27 +704,26 @@
 
 					if (!isHighlighted) {
 						listItem.classList.add('highlight');
-						attributePlaceholder.innerText = 'Aucun attribut pour cet objectClass.';
 
 						// Ajouter les attributs MUST et MAY correspondants
 						['MUST', 'MAY'].forEach(key => {
 							for (const attrKey in objectClass[key]) {
 								const attrItem = document.createElement('div');
 								attrItem.className = 'list-item';
-								attrItem.innerText = `${attrKey} (${key})`; // Le nom de l'attribut
-								attrItem.title = objectClass[key][attrKey]?.DESC || "Pas de description disponible";
+								attrItem.innerText = `${objectClass[key][attrKey]} (${key})`; // Le nom de l'attribut
+								attrItem.title = findAttrPropertyByName(objectClass[key][attrKey], 'DESC') || 'Aucune descritopn disponible.';
 								attributeList.appendChild(attrItem);
 								hasAttributes = true; // Indiquer qu'il y a des attributs
 							}
 						});
+						attributePlaceholder.innerText = hasAttributes ?'' :'Aucun attribut pour cet objectClass.';
 					} else {
 						listItem.classList.remove('highlight');
-						attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher les attributs ...';
+						attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher ses attributs ...';
 					}
 
 					// Si aucun attribut n'est trouvé, afficher le message approprié
 					attributeList.innerHTML = '<h4>Attributs' + (hasAttributes ?' de \''+objectClass.NAME[0]+'\'' :'') + ':</h4>' + attributeList.innerHTML;
-					attributePlaceholder.style.display = hasAttributes ?'none' :'block';
 				}
 
 				objectClassList.appendChild(listItem);
