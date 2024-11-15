@@ -157,11 +157,30 @@
         .btn-delete:hover {
             background-color: #c82333; /* Couleur plus foncée au survol */
         }
-        .auxiliariesContainer {
+        .objectClassesContainer {
             display: flex; /* Utilisation de flexbox pour la mise en page */
             justify-content: space-between; /* Espace entre les colonnes */
             align-items: stretch; /* Alignement en haut des colonnes */
             height: calc(70vh - 100px); /* Hauteur fixe pour le conteneur */
+        }
+		.fixed-header {
+            position: sticky; /* Rendre la position fixe quand on fait défiler */
+            top: 0; /* Positionner en haut */
+            background-color: #ffffe0; /* Fond blanc pour le titre */
+            z-index: 10; /* Assurez-vous que le titre soit au-dessus du contenu */
+            padding: 10px; /* Ajoute un peu de rembourrage */
+            border-bottom: 1px solid #ccc; /* Optionnel : une bordure pour séparer du contenu */
+        }
+        .header-row {
+            display: flex; /* Utiliser flexbox pour aligner les éléments en ligne */
+            align-items: center; /* Centrer verticalement les éléments */
+        }
+        .header-row h4 {
+            margin-right: 10px; /* Ajouter un peu d'espace entre le titre et le label */
+        }
+		.attribute-liste {
+            margin-left: auto; /* Pousse cet élément vers la droite */
+            text-align: right; /* Assurez-vous que le texte est aligné à droite */
         }
         .list {
             flex: 1; /* Permet aux listes de prendre une part égale de l'espace */
@@ -200,7 +219,7 @@
             padding: 10px;
             z-index: 10; /* Assurez-vous que l'élément est au-dessus des autres éléments */
         }
-		.auxiliaryCheckbox {
+		.objectClassesCheckbox {
             margin-right: 10px; /* Ajustez la valeur pour plus ou moins d'espace */
         }
         h4 {
@@ -308,22 +327,58 @@
 
                 <!-- Tab pour ajouter une nouvelle objectClass -->
                 <div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
-                    <h3>ObjectClasses AUXILIARY et Attributs</h3>
-                    <div class="tab-content">
-                        <div class="auxiliariesContainer">
-                            <div class="list" id="objectClassList">
-                                <h4>ObjectClasses AUXILIARY:</h4>
-                                <!-- La liste des objectClasses sera générée ici -->
-                            </div>
-                            <div class="list attributeList" id="attributeList">
-                                <h4>Attributs:</h4>
-                                <div id="attributePlaceholder" class="placeholder">
-			                        Cliquer sur un objectClass pour afficher les attributs ...
-                                </div>
-                                <!-- La liste des attributs sera affichée ici -->
-                            </div>
-                        </div>
-                    </div>
+                    <div class="sub-tabs">
+                         <ul class="nav nav-tabs" id="subTab" role="tablist">
+                             <li class="nav-item">
+                                 <a class="nav-link active" id="structural-tab" data-toggle="tab" href="#structural" role="tab" aria-controls="structural" aria-selected="true">ObjectClasses STRUCTURAL</a>
+                             </li>
+                             <li class="nav-item">
+                                 <a class="nav-link" id="auxiliary-tab" data-toggle="tab" href="#auxiliary" role="tab" aria-controls="auxiliary" aria-selected="false">ObjectClasses AUXILIARY</a>
+                             </li>
+                         </ul>
+
+                         <!-- Contenu des sous-onglets -->
+                         <div class="tab-content" id="subTabContent">
+                             <div class="tab-pane fade show active" id="structural" role="tabpanel" aria-labelledby="structural-tab">
+								 <div class="fixed-header">
+								     <div class="header-row">
+                                         <h4>ObjectClasses STRUCTURAL</h4>
+                                         <h4 class="attribute-liste">Attributs:</h4>
+                                     </div>
+                                 </div>
+                                 <div class="objectClassesContainer">
+                                     <div class="list" id="objectClassListStructural">
+                                         <!-- La liste des objectClasses STRUCTURAL sera générée ici -->
+                                     </div>
+                                     <div class="list attributeList" id="attributeListStructural">
+                                         <div id="attributePlaceholderStructural" class="placeholder">
+                                             Cliquer sur un objectClass pour afficher les attributs ...
+                                         </div>
+                                         <!-- La liste des attributs sera affichée ici -->
+                                     </div>
+                                 </div>
+                             </div>
+                             <div class="tab-pane fade" id="auxiliary" role="tabpanel" aria-labelledby="auxiliary-tab">
+								 <div class="fixed-header">
+								     <div class="header-row">
+                                         <h4>ObjectClasses STRUCTURAL</h4>
+                                         <h4 class="attribute-liste">Attributs:</h4>
+                                     </div>
+                                 <div class="objectClassesContainer">
+                                     <div class="list" id="objectClassListAuxiliary">
+                                         <!-- La liste des objectClasses AUXILIARY sera générée ici -->
+                                     </div>
+                                     <div class="list attributeList" id="attributeListAuxiliary">
+                                         <h4>Attributs:</h4>
+                                         <div id="attributePlaceholderAuxiliary" class="placeholder">
+                                             Cliquer sur un objectClass pour afficher les attributs ...
+                                         </div>
+                                         <!-- La liste des attributs sera affichée ici -->
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
                 </div>
             </div>
         </form>
@@ -388,348 +443,361 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script src="/js/popupMultiValues.js"></script>
         <script>
-			let activeTabId = localStorage.getItem('activeTab');
-			const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
-			const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
+let activeTabId = localStorage.getItem('activeTab');
+const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
+const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 
-			function checkInputFunction(input, attrName) {
-				const objectClassIndex = parseInt(input.dataset.objectClassIndex);
-				const objectClass = objectClassesDetails[objectClassIndex];
-				const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
-                    || objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
+function checkInputFunction(input, attrName) {
+	const objectClassIndex = parseInt(input.dataset.objectClassIndex);
+	const objectClass = objectClassesDetails[objectClassIndex];
+	const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
+							|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 
-				// Excution des scripts personnailisés
-				if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
-					eval(objectAttribute.valueCheck[0]);
-					check(input, objectClassesDetails, input.defaultValue);
-				}
+	// Excution des scripts personnailisés
+	if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
+		eval(objectAttribute.valueCheck[0]);
+		check(input, objectClassesDetails, input.defaultValue);
+	}
 
-				// Mise à jour de l áttribut dans les autres oglets
-				const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
-				allTabs.forEach(tab => {
-					tab.querySelectorAll('input').forEach((field) => {
-						if (field.name === input.name ) {
-							field.value = input.value;
-						}
-					});
-				});
-
-				// Mise à jour de l'état du bouton de Validaion
-				checkSaveButton();
+	// Mise à jour de l áttribut dans les autres oglets
+	const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
+	allTabs.forEach(tab => {
+		tab.querySelectorAll('input').forEach((field) => {
+			if (field.name === input.name ) {
+				field.value = input.value;
 			}
+		});
+	});
 
-			function validateMainForm(form) {
-				// Passer l'info au serveur du format JSON [] des inputs hidden de la 'mainForm' (attributs multi-valués)
-				form.querySelectorAll('input[type="hidden"]').forEach(input => {
-					input.name += '_hidden'
-				});
+	// Mise à jour de l'état du bouton de Validaion
+	checkSaveButton();
+}
+
+function validateMainForm(form) {
+	// Passer l'info au serveur du format JSON [] des inputs hidden de la 'mainForm' (attributs multi-valués)
+	form.querySelectorAll('input[type="hidden"]').forEach(input => {
+		input.name += '_hidden'
+	});
 
 /*
-				// Exemple de validation : vérifier si l'email est valide
-				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
-				if (!emailPattern.test(email)) {
-					errorMessage.innerText = 'Veuillez entrer une adresse email valide.';
-					return false; // Empêche l'envoi du formulaire
-				}
+	// Exemple de validation : vérifier si l'email est valide
+	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
+	if (!emailPattern.test(email)) {
+		errorMessage.innerText = 'Veuillez entrer une adresse email valide.';
+		return false; // Empêche l'envoi du formulaire
+	}
 */
-				return true;
-			}
+	return true;
+}
 
-			// Sauvegrder la position de l'onglet courant
-			function saveCurrentTab(){
-				const activeTab = document.querySelector('.nav-link.active');
-				if (activeTab ? activeTab.id : null) {
-					localStorage.setItem('activeTab', activeTab.id);
-				}
-			}
+// Sauvegrder la position de l'onglet courant
+function saveCurrentTab(){
+	const activeTab = document.querySelector('.nav-link.active');
+	if (activeTab ? activeTab.id : null) {
+		localStorage.setItem('activeTab', activeTab.id);
+	}
+}
 
-			// Rafraichir la page et se repositionner sur l'onglet courant
-			function restoreValues() {
-				if (!document.getElementById('saveButton').disabled
-					&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir les abandonner ?") )
-						return;
+// Rafraichir la page et se repositionner sur l'onglet courant
+function restoreValues() {
+	if (!document.getElementById('saveButton').disabled
+		&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir les abandonner ?") )
+			return;
 
-				// Rafraichir la page
-				saveCurrentTab();
-				window.location.reload();
-			}
+	// Rafraichir la page
+	saveCurrentTab();
+	window.location.reload();
+}
 
-			// Abandon de la page
-			function exit() {
-				if (!document.getElementById('saveButton').disabled
-					&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
-						return;
+// Abandon de la page
+function exit() {
+	if (!document.getElementById('saveButton').disabled
+		&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
+			return;
 
-				window.location.href = '/search'; // Redirection vers la route '/search'
-			}
+	window.location.href = '/search'; // Redirection vers la route '/search'
+}
 
-			async function deleteEntry() {
-				if (confirm("Êtes-vous sûr de vouloir supprimer cette entrée ?")) {
+async function deleteEntry() {
+	if (confirm("Êtes-vous sûr de vouloir supprimer cette entrée ?")) {
 
-					// Logique de suppression de l'entrée dn
-					try {
-						const response = await fetch("/delete/<%= dn %>", {
-							method: 'POST',
-								headers: {
-								'Content-Type': 'application/json'
-								}
-						});
-
-						const data = await response.json();
-
-						if (response.ok) {
-							alert(data.message); // Message de succès
-							window.location.href = data.redirect; // Redirection vers /search
-						} else {
-							alert(`Erreur: ${data.error}`);
-						}
-					} catch (error) {
-						console.error('Erreur:', error);
-						alert('Erreur lors de la suppression de l\'élément.');
+		// Logique de suppression de l'entrée dn
+		try {
+			const response = await fetch("/delete/<%= dn %>", {
+				method: 'POST',
+					headers: {
+					'Content-Type': 'application/json'
 					}
-				}
-			}
-
-			// Edition des propriétés d'attribut
-			function openEditModal(button, attrName) {
-				const objectClassIndex = parseInt(button.dataset.objectClassIndex);
-				const objectClass = objectClassesDetails[objectClassIndex];
-				const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
-					|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
-				document.getElementById('validerModale').dataset.objectClassIndex = objectClassIndex;
-				if (!document.getElementById('saveButton').disabled) {
-					alert("Opération impossible : il y a des modifications d'attributs en cours !");
-					return;
-				}
-
-				// Label d'attribut
-				const newLabelInputField = document.getElementById('newLabel');
-				newLabelInputField.value = objectAttribute.customWording || '';
-				newLabelInputField.placeholder = attrName;
-
-				// Bontons radio SINGLE-VALUE/MULTI-VALUES:
-				//	- OpenLDAP schema : not SINGLE-VALUE -> MULTI-VALUES,
-				//	- this appli: can force SINGLE-VALUE.
-				const radio = !!objectAttribute?.SINGLE_VALUE
-						? 'singleValue'
-						:(objectAttribute.MULTI_VALUE == null && objectAttribute.MULTI_VALUE !== 'SINGLE-VALUE')
-							?'multiValue' :'singleValue';
-				document.getElementById('multiValue').disabled = objectAttribute.SINGLE_VALUE;
-				document.getElementById(radio).checked = true;
-				document.getElementById('schema').disabled = true;
-
-				// Script de validation des saisies
-				document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
-
-				document.getElementById('attributeName').textContent = attrName;
-				document.getElementById('attributeId').value = objectAttribute.OID; // Pour envoi par le formulaire lors de la soumission
-
-				saveCurrentTab();
-				$('#editModal').modal('show');
-			}
-
-			function submitModal(submitButton) {
-				const attrName = document.getElementById('newLabel').placeholder;
-				const multiValue = document.getElementById('multiValue').checked;
-				const objectClassIndex = parseInt(submitButton.dataset.objectClassIndex);
-				const objectClass = objectClassesDetails[objectClassIndex];
-				const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
-					|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
-				const singleValue = !!objectAttribute.SINGLE_VALUE;
-				if (singleValue || (!singleValue && multiValue))
-					document.getElementById('schema').checked = !(document.getElementById('schema').disabled = false);
-				document.getElementById('attrForm').submit();
-			}
-
-			function changeModalSize(increase) {
-				const modalDialog = document.querySelector('#editModal .modal-dialog');
-				const currentClassList = modalDialog.classList;
-				const jsValidationTextarea = document.getElementById('jsValidation');
-				const greater = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(true)"]');
-				const lower = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(false)"]');
-
-				let currentSize = '';
-				if (currentClassList.contains('modal-sm')) {
-					currentSize = 'sm';
-				} else if (currentClassList.contains('modal-lg')) {
-					currentSize = 'lg';
-				} else if (currentClassList.contains('modal-xl')) {
-					currentSize = 'xl';
-				}
-
-				lower.style.color = greater.style.color = 'black';
-				if (increase) {
-					if (currentSize === 'sm') {
-						currentClassList.remove('modal-sm');
-						jsValidationTextarea.rows = 10;
-					} else if (currentSize === '') {
-						currentClassList.remove('modal-sm');
-						currentClassList.add('modal-lg');
-						jsValidationTextarea.rows = 15;
-					} else if (currentSize === 'lg') {
-						currentClassList.remove('modal-lg');
-						currentClassList.add('modal-xl');
-						jsValidationTextarea.rows = 20;
-						greater.style.color = '#ffffe0'; 
-						greater.blur(); 
-					}
-				} else {
-					if (currentSize === 'xl') {
-						currentClassList.remove('modal-xl');
-						currentClassList.add('modal-lg');
-						jsValidationTextarea.rows = 15;
-					} else if (currentSize === 'lg') {
-						currentClassList.remove('modal-lg');
-						jsValidationTextarea.rows = 10;
-					} else if (currentSize === '') {
-						currentClassList.remove('modal-lg');
-						currentClassList.add('modal-sm');
-						jsValidationTextarea.rows = 5;
-						lower.style.color = '#ffffe0'; 
-						lower.blur(); 
-					}
-				}
-			}
-
-			// Valide le bouton 'saveButton' seulement sur modification d'attributs
-			function checkSaveButton() {
-				const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
-				let isAnyInputChanged = false;
-
-				inputs.forEach(input => {
-					if (input.name)
-						if (input.value !== input.defaultValue)
-							isAnyInputChanged = true;
-			   	});
-
-				const saveButton = document.getElementById('saveButton');
-				if (isAnyInputChanged) {
-					saveButton.disabled = false;
-					saveButton.classList.add('enabled');
-					saveButton.classList.remove('disabled');
-				} else {
-					saveButton.disabled = true;
-					saveButton.classList.remove('enabled');
-					saveButton.classList.add('disabled');
-				}
-			}
-
-			function objectClassesEdit(checkbox, checkbox) {
-				let msg = 'Êtes-vous sûr de vouloir ' + (checkbox.checked ? 'ajouter' : 'supprimé')
-				    + ' cet objetClass ' + (checkbox.checked ? 'au' : 'du') + ' DN en cours d\'édition ?'
-					+ (checkbox.checked ? '' : '\n(certaines données seront probablement perdues ...)');
-				if (confirm(msg)) {
-					alert('Désolé pour ce contre temps : cette fonctionnalité est encore en cours d\'implémentation.');
-				}
-				checkbox.checked = !checkbox.checked;
-			}
-
-			// Gestion de la soumission du formulaire
-			const form = document.querySelector('form'); // Sélection formulaire
-			if ( form?.id === 'mainForm') {
-				form.addEventListener('submit', (event) => {
-					// Validation des données modifiées
-					if (!validateMainForm(form)) {
-						// Eviter la soumission du formulaire
-						event.preventDefault();
-						return; // Sortir de la fonction pour éviter la soumission
-					}
-				});
-			}
-
-			// Fonction pour restaurer la position sur l'onglet actif après le rechargement page
-			window.onload = function() {
-				activeTabId = localStorage.getItem('activeTab');
-				if (activeTabId) {
-					const targetTab = document.getElementById(activeTabId);
-					if (targetTab) {
-						targetTab.click(); // Simule le clic sur l'onglet actif
-					}
-				}
-			};
-
-			function findAttrPropertyByName(name, property) {
-				const attribute = ldapSchema.attributes.find(attr => 
-					attr.NAME.includes(name) // Vérifie si le NAME contient le nom recherché  
-				);
-				return attribute ?attribute[property] || null :null;
-			}
-
-			// AFFICHAGE de l'onglet "+"
-			const objectClassList = document.getElementById('objectClassList');
-			const attributeList = document.getElementById('attributeList');
-			const attributePlaceholder = document.getElementById('attributePlaceholder');
-
-			// Remplir la liste des objectClasses
-			ldapSchema.objectClasses.forEach((objectClass) => {
-				if (objectClass.TYPE !== 'AUXILIARY') return;
-				const listItem = document.createElement('div');
-				listItem.className = 'list-item';
-
-				// Vérifier si l'objectClass est présente dans objectClassesDetails
-				const isChecked = objectClassesDetails.some(detail => detail.NAME.includes(objectClass.NAME[0]));
-
-				// Créer la case à cocher
-				const checkbox = document.createElement('input');
-				checkbox.type = 'checkbox';
-				checkbox.className = 'checkbox';
-				checkbox.className = 'auxiliaryCheckbox';
-				checkbox.checked = isChecked;
-
-				// Ajouter la case à cocher et le nom de l'ObjectClass dans l'élément de liste
-				listItem.appendChild(checkbox);
-				listItem.appendChild(document.createTextNode(objectClass.NAME[0]));
-				listItem.title = objectClass.DESC || "Pas de description disponible";
-
-				// Événement de clic pour gérer l'état de la case à cocher
-				checkbox.onclick = function(event) {
-					event.stopPropagation(); // Empêche la propagation du clic pour ne pas déclencher la surbrillance
-					objectClassesEdit(objectClass.NAME[0], checkbox);
-				};
-
-				// Événement de clic pour mettre en surbrillance l'objectClass et afficher les attributs
-				listItem.onclick = function() {
-					let hasAttributes = false;
-
-					// Vérifiez si l'item est déjà surligné
-					const isHighlighted = listItem.classList.contains('highlight');
-
-					// Surbrillance de l'objectClass cliqué
-					const highlighted = objectClassList.getElementsByClassName('highlight');
-					Array.from(highlighted).forEach(item => {
-						item.classList.remove('highlight');
-					});
-
-					// Vider la liste des attributs
-					attributeList.innerHTML = '';
-					attributeList.appendChild(attributePlaceholder);
-
-					if (!isHighlighted) {
-						listItem.classList.add('highlight');
-
-						// Ajouter les attributs MUST et MAY correspondants
-						['MUST', 'MAY'].forEach(key => {
-							for (const attrKey in objectClass[key]) {
-								const attrItem = document.createElement('div');
-								attrItem.className = 'list-item';
-								attrItem.innerText = `${objectClass[key][attrKey]} (${key})`; // Le nom de l'attribut
-								attrItem.title = findAttrPropertyByName(objectClass[key][attrKey], 'DESC') || 'Aucune descritopn disponible.';
-								attributeList.appendChild(attrItem);
-								hasAttributes = true; // Indiquer qu'il y a des attributs
-							}
-						});
-						attributePlaceholder.innerText = hasAttributes ?'' :'Aucun attribut pour cet objectClass.';
-					} else {
-						listItem.classList.remove('highlight');
-						attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher ses attributs ...';
-					}
-
-					// Si aucun attribut n'est trouvé, afficher le message approprié
-					attributeList.innerHTML = '<h4>Attributs' + (hasAttributes ?' de \''+objectClass.NAME[0]+'\'' :'') + ':</h4>' + attributeList.innerHTML;
-				}
-
-				objectClassList.appendChild(listItem);
 			});
+
+			const data = await response.json();
+
+			if (response.ok) {
+				alert(data.message); // Message de succès
+				window.location.href = data.redirect; // Redirection vers /search
+			} else {
+				alert(`Erreur: ${data.error}`);
+			}
+		} catch (error) {
+			console.error('Erreur:', error);
+			alert('Erreur lors de la suppression de l\'élément.');
+		}
+	}
+}
+
+// Edition des propriétés d'attribut
+function openEditModal(button, attrName) {
+	const objectClassIndex = parseInt(button.dataset.objectClassIndex);
+	const objectClass = objectClassesDetails[objectClassIndex];
+	const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
+		|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
+	document.getElementById('validerModale').dataset.objectClassIndex = objectClassIndex;
+	if (!document.getElementById('saveButton').disabled) {
+		alert("Opération impossible : il y a des modifications d'attributs en cours !");
+		return;
+	}
+
+	// Label d'attribut
+	const newLabelInputField = document.getElementById('newLabel');
+	newLabelInputField.value = objectAttribute.customWording || '';
+	newLabelInputField.placeholder = attrName;
+
+	// Bontons radio SINGLE-VALUE/MULTI-VALUES:
+	//	- OpenLDAP schema : not SINGLE-VALUE -> MULTI-VALUES,
+	//	- this appli: can force SINGLE-VALUE.
+	const radio = !!objectAttribute?.SINGLE_VALUE
+			? 'singleValue'
+			:(objectAttribute.MULTI_VALUE == null && objectAttribute.MULTI_VALUE !== 'SINGLE-VALUE')
+				?'multiValue' :'singleValue';
+	document.getElementById('multiValue').disabled = objectAttribute.SINGLE_VALUE;
+	document.getElementById(radio).checked = true;
+	document.getElementById('schema').disabled = true;
+
+	// Script de validation des saisies
+	document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
+
+	document.getElementById('attributeName').textContent = attrName;
+	document.getElementById('attributeId').value = objectAttribute.OID; // Pour envoi par le formulaire lors de la soumission
+
+	saveCurrentTab();
+	$('#editModal').modal('show');
+}
+
+function submitModal(submitButton) {
+	const attrName = document.getElementById('newLabel').placeholder;
+	const multiValue = document.getElementById('multiValue').checked;
+	const objectClassIndex = parseInt(submitButton.dataset.objectClassIndex);
+	const objectClass = objectClassesDetails[objectClassIndex];
+	const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
+		|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
+	const singleValue = !!objectAttribute.SINGLE_VALUE;
+	if (singleValue || (!singleValue && multiValue))
+		document.getElementById('schema').checked = !(document.getElementById('schema').disabled = false);
+	document.getElementById('attrForm').submit();
+}
+
+function changeModalSize(increase) {
+	const modalDialog = document.querySelector('#editModal .modal-dialog');
+	const currentClassList = modalDialog.classList;
+	const jsValidationTextarea = document.getElementById('jsValidation');
+	const greater = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(true)"]');
+	const lower = document.querySelector('.btn-light.btn-sm[onclick="changeModalSize(false)"]');
+
+	let currentSize = '';
+	if (currentClassList.contains('modal-sm')) {
+		currentSize = 'sm';
+	} else if (currentClassList.contains('modal-lg')) {
+		currentSize = 'lg';
+	} else if (currentClassList.contains('modal-xl')) {
+		currentSize = 'xl';
+	}
+
+	lower.style.color = greater.style.color = 'black';
+	if (increase) {
+		if (currentSize === 'sm') {
+			currentClassList.remove('modal-sm');
+			jsValidationTextarea.rows = 10;
+		} else if (currentSize === '') {
+			currentClassList.remove('modal-sm');
+			currentClassList.add('modal-lg');
+			jsValidationTextarea.rows = 15;
+		} else if (currentSize === 'lg') {
+			currentClassList.remove('modal-lg');
+			currentClassList.add('modal-xl');
+			jsValidationTextarea.rows = 20;
+			greater.style.color = '#ffffe0'; 
+			greater.blur(); 
+		}
+	} else {
+		if (currentSize === 'xl') {
+			currentClassList.remove('modal-xl');
+			currentClassList.add('modal-lg');
+			jsValidationTextarea.rows = 15;
+		} else if (currentSize === 'lg') {
+			currentClassList.remove('modal-lg');
+			jsValidationTextarea.rows = 10;
+		} else if (currentSize === '') {
+			currentClassList.remove('modal-lg');
+			currentClassList.add('modal-sm');
+			jsValidationTextarea.rows = 5;
+			lower.style.color = '#ffffe0'; 
+			lower.blur(); 
+		}
+	}
+}
+
+// Valide le bouton 'saveButton' seulement sur modification d'attributs
+function checkSaveButton() {
+	const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
+	let isAnyInputChanged = false;
+
+	inputs.forEach(input => {
+		if (input.name)
+			if (input.value !== input.defaultValue)
+				isAnyInputChanged = true;
+   	});
+
+	const saveButton = document.getElementById('saveButton');
+	if (isAnyInputChanged) {
+		saveButton.disabled = false;
+		saveButton.classList.add('enabled');
+		saveButton.classList.remove('disabled');
+	} else {
+		saveButton.disabled = true;
+		saveButton.classList.remove('enabled');
+		saveButton.classList.add('disabled');
+	}
+}
+
+function objectClassesEdit(checkbox, checkbox) {
+	let msg = 'Êtes-vous sûr de vouloir ' + (checkbox.checked ? 'ajouter' : 'supprimé')
+	    + ' cet objetClass ' + (checkbox.checked ? 'au' : 'du') + ' DN en cours d\'édition ?'
+		+ (checkbox.checked ? '' : '\n(certaines données seront probablement perdues ...)');
+	if (confirm(msg)) {
+		alert('Désolé pour ce contre temps : cette fonctionnalité est encore en cours d\'implémentation.');
+	}
+	checkbox.checked = !checkbox.checked;
+}
+
+// Gestion de la soumission du formulaire
+const form = document.querySelector('form'); // Sélection formulaire
+if ( form?.id === 'mainForm') {
+	form.addEventListener('submit', (event) => {
+		// Validation des données modifiées
+		if (!validateMainForm(form)) {
+			// Eviter la soumission du formulaire
+			event.preventDefault();
+			return; // Sortir de la fonction pour éviter la soumission
+		}
+	});
+}
+
+// Fonction pour restaurer la position sur l'onglet actif après le rechargement page
+window.onload = function() {
+	activeTabId = localStorage.getItem('activeTab');
+	if (activeTabId) {
+		const targetTab = document.getElementById(activeTabId);
+		if (targetTab) {
+			targetTab.click(); // Simule le clic sur l'onglet actif
+		}
+	}
+};
+
+function findAttrPropertyByName(name, property) {
+	const attribute = ldapSchema.attributes.find(attr => 
+		attr.NAME.includes(name) // Vérifie si le NAME contient le nom recherché  
+	);
+	return attribute ?attribute[property] || null :null;
+}
+
+// AFFICHAGE de l'onglet "+"
+const structuralObjectClassList = document.getElementById('objectClassListStructural');
+const auxiliaryObjectClassList = document.getElementById('objectClassListAuxiliary');
+const attributeListStructural = document.getElementById('attributeListStructural');
+const attributeListAuxiliary = document.getElementById('attributeListAuxiliary');
+const attributePlaceholderStructural = document.getElementById('attributePlaceholderStructural');
+const attributePlaceholderAuxiliary = document.getElementById('attributePlaceholderAuxiliary');
+const attributeHeader = document.querySelector('.attribute-liste');
+
+// Créer un tableau des types d'objectClasses  
+const objectClassTypes = [
+    { type: 'STRUCTURAL', objectClassList: structuralObjectClassList, attributeList: attributeListStructural, attributePlaceholder: attributePlaceholderStructural },
+    { type: 'AUXILIARY', objectClassList: auxiliaryObjectClassList, attributeList: attributeListAuxiliary, attributePlaceholder: attributePlaceholderAuxiliary }
+];
+
+// Remplir la liste des objectClasses  
+objectClassTypes.forEach(({ type, objectClassList, attributeList, attributePlaceholder }) => {
+    ldapSchema.objectClasses.forEach((objectClass) => {
+        if (objectClass.TYPE !== type) return;
+
+        const listItem = document.createElement('div');
+        listItem.className = 'list-item';
+
+        // Vérifier si l'objectClass est présente dans objectClassesDetails  
+        const isChecked = objectClassesDetails.some(detail => detail.NAME.includes(objectClass.NAME[0]));
+
+        // Créer la case à cocher  
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'checkbox objectClassesCheckbox';
+        checkbox.checked = isChecked;
+
+        // Ajouter la case à cocher et le nom de l'ObjectClass dans l'élément de liste  
+        listItem.appendChild(checkbox);
+        listItem.appendChild(document.createTextNode(objectClass.NAME[0]));
+        listItem.title = objectClass.DESC || "Pas de description disponible";
+
+        // Événement de clic pour gérer l'état de la case à cocher  
+        checkbox.onclick = function(event) {
+            event.stopPropagation(); // Empêche la propagation du clic pour ne pas déclencher la surbrillance  
+            objectClassesEdit(objectClass.NAME[0], checkbox);
+        };
+
+        // Événement de clic pour mettre en surbrillance l'objectClass et afficher les attributs  
+        listItem.onclick = function() {
+            let hasAttributes = false;
+
+            // Vérifiez si l'item est déjà surligné  
+            const isHighlighted = listItem.classList.contains('highlight');
+
+            // Surbrillance de l'objectClass cliqué  
+            const highlighted = objectClassList.getElementsByClassName('highlight');
+            Array.from(highlighted).forEach(item => {
+                item.classList.remove('highlight');
+            });
+
+            // Vider la liste des attributs  
+            attributeList.innerHTML = '';
+            attributeList.appendChild(attributePlaceholder);
+
+            if (!isHighlighted) {
+                listItem.classList.add('highlight');
+
+                // Ajouter les attributs MUST et MAY correspondants  
+                ['MUST', 'MAY'].forEach(key => {
+                    for (const attrKey in objectClass[key]) {
+                        const attrItem = document.createElement('div');
+                        attrItem.className = 'list-item';
+                        attrItem.innerText = `${objectClass[key][attrKey]} (${key})`; // Le nom de l'attribut  
+                        attrItem.title = findAttrPropertyByName(objectClass[key][attrKey], 'DESC') || 'Aucune description disponible.';
+                        attributeList.appendChild(attrItem);
+                        hasAttributes = true; // Indiquer qu'il y a des attributs  
+                    }
+                });
+				attributeHeader.innerHTML = 'Attributs' + (hasAttributes ? ' de \'<strong>' + objectClass.NAME[0] + '</strong>\'' : '') + ':';
+                attributePlaceholder.innerText = hasAttributes ? '' : 'Aucun attribut pour cet objectClass.';
+            } else {
+                listItem.classList.remove('highlight');
+                attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher ses attributs ...';
+            }
+
+            // Si aucun attribut n'est trouvé, afficher le message approprié  
+            //attributeList.innerHTML = '<h4>Attributs' + (hasAttributes ? ' de \'' + objectClass.NAME[0] + '\'' : '') + ':</h4>' + attributeList.innerHTML;
+        }
+
+        objectClassList.appendChild(listItem);
+    });
+});
         </script>
     </div>
 </body>
