@@ -321,9 +321,8 @@ async function updateAttributeConfigInLDAP(client, config, attrName, attrConf) {
 			// Si l'entrée existe, la supprimer
 			await new Promise((resolve, reject) => {
 				client.del(dn, (err) => {
-					if (err) {
+					if (err)
 						return reject(err);
-					}
 					resolve();
 				});
 			});
