@@ -284,23 +284,21 @@ let config;
 					}
 				}));
 				const objectClassesDetails = searchPromises;
-
 //console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
+				// Recuperatio des customisations d'attributs
 				const attrDefDN = config.configDn.attributs + ',' + config.configDn.root;
 				const attrDefOptions = {
 					scope: 'one',
 					attributes: [ 'cn', 'l', 'description', 'ou' ]
 				};
-
 				const attributesConfig = await searchLDAP(client, attrDefDN, attrDefOptions).catch(err => {
 					return [];
 				});
-
-console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConfig, null, 2)); // Display for debug
+//console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConfig, null, 2)); // Display for debug
 
 				// Enrich chaque objectClass du dn courant avec les data d'objectData et d'attributesConfig
-				// 1: Enrich les objectClasses avec les éventuelles customConf d'attributs définies dans attributesConfig
+				// 1: avec les éventuelles customConf d'attributs définies dans attributesConfig
 				objectClassesDetails.forEach(objectClass => {
 					// Parcours des attributs de MUST et MAY
 					['MUST', 'MAY'].forEach(key => {
@@ -308,28 +306,25 @@ console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConf
 							const attrCustomizations = attributesConfig.find(item => item.cn.includes(currentAttr.OID)) ?? null;
 
 							// Déterminer si la data d'attribut doit être [] ou SINGLE_VALUE
-							const singleValue = currentAttr.SINGLE_VALUE || false;
-                    		const forceMultiValue = attrCustomizations?.ou ?? null;
-                    		const multiValue = !singleValue && (forceMultiValue == null || forceMultiValue[0] === true);
-							currentAttr.MULTI_VALUE = !!multiValue;
+                    		const customMultiValue = attrCustomizations?.ou ?? null;
+                    		const isMultiValue = !currentAttr.SINGLE_VALUE && (customMultiValue?.[0] !== 'SINGLE-VALUE');
+							if (!isMultiValue) currentAttr.MULTI_VALUE = 'SINGLE-VALUE';
 
 							if (attrCustomizations) {
 								// Ajout des customisations de l'attribut
-								currentAttr.customWording = attrCustomizations?.l || null;
-								currentAttr.valueCheck = attrCustomizations?.description || null;
-								if (forceMultiValue !== null)	currentAttr.MULTI_VALUES = multiValue;
+								if (attrCustomizations?.l || null)
+									currentAttr.customWording = attrCustomizations.l;
+								if (attrCustomizations?.description || null)
+									currentAttr.valueCheck = attrCustomizations?.description;
 							}
 						});
 					});
 				});
 
-
-				// 2: Enrich les objectClasses avec les data d'objectData de chaque attribut
-				//	Pour cela, parcourir les DATA
-				Object.keys(objectData).forEach(attrDataName => {
+				// 2: avec les data d'objectData de chaque attribut
+				Object.keys(objectData).forEach(attrDataName => { // on parcourt les DATA
 					if (attrDataName === 'dn')	return;
 					const attrData = objectData[attrDataName]; // Obtenir les data pour chaque attribut
-
 
 					// Parcourir chaque objectClassDetails à la recherche de l'attribut attrDataName
 					objectClassesDetails.forEach(objectClass => { // rechercher dans tous les attributs de l'objectClass à enrichir
@@ -337,9 +332,9 @@ console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConf
 							objectClass[key].forEach(currentAttr => {
 
 								if (currentAttr.NAME.find(name => name.toLowerCase() === attrDataName.toLowerCase())) {
-									// L'attribut courrant peut être enrichi
+									// L'attribut trouvé peut être enrichi
 									let VALUES;
-									if (currentAttr.MULTI_VALUES) {
+									if (currentAttr.MULTI_VALUES !== 'SINGLE-VALUES') {
 										VALUES = Array.isArray(attrData)
 											? attrData
 											: (attrData !== undefined ? [attrData] : null);
@@ -358,7 +353,6 @@ console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConf
 						});
 					});
 				});
-
 console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
 				return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, ldapSchema: ldapSchema});
@@ -518,7 +512,7 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 
 		// Lancer le serveur
 		app.listen(config.nodeJsPort, () => {
-			console.log(`\nServeur en écoute sur http://localhost:${config.nodeJsPort}`);
+			console.log(`Serveur en écoute sur http://localhost:${config.nodeJsPort}`);
 		});
 	} catch (error) {
 		logger.error('Erreur lors du chargement du schéma LDAP:', error);
