@@ -120,7 +120,6 @@ function generateLDIF(oldObject, newObject, dn) {
 			&& newObject[key] !== undefined
 			&& newObject[key] !== ''
 			&& !(Array.isArray(newObject[key]) && (newObject[key].length === 0 || newObject[key][0] === ''))
-			&& !isEmptyObject(newObject[key])
 			) {
 			// Si la clé est dans le nouvel objet mais pas dans l'ancien, c'est un ajout
 			changes.push({
@@ -303,19 +302,16 @@ async function updateAttributeConfigInLDAP(client, config, attrName, attrConf) {
 		await checkAndCreateOrganizationalUnit(client, root);
 
 		const dn = 'cn=' + attrName + ',' + root;
-		const entry = {};
-		entry.objectClass = ['top', 'applicationProcess'];
-		entry.cn = attrName;
-		if (attrConf.customWording) {
-			entry.l = attrConf.customWording;
-		}
-		if (attrConf.MULTIVALUE != null) {
-			entry.ou = !attrConf.MULTIVALUE ?'SINGLE-VALUE' :'MULTI-VALUE';
-		}
-		if (attrConf.valueCheck) {
-			entry.description = attrConf.valueCheck;
-		}
+		const entry = {
+			objectClass: ['top', 'applicationProcess'],
+			cn: attrName,
+			...(attrConf.customWording && { l: attrConf.customWording }),
+			...(attrConf.MULTIVALUE != null && { ou: !attrConf.MULTIVALUE ? 'SINGLE-VALUE' : 'MULTI-VALUE' }),
+			...(attrConf.valueCheck && { description: attrConf.valueCheck })
+		};
+//console.log('entry: ', JSON.stringify(entry, null, 2)); // Pour debug
 
+		// Remove de l'entrée existante
 		const dnExists = await checkDNExists(client, dn);
 		if (dnExists) {
 			// Si l'entrée existe, la supprimer
@@ -329,7 +325,7 @@ async function updateAttributeConfigInLDAP(client, config, attrName, attrConf) {
 		}
 
 		if (Object.entries(entry).length > 2) {
-			// Ajouter la nouvelle entrée d'attribut
+			// Ajouter la nouvelle entrée de custom attribut
 			await new Promise((resolve, reject) => {
 				client.add(dn, entry, (err) => {
 					if (err) {
