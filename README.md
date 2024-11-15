@@ -178,17 +178,8 @@ Edition :
  ![](doc/images/edit.png)
 
 Edition d'objectClasses :
+![](doc/images/addObjectClass.png)
 
-<table>
-    <tr>
-        <td>
-            <img src="doc/images/addObjectClass.png" alt="Description de la première image" width="400"/>
-        </td>
-        <td>
-            <img src="doc/images/addObjectClass2.png" alt="Description de la seconde image" width="400"/>
-        </td>
-    </tr>
-</table>
 
 ## Contribuer
 
