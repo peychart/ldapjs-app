@@ -297,81 +297,71 @@ let config;
 					return [];
 				});
 
-//console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConfig, null, 2)); // Display for debug
+console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConfig, null, 2)); // Display for debug
 
-console.log('ldapSchema: ', JSON.stringify(ldapSchema, null, 2));
+				// Enrich chaque objectClass du dn courant avec les data d'objectData et d'attributesConfig
+				// 1: Enrich les objectClasses avec les éventuelles customConf d'attributs définies dans attributesConfig
+				objectClassesDetails.forEach(objectClass => {
+					// Parcours des attributs de MUST et MAY
+					['MUST', 'MAY'].forEach(key => {
+						objectClass[key].forEach(currentAttr => {
+							const attrCustomizations = attributesConfig.find(item => item.cn.includes(currentAttr.OID)) ?? null;
 
-				// Rechercher des contrôles d'attributs dans l'arborescence LDAP config.configDn.attributs+root
-				Object.keys(objectData).forEach(attrName => {
-					const attrValues = objectData[attrName]; // Obtenir les valeurs pour chaque attribut
+							// Déterminer si la data d'attribut doit être [] ou SINGLE_VALUE
+							const singleValue = currentAttr.SINGLE_VALUE || false;
+                    		const forceMultiValue = attrCustomizations?.ou ?? null;
+                    		const multiValue = !singleValue && (forceMultiValue == null || forceMultiValue[0] === true);
+							currentAttr.MULTI_VALUE = !!multiValue;
 
-					// Parcourir chaque objectClassDetails
-					objectClassesDetails.forEach(objectClass => {
-						if (!objectClass['ATTRIBUTE']) {
-							objectClass['ATTRIBUTE'] = {};
-						}
+							if (attrCustomizations) {
+								// Ajout des customisations de l'attribut
+								currentAttr.customWording = attrCustomizations?.l || null;
+								currentAttr.valueCheck = attrCustomizations?.description || null;
+								if (forceMultiValue !== null)	currentAttr.MULTI_VALUES = multiValue;
+							}
+						});
+					});
+				});
 
-console.log('objectClass(de objectClassesDetails.forEach): ', JSON.stringify(objectClass, null, 2));
 
-						// Vérifier si l'objet class a des attributs MUST ou MAY
+				// 2: Enrich les objectClasses avec les data d'objectData de chaque attribut
+				//	Pour cela, parcourir les DATA
+				Object.keys(objectData).forEach(attrDataName => {
+					if (attrDataName === 'dn')	return;
+					const attrData = objectData[attrDataName]; // Obtenir les data pour chaque attribut
+
+
+					// Parcourir chaque objectClassDetails à la recherche de l'attribut attrDataName
+					objectClassesDetails.forEach(objectClass => { // rechercher dans tous les attributs de l'objectClass à enrichir
 						['MUST', 'MAY'].forEach(key => {
+							objectClass[key].forEach(currentAttr => {
 
-							objectClass[key].forEach(attrObject => {
-								const foundAttrName = attrObject.NAME.find(name => name.toLowerCase() === attrName.toLowerCase());
-
-console.log(`foundAttrName : ${foundAttrName}, pour attrName : ${attrName}, dans ${attrObject.NAME} de ${objectClass.NAME}`);
-
-								// Si une correspondance est trouvée, enrichir l'attribut
-								if (foundAttrName) {
-									const foundAttrSchema = ldapSchema.attributes.find(item => item.NAME.includes(foundAttrName));
-									const foundAttrOID = foundAttrSchema ? foundAttrSchema.OID : null; // Récupérer l'OID
-
-console.log('foundAttrSchema: ', foundAttrSchema);
-console.log('foundAttrOID: ', foundAttrOID);
-									// Déterminer si l'attribut est SINGLE_VALUE
-									const singleValue = foundAttrSchema.SINGLE_VALUE || false;
-									const forceMultiValue = attributesConfig.find(item => item.cn.includes(foundAttrOID))?.ou ?? null;
-									const multiValue = !singleValue && (forceMultiValue == null || forceMultiValue[0] === 'MULTI-VALUE');
-
-									// Préparer les valeurs en fonction de SINGLE_VALUE et MULTI-VALUE
-									let values;
-									if (multiValue) {
-										values = Array.isArray(attrValues)
-											? attrValues
-											: (attrValues !== undefined ? [attrValues] : []);
+								if (currentAttr.NAME.find(name => name.toLowerCase() === attrDataName.toLowerCase())) {
+									// L'attribut courrant peut être enrichi
+									let VALUES;
+									if (currentAttr.MULTI_VALUES) {
+										VALUES = Array.isArray(attrData)
+											? attrData
+											: (attrData !== undefined ? [attrData] : null);
 									} else {
-										values = Array.isArray(attrValues)
-											? (attrValues.length > 0 ? attrValues[0] : null)
-											: (attrValues !== undefined ? attrValues : null);
+										VALUES = Array.isArray(attrData)
+											? (attrData.length > 0 ? attrData[0] : null)
+											: (attrData !== undefined ? attrData : null);
 									}
 
-									// Enrichir l'objet ATTRIBUTE
-									objectClass['ATTRIBUTE'][foundAttrName] = {
-										type: key,
-										values: values, // Les valeurs préparées
-										SINGLE_VALUE: singleValue,
-										DESCRIPTION: attrObject.DESC, // Assurez-vous que cette clé existe
-										NO_USER_MODIFICATION: attrObject.NO_USER_MODIFICATION
-									};
-
-									// Ajout de la propriété customType à chaque attribut
-									const customAttr = attributesConfig.find(item => item.cn.includes(foundAttrOID)); // Utiliser foundAttrOID
-									objectClass['ATTRIBUTE'][foundAttrName].customWording = customAttr?.l || null;
-									objectClass['ATTRIBUTE'][foundAttrName].valueCheck = customAttr?.description || null;
-									if (forceMultiValue !== null) {
-										objectClass['ATTRIBUTE'][foundAttrName].MULTIVALUE = multiValue;
+									if (VALUES) {
+										// Enrichir le currentAttr de sa DATA
+										currentAttr.VALUES = VALUES;
 									}
-									// Optionnel : Supprimer la clé de l'objet après traitement
-									delete objectClass[key];
 								}
 							});
 						});
 					});
 				});
 
-//console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
-				return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, ldapSchema});
+				return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, ldapSchema: ldapSchema});
 
 			} catch(error) {
 				console.error('Fiche non trouvée:', error);
