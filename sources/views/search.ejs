@@ -53,6 +53,9 @@
             border: 1px solid #ccc;
             width: 270px;
         }
+       .logout-button {
+            margin-left: auto; /* Pour pousser le bouton à droite */
+        }
     </style>
 </head>
 <body>
@@ -66,7 +69,13 @@
         
         <div class="reset-button">
             <form action="/search" method="post">
-                <button type="submit">Reset</button>
+                <button type="submit">Effacer</button>
+            </form>
+        </div>
+
+        <div class="logout-button">
+            <form action="/logout" method="get">
+                <button type="submit">Déconnexion</button>
             </form>
         </div>
     </div>
