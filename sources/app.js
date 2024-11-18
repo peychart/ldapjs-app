@@ -7,7 +7,9 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const passport = require('passport');
 const { Strategy: LdapStrategy } = require('passport-ldapauth');
-const winston = require('winston');
+//const winston = require('winston');
+//const createLogger = require('./utils/log');
+const { createLogger, format, transports } = require('winston');
 const {
 	bindClient,
 	searchLDAP,
@@ -27,7 +29,6 @@ const {
 const {
 	isEqual
 } = require('./utils/utils');
-const createLogger = require('./utils/log');
 
 const app = express();
 let config;
@@ -35,7 +36,17 @@ let config;
 // Chargement initial de la configuration
 (async () => {
 	// Chargement initial de la configuration
-	const logger = createLogger();
+	const logger = createLogger({
+level: 'error', // 'info' Niveau de log par défaut  
+    format: format.combine(
+        format.timestamp(),
+        format.json()
+    ),
+    transports: [
+        new transports.Console(), // Journalisation dans la console  
+        new transports.File({ filename: 'error.log', level: 'error' }), // Journalisation des erreurs dans un fichier  
+    ],
+});
 	config = loadConfig();
 
 	try {
@@ -79,9 +90,6 @@ let config;
 		// Fin de la configuration initiale
 		logger.info('Application démarrée avec succès.');
 
-		// Définir vos routes ici, par exemple :
-
-
 		// ****************************************************************************
 		// *********************** DEFINITION DES ROUTES ******************************
 
@@ -95,6 +103,13 @@ let config;
 			res.render('login', { login, error: null, ldapUrl: `${config.ldap.url}:${config.ldap.port}` });
 		});
 
+process.on('uncaughtException', (err) => {
+   console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 		// ***********************************************************
 		// Route pour traiter la soumission du formulaire de connexion
@@ -131,11 +146,11 @@ let config;
 
 				// Vérifier si une entrée a été trouvée
 				if (validResults.length === 0) {
-					throw new Error('Nom d\'utilisateur ou mot de passe incorrect.'); // Gérer l'erreur ici
+					throw new Error('Nom d\'utilisateur ou mot de passe incorrect.');
 				} else if (validResults.length > 1) {
 					const allEqual = validResults.every(dn => dn === validResults[0]);
 					if (!allEqual) {
-						throw new Error('Plus d\'une occurrence d\'identifiant trouvée ! Veuillez préciser davantage votre login.'); // Gérer l'erreur ici
+						throw new Error('Plus d\'une occurrence d\'identifiant trouvée ! Veuillez préciser davantage votre login.');
 					}
 				}
 
@@ -226,15 +241,16 @@ let config;
 				// Récupérer les résultats de la recherche LDAP
 				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
-				// Passer le searchTerm à la vue
-				return res.render('search', { results, searchTerm: searchTerm, error: null });
+				// Passer le searchTerm à la vue avec un statut 200 (OK)
+				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, error: null });
 
 			} catch(error) {
 					console.error('Erreur:', error);
 				if (client) {
 					client.unbind(); // Assurez-vous que le client est délié
 				}
-				return res.render('search', { results: null, searchTerm: null, error: error.message });
+				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
+				return ress.status(500).render('search', { results: null, searchTerm: null, error: error.message });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
@@ -247,33 +263,54 @@ let config;
 			}
 		});
 
-		// ***********************************************************
-		// Route pour éditer un objet
+		/* *****************************
+		 * Route d'édition de l'oject dn
+		 */
+		app.get('/clearEdit/:dn', async (req, res) => {
+			const dn = req.params.dn;
+			delete req.session.edit;
+
+			return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
+			//return res.redirect(`/edit/${dn}`);
+		});
+
 		app.get('/edit/:dn', async (req, res) => {
 			const dn = req.params.dn; // Récupérer le DN des paramètres de l'URL
 			const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
-			const options = {
-				scope: 'base', // Recherche unique sur le DN spécifié
-				attributes: ['*'] // Attributs à récupérer
-			};
+			try {let objectData;
 
-			try {
 				// Liaison au client LDAP
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-				// Récupration de l'entrée dn à éditer
-				const objectData = (await searchLDAP(client, dn, options)
-					.catch(() => {
-						throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
-					})
-				)[0];
+				// Récupération des Data à éditer
+				objectData = req.session.edit?.objectData;
+
+//console.log('\nreq.session.edit.objectData: ', req.session.edit?.objectData);	// Pour debug
+
+				if (!objectData) {
+					const options = {
+						scope: 'base', // Recherche unique sur le DN spécifié
+						attributes: ['*'] // Attributs à récupérer
+					};
+
+					// Récupration de l'entrée dn à éditer
+					objectData = (await searchLDAP(client, dn, options)
+						.catch(() => {
+							throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
+						})
+					)[0];
+				} 
 
 				// On élimie l'objectClass === 'top'
-				const objectClassesToSearch = objectData.objectClass.filter(element => element !== 'top');
+				const objectClassesToSearch = [
+					...(objectData?.objectClass.filter(item => item !== 'top') || []),
+					...(req.session.edit?.ADDED || [])
+				]; if (!objectClassesToSearch.length)
+					throw new Error('DN à éditer vide: création ?...');
 
 				// Récupérer la définition de chaque objectClass composant notre dn à éditer
-				const searchPromises = await Promise.all(objectClassesToSearch.map(async objectClassName => {
+				const objectClassesDetails = objectClassesToSearch.map(objectClassName => {
 					try {
 						const cls = getObjectClassByName(ldapSchema, objectClassName);
 						const objCls = setInheritedMustAttributes(ldapSchema, cls);
@@ -282,8 +319,17 @@ let config;
 						console.error(`Erreur lors de la récupération de ${objectClassName} :`, error);
 						return null; // Ou une valeur par défaut, si nécessaire
 					}
-				}));
-				const objectClassesDetails = searchPromises;
+				});
+
+				// Ajouter la propriété ADDED/DELEETD=true aux objectClasses éventuellement concernés
+				['ADDED', 'DELETED'].forEach(type => {
+					objectClassesDetails.forEach(obj => {
+						if (req.session.edit?.[type])
+							if (req.session.edit[type].includes(obj.NAME[0])) obj[type]=true;
+					});
+					if (req.session.edit?.[type]) delete req.session.edit[type];
+				});
+
 //console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
 				// Recuperatio des customisations d'attributs
@@ -353,7 +399,7 @@ let config;
 						});
 					});
 				});
-console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+//console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
 				return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, ldapSchema: ldapSchema});
 
@@ -375,47 +421,95 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 		app.post('/edit/:dn', async (req, res) => {
 			// Déclaration du client de connexion
 			const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
-			let dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
+			const dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
+			let objectData;
+			let objectClassesEdition = false;
 
 			try {
 				// Connexion au serveur LDAP
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-				// Traitement de la réponse
-				const results = Object.keys(req.body).reduce((acc, key) => {
-					// Dédoubler les champs input de la réponse (répartis sur les onglets)) :
-					const value = Array.isArray(req.body[key]) ? req.body[key][0] : req.body[key];
-
-					// Parse JSON pour les clés marquées de '[]'
-					const safeParse = (val) => {
-						try {
-							return JSON.parse(val);
-						} catch(error) {
-							return val; // Retourne la valeur d'origine en cas d'erreur
-						}
-					};
-
-					if (key.endsWith('_hidden') || key === 'businessCategory') {
-						const baseKey = key.slice(0, -7); // Enlever '[]' du nom de clé
-
-						// Si la valeur est un tableau, parser chaque élément
-						acc[baseKey] = Array.isArray(value) ? value.map(safeParse) : safeParse(value);
-					} else {
-						// Pour les autres champs, conserver la valeur
-						acc[key] = value;
+				// Fonction parse JSON sécurisée
+				const safeParse = (val) => {
+					try {
+						return JSON.parse(val);
+					} catch(error) {
+						return val; // Retourne la valeur d'origine en cas d'erreur
 					}
+				};
+				const noEmpty = (val) => {
+					return (!val || !Array.isArray(val))
+						?val
+						:Array.from(new Set(val?.filter(el => el !== null && el !== undefined && el !== '' && el !== false && !Number.isNaN(el))));
+				}
+
+				// Traitement de la réponse
+				objectData = Object.keys(req.body).reduce((acc, key) => {
+					// Ajout/suppression d'objectClasses
+					if (key.startsWith('reload')) {
+						objectClassesEdition = true;
+						return acc;
+					}
+					if ( key.endsWith('Added') || key.endsWith('Deleted')) {
+						const statusKey = key.endsWith('Deleted') ? 'DELETED' : 'ADDED';
+						req.session.edit = {
+							...req.session.edit,
+							[statusKey]: [
+								...(req.session.edit?.[statusKey] || []),
+								req.body[key]
+							]
+						};
+						objectClassesEdition = true;
+						return acc;
+					}
+
+					// Dédoubler les champs input dupliquées entre onglets :
+					//	on retient le premier élément du getElementByName...
+					let value = (key.startsWith('objectClass') || !Array.isArray(req.body[key]))
+						?req.body[key]
+						:req.body[key][0];
+
+					// Parse des clées multiValeurs (de valeurs Array[])
+					if (key.endsWith('_multiValues')) {
+						// Rétablir le nom d'attribut
+						const baseKey = key.substring(0, key.indexOf('_'));
+
+						// Si la valeur est bien un tableau, parser ses valeurs
+						value = Array.isArray(value) ?value.map(safeParse) :(safeParse(value));
+						value = noEmpty(value);
+
+						if (Array.isArray(value) && value.length)
+							acc[baseKey] = value;
+						else if (value)
+							acc[baseKey] = [value];
+					} else // Pour les autres champs, conserver la valeur non vide en l'état
+						if (value) acc[key] = value;
 
 					return acc;
 				}, {});
 
-				// Mise à jour de la base LDAP
-				await updateLDAP(client, dn, results);
+//console.log('objectData: ', objectData);	// Pour debug
 
-				return res.redirect(`/edit/${dn}`);
+				if (objectClassesEdition) {
+						throw 254;
+				} else {
+					// Mise à jour de la base LDAP
+					await updateLDAP(client, dn, objectData);
+				}
 
-			} catch(error) {
-				console.error('Erreur:', error);
-				res.status(500).send({ error: error.message });
+				// Redirection vers la page d'édition du dn
+				//return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
+				return res.status(200).redirect(`/edit/${dn}`);
+				//return res.redirect(`/edit/${dn}`);
+			} catch(err) {
+				if (err.code === 255 || err === 254 ) {						// Poursuite de l'édition du dn
+					req.session.edit = {...req.session.edit, objectData: objectData};
+					return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
+					//return res.redirect(`/edit/${dn}`);
+				} else {
+					console.error('Erreur d\'édition :', err);
+					res.status(500).send({ error: err.message });
+				}
 			} finally {
 				// Déconnexion du client LDAP
 				if (client) {
@@ -479,7 +573,7 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 				for (let key of keys) {
 					if (key === 'attributeId') {
 						attrName = req.body[key];
-					} else if (key === 'attributeType') {
+					} else if (key === 'attributeType') { // MULTI-VALUES ?
 						if (req.body[key] !== 'SCHEMA')
 							attrConf.MULTIVALUE = (req.body[key] === 'MULTI-VALUE');
 					} else if (key === 'newLabel' && req.body[key]) {
@@ -497,7 +591,8 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 				// Mise à jour dans la base LDAP
 				await updateAttributeConfigInLDAP(client, config, attrName, attrConf);
 
-				return res.redirect(`/edit/${dn}`);
+				return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
+				//return res.redirect(`/edit/${dn}`);
 
 			} catch(error) {
 				console.error('Erreur:', error);
@@ -516,6 +611,6 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 		});
 	} catch (error) {
 		logger.error('Erreur lors du chargement du schéma LDAP:', error);
-		process.exit(1); // Optionnel : quittez le processus en cas d'erreur
+		process.exit(2); // Optionnel : quittez le processus en cas d'erreur
 	}
 })();
