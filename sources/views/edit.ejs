@@ -240,9 +240,9 @@
             <!-- Conteneur pour les boutons avec Flexbox -->
             <div class="d-flex justify-content-between mb-3">
                 <div class="d-flex"> <!-- Boutons à gauche -->
-                    <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
+                    <button type="button" id="saveButton" class="btn btn-save" style="width: 120px;" disabled onclick="removeHiddenTabs()">Valider</button>
                     <button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
-                    <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Sortir</button>
+                    <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Retour</button>
                 </div>
 
                 <div class="d-flex"> <!-- Boutons à droite -->
@@ -277,12 +277,13 @@
                 <% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
                     const objName = objectClass.NAME[0];
                 %>
+                    <input type="hidden" name="objectClass" value="<%= objName %>"/>
                     <div class="tab-pane fade <%= objectClassIndex === 0 ? 'show active' : '' %>" id="<%= objName %>" role="tabpanel" aria-labelledby="<%= objName %>-tab">
                         <% ['MUST', 'MAY'].forEach(TYPE => { %>
                             <h3 class="underline">Attributs <%= (TYPE === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
                             <ul>
                                 <% objectClass[TYPE].forEach(currentAttr => {
-                                        const attrName = currentAttr.NAME[0];
+                                    const attrName = currentAttr.NAME[0];
                                 %>
                                 <li>
                                     <strong><%= currentAttr.customWording || attrName %>:</strong>
@@ -303,7 +304,8 @@
                                                     id="<%= attrName %>"
                                                     class="hiddenInput"
                                                     name="<%= attrName %>"
-                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?(currentAttr.VALUES.length ?currentAttr.VALUES :['']) :Array.of(currentAttr.VALUES || [])) %>"
+                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :Array.of(currentAttr.VALUES ?? '')) %>"
+                                                \>
                                                 <!-- Bouton d ajout d une valeur à l attribut -->
                                                 <button type="button" class="add-button">+</button>
                                             </div>
@@ -316,7 +318,8 @@
                                             class="form-control"
                                             data-object-class-index = '<%= objectClassIndex %>'
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
-                                            oninput="checkInputFunction(this, '<%= attrName %>');" />
+                                            oninput="checkInputFunction(this, '<%= attrName %>');"
+                                        />
                                     <% } %>
                                 </li>
                                 <% }) %>
@@ -443,9 +446,24 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
         <script src="/js/popupMultiValues.js"></script>
         <script>
-let activeTabId = localStorage.getItem('activeTab');
+const urlParams = new URLSearchParams(window.location.search);
+const errMsg = urlParams.get('errMsg');
 const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
+let activeTabId = localStorage.getItem('activeTab');
+
+function init() {
+	objectClassesDetails.forEach(objectClass => { // Hidden les onglet DELETED
+		if (objectClass.DELETED === true) {
+			// Cacher l'onglet
+			document.getElementById(objectClass.NAME[0] + '-tab').style.display="none";
+			// Cacher le contenu de l'onglet
+			document.getElementById(objectClass.NAME[0]).style.display="none";
+		}
+	});
+
+	if (errMsg) alert(errMsg);
+}
 
 function checkInputFunction(input, attrName) {
 	const objectClassIndex = parseInt(input.dataset.objectClassIndex);
@@ -473,11 +491,8 @@ function checkInputFunction(input, attrName) {
 	checkSaveButton();
 }
 
-function validateMainForm(form) {
-	// Passer l'info au serveur du format JSON [] des inputs hidden de la 'mainForm' (attributs multi-valués)
-	form.querySelectorAll('input[type="hidden"]').forEach(input => {
-		input.name += '_hidden'
-	});
+function ldapValidation(form) { // pour mise à jour dans la base
+
 
 /*
 	// Exemple de validation : vérifier si l'email est valide
@@ -488,6 +503,37 @@ function validateMainForm(form) {
 	}
 */
 	return true;
+}
+
+function validateMainForm(form) {
+	let valid = false;
+	// Marquer les attributes MULTI-VALUES
+	form.querySelectorAll('input[type="hidden"]').forEach(input => {	// Marquer les inputs hidden d'attributs multi-valués
+		input.name += '_multiValues'
+	});
+	// Marquer les objectClasses ADDED/DELETED dans l'envoi du formulaire
+	objectClassesDetails.forEach(objectClass => {
+		if (objectClass.DELETED === true || objectClass.ADD === true) {
+			const item = document.createElement('input');
+			item.name = objectClass.DELETED === true ?'objectClass_Deleted' :'objectClass_Added';
+			item.value = objectClass.NAME[0];
+			item.type = 'hidden';
+			form.appendChild(item);
+			valid = true;
+		}
+	});
+	// Juste rafraichir la page pour l'affichage du new objectClass
+	if (valid) {
+		const item = document.createElement('input');
+		item.name = 'reload';
+		item.type = 'checkbox';
+		item.checked = true;
+		item.hidden = true;
+		form.appendChild(item);
+		return true;
+	}
+
+	return ldapValidation();
 }
 
 // Sauvegrder la position de l'onglet courant
@@ -506,7 +552,21 @@ function restoreValues() {
 
 	// Rafraichir la page
 	saveCurrentTab();
-	window.location.reload();
+
+	// Redirige vers une route du serveur d'extraction LDAP
+	window.location.href = '/clearEdit/<%= dn %>';
+}
+
+function removeHiddenTabs() {
+	objectClassesDetails.forEach(objectClass => { // remove hidden tabs
+		if (objectClass.DELETED === true) {
+			const tabLink = document.getElementById(objectClass.NAME[0] + '-tab');
+			tabLink.remove();
+		}
+	});
+
+	// Submit mainForm
+	document.getElementById('mainForm').submit();
 }
 
 // Abandon de la page
@@ -655,7 +715,7 @@ function checkSaveButton() {
 		if (input.name)
 			if (input.value !== input.defaultValue)
 				isAnyInputChanged = true;
-   	});
+	});
 
 	const saveButton = document.getElementById('saveButton');
 	if (isAnyInputChanged) {
@@ -671,70 +731,28 @@ function checkSaveButton() {
 
 function objectClassesEdit(checkbox, objectClassName) {
 	const tabContainer = document.querySelector('#myTab');
-    const addTab = document.querySelector('#add-tab');
+	const addTab = document.querySelector('#add-tab');
 
 	// Sélectionner l'onglet correspondant à l'objectClass
 	const tabLink = document.getElementById(objectClassName + '-tab');
 	const tabPane = document.getElementById(objectClassName);
 
-// Afficher l'état de tabContainer pour le débogage  
-console.log('tabContainer:', tabContainer);
-console.log('addTab:', addTab);
-console.log('addTab parent:', addTab.parentNode); // Vérifie le parent de addTab
-
+// Afficher l'état de tabContainer pour le débogage
 	if (checkbox.checked) {
 		if (tabLink) {
 			tabLink.style.display = "";	// Assurez-vous que l'onglet est visible
 			tabPane.style.display = "";	// Assurez-vous que le contenu de l'onglet est visible
 		} else {
-			// Ajouter le nouvel onglet
-			const newTab = document.createElement('li');
-			newTab.className = 'nav-item';
-			newTab.innerHTML = `<a class="nav-link active" id="${objectClassName}-tab" data-toggle="tab" href="#${objectClassName}" role="tab" aria-controls="${objectClassName}" aria-selected="true">${objectClassName}</a>`;
-
-            if (addTab && tabContainer && tabContainer.contains(addTab)) {
-                tabContainer.insertBefore(newTab, addTab);  // Insérer avant l'onglet d'ajout  
-            } else {
-                console.warn('addTab is not present in tabContainer or tabContainer is undefined.');
-                tabContainer.appendChild(newTab);  // Ajouter à la fin si l'onglet d'ajout n'est pas trouvé  
-            }
-
-			const newTabPane = document.createElement('div');
-			newTabPane.className = 'tab-pane fade show active';
-			newTabPane.id = objectClassName;
-			newTabPane.role = 'tabpanel';
-			newTabPane.setAttribute('aria-labelledby', objectClassName + '-tab');
-
-			// Générer le contenu d'attributs
-			let attributesHTML = '';
-			['MUST', 'MAY'].forEach(TYPE => {
-				attributesHTML += `<h3 class="underline">Attributs ${TYPE === 'MUST' ? 'obligatoires' : 'optionnels'} :</h3><ul>`;
-				objectClass[TYPE].forEach(currentAttr => {
-					const attrName = currentAttr.NAME[0];
-					attributesHTML += `
-						<li>
-							<strong>${currentAttr.customWording || attrName}:</strong>
-							<button type="button" class="edit-btn" data-object-class-index='${objectClassIndex}' onclick="openEditModal(this, '${attrName}')">
-								<i class="fas fa-pencil-alt"></i>
-							</button>
-							${currentAttr.MULTI_VALUE !== 'SINGLE-VALUE' ? `
-								<div class="popupContainer" data-attr-name="${attrName}">
-									<div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
-										<input type="text" class="editInput" data-object-class-index='${objectClassIndex}' placeholder="Éditez ici les valeurs de l'attribut '${attrName}'" oninput="checkInputFunction(this, '${attrName}');" />
-										<input type="hidden" id="${attrName}" class="hiddenInput" name="${attrName}" value='${JSON.stringify(Array.isArray(currentAttr.VALUES) ? (currentAttr.VALUES.length ? currentAttr.VALUES : ['']) : Array.of(currentAttr.VALUES || []))}' />
-										<button type="button" class="add-button">+</button>
-									</div>
-									<div class="popup" style="display: none;"></div>
-									</div>` : `
-								<input type="text" name="${attrName}" value='${(Array.isArray(currentAttr.VALUES) ? currentAttr.VALUES[0] : currentAttr.VALUES) || ''}' class="form-control" data-object-class-index='${objectClassIndex}' placeholder="Éditez ici la valeur de l'attribut '${attrName}'" oninput="checkInputFunction(this, '${attrName}');" />
-							`}
-						</li>`;
-				});
-				attributesHTML += `</ul>`;
+			objectClassesDetails.push({
+				NAME: [objectClassName],
+				ADD: true
 			});
 
-			newTabPane.innerHTML = attributesHTML;
-			document.querySelector('#myTabContent').insertBefore(newTabPane, document.querySelector('#add'));
+			// Submit mainForm
+			const form = document.getElementById('mainForm');
+			if (validateMainForm(form)) {
+				form.submit(); // Soumission du formulaire après validation  
+			}
 		}
 	} else {
 		if (tabLink) {
@@ -743,8 +761,15 @@ console.log('addTab parent:', addTab.parentNode); // Vérifie le parent de addTa
 				+ (checkbox.checked ? '' : '\n(certaines données seront probablement perdues ...)');
 			if (confirm(msg)) {
 				// Supprimer l'onglet
+				//tabPane.remove();
 				tabLink.style.display = "none";	// Cacher l'onglet
  				tabPane.style.display = "none";	// Cacher le contenu de l'onglet
+
+				// Marquer l'objectClass DELETED
+				const objectClass = objectClassesDetails.find(item => item.NAME.includes(objectClassName)); 
+				if (objectClass) {
+					objectClass.DELETED = true; // Mettre à jour la propriété DELETED si l'objet existe
+				}
 			} else {
 				checkbox.checked = true;
 			}
@@ -807,7 +832,10 @@ objectClassTypes.forEach(({ type, objectClassList, attributeList, attributePlace
 		listItem.className = 'list-item';
 
 		// Vérifier si l'objectClass est présente dans objectClassesDetails
-		const isChecked = objectClassesDetails.some(detail => detail.NAME.includes(objectClass.NAME[0]));
+		const isChecked = objectClass && 
+			objectClassesDetails.some(detail => 
+				detail.NAME.includes(objectClass.NAME[0]) && detail.DELETED !== true  
+			);
 
 		// Créer la case à cocher
 		const checkbox = document.createElement('input');
@@ -871,6 +899,9 @@ objectClassTypes.forEach(({ type, objectClassList, attributeList, attributePlace
 		objectClassList.appendChild(listItem);
 	});
 });
+
+// Appel de la fonction pour init à la fin du chargement du DOM  
+document.addEventListener('DOMContentLoaded', init);
 		</script>
 	</div>
 </body>
