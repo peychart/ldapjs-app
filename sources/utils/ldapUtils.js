@@ -114,12 +114,16 @@ function generateLDIF(oldObject, newObject, dn) {
 
 	// Parcourir les propriétés du nouvel objet pour trouver les ajouts
 	if (newObject !== null && typeof newObject === 'object') Object.keys(newObject).forEach(key => {
+		// Filtrer les valeurs null des tableaux
+		if (Array.isArray(newObject[key]))
+			newObject[key] = newObject[key].filter(value => value !== null);
+
 		if (newObject.hasOwnProperty(key)
 			&& (!oldObject || !oldObject.hasOwnProperty(key))
 			&& newObject[key] !== null
 			&& newObject[key] !== undefined
 			&& newObject[key] !== ''
-			&& !(Array.isArray(newObject[key]) && (newObject[key].length === 0 || newObject[key][0] === ''))
+			&& !(Array.isArray(newObject[key]) && (newObject[key].length === 0 || newObject[key][0]))
 			) {
 			// Si la clé est dans le nouvel objet mais pas dans l'ancien, c'est un ajout
 			changes.push({
@@ -136,6 +140,13 @@ function generateLDIF(oldObject, newObject, dn) {
 	return { dn, changes };
 }
 
+function ldapValidate(object) {
+	const errors = []; // Stocke les messages d'erreur
+
+errors.push('Break de debug ...');
+	return errors.length > 0 ? errors : null; // Retourne les erreurs, sinon null
+}
+
 /*
  * Mise a jour d'un dn LDAP
  */
@@ -146,26 +157,32 @@ async function updateLDAP(client, dn, newObject) {
 	}
 
 	try {
+		const validationErrors = ldapValidate(newObject);
+		if (validationErrors) {
+			const error = new Error('Erreur de format LDAP : ' + validationErrors.join(', '));
+			error.code = 255;
+			throw error;
+		}
+
 		const oldObject = await searchLDAP(client, dn, {'scope': 'base', 'attributes': '*'});
 
 		if (!oldObject || oldObject.length === 0) {
 			throw new Error(`Aucun objet trouvé pour DN: ${dn}`);
 		}
 
+//console.log('oldObject:', oldObject);	//pour debug
+//console.log('\n\nnewObject:', newObject);	//pour debug
+
 		// Génération du LDIF des changements
 		const { changes } = generateLDIF(oldObject[0] || null, newObject, dn);
 
-//console.clear();	//pour debug
-//console.log('oldObject:', oldObject);	//pour debug
-//console.log('\n\nnewObject:', newObject);	//pour debug
 //console.log('\n\nChanges to be submitted:', JSON.stringify(changes, null, 2));	//pour debug
-//return true; // pour debug
 
 		// Exécution d'une seule requête pour toutes les modifications
 		if (changes.length) await new Promise((resolve, reject) => {
 			client.modify(dn, changes, (err) => {
 				if (err) {
-						console.error(`Erreur lors de l'application des changements :`, err);
+						console.error(`écriture base echouée:`, err);
 						reject(err); // Rejeter la promesse en cas d'erreur
 				} else {
 						resolve(); // Résoudre la promesse si la modification réussit
@@ -175,8 +192,12 @@ async function updateLDAP(client, dn, newObject) {
 
 		return true;
 	} catch(err) {
-		console.error(`Erreur dans de mise à jour de la base LDAP : ${err.message}`);
-		throw err; // Relance de l'erreur pour propagation
+		if (err === 255)
+			throw err;
+		else {
+			console.error(`Une erreur est survenue: ${err.message}`);
+			throw err; // Relance de l'erreur pour propagation
+		}
 	}
 }
 
@@ -530,12 +551,10 @@ async function loadSchema(ldap, config) {
 		throw error; // Laisser l'erreur remonter
 	} finally {
 		// Déconnexion du schemaClient
-		if (schemaClient) {
-			try {
-				await schemaClient.unbind();
-			} catch (unbindError) {
-				console.error('Erreur lors de la déconnexion du schemaClient:', unbindError);
-			}
+		try {
+			await schemaClient.unbind();
+		} catch (unbindError) {
+			console.error('Erreur lors de la déconnexion du schemaClient:', unbindError);
 		}
 	}
 }
