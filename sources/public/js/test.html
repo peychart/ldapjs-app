@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemple d'Intégration d'un Champ de Saisie</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+
+<body>
+<div class="container mt-5">
+    <h1>Ajouter des Champs de Saisie</h1>
+</div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<!-- JS de Bootstrap -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<!-- Inclure la bibliothèque -->
+<script src="multiInputLibrary.js"></script>
+<script>
+    // Créer plusieurs champs de saisie avec des valeurs initiales  
+    createSingleInput('singleInput1', 'Saisie de Valeurs 1', ['Valeur 1', 'Valeur 2', 'Valeur 3']);
+    createSingleInput('singleInput2', 'Saisie de Valeurs 2', ['Valeur A', 'Valeur B']);
+</script>
+</body>
+</html>
