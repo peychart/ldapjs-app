@@ -7,12 +7,6 @@ function createPopupForInput(input, container) {
     inputWrapper.className = 'input-wrapper';
     container.appendChild(inputWrapper); // Ajouter l'englobement au conteneur
 
-    // Sauvegarder le nom d'origine de l'input  
-    const originalName = input.name; 
-
-    // Modifier le name de l'input pour y ajouter le suffixe "_multivalues"
-    input.name = originalName + "_multivalues"; 
-
     // Déplacer l'input à l'intérieur de la nouvelle div  
     inputWrapper.appendChild(input);
 
@@ -34,20 +28,20 @@ function createPopupForInput(input, container) {
     textArea.style.display = 'none'; // Masquer par défaut  
     textArea.style.width = `${input.offsetWidth}px`; // Ajuster la largeur pour qu'elle corresponde à l'input  
     textArea.style.overflowY = 'auto'; // Permettre le défilement  
-    textArea.style.resize = 'none'; // Empêcher le redimensionnement
 
     // Définir le name du textarea comme l'original (avant la modification)
-    textArea.name = originalName; // Le name du textarea est le name d'origine de l'input  
+    textArea.name = input.name; // Le name du textarea est le name d'origine de l'input  
     inputWrapper.appendChild(textArea); // Ajouter le textarea dans le wrapper
+
+    // Modifier le name de l'input pour y ajouter le suffixe "_multivalues"
+    input.name = input.name + "_multivalues"; 
 
     // Initialiser les valeurs existantes dans l'input 
     if (input.value) {
         try {
             const parsedValues = JSON.parse(input.value);
             if (Array.isArray(parsedValues)) {
-                parsedValues.forEach(value => {
-                    values.push(value); // Ajouter les valeurs au tableau  
-                });
+                values.push(...parsedValues); // Ajouter les valeurs au tableau  
             } else {
                 values.push(input.value); // Ajouter la valeur d'entrée si ce n'est pas un tableau 
             }
@@ -74,18 +68,13 @@ function createPopupForInput(input, container) {
 
     // Ajouter une valeur à la liste lors du clic sur le bouton +  
     addButton.addEventListener('click', () => {
-        // Effacer le contenu de l'input  
-        input.value = ''; // Réinitialiser l'input  
-        
-        // Ajouter une nouvelle ligne vide au tableau  
-        values.push(''); // Ajouter une nouvelle ligne vide  
-        updateTextArea(); // Mettre à jour le textarea avec les valeurs actuelles  
-        textArea.style.display = 'block'; // Afficher le textarea  
-        removeButton.disabled = false; // Activer le bouton - si des valeurs existent  
-
-        // Sélectionner la dernière ligne vide ajoutée  
-        selectedValue = ''; // Mettre la valeur sélectionnée à la ligne vide  
+        const newValue = ''; // Nouvelle ligne vide  
+        values.push(newValue); // Ajouter la nouvelle valeur au tableau  
+        selectedValue = newValue; // Mettre la valeur sélectionnée à la nouvelle ligne vide  
         input.value = selectedValue; // Mettre la sélection dans l'input  
+        removeButton.disabled = false; // Activer le bouton -  
+        textArea.style.display = 'block'; // Afficher le textarea  
+        updateTextArea(); // Mettre à jour le textarea avec les valeurs actuelles  
         input.focus(); // Ramené le focus sur l'input pour une nouvelle saisie  
     });
 
@@ -99,8 +88,8 @@ function createPopupForInput(input, container) {
                 removeButton.disabled = true; // Désactiver le bouton -
                 updateTextArea(); // Mettre à jour le textarea avec les valeurs actuelles  
                 if (values.length > 0) {
-                    input.value = values[0]; // Mettre à jour l'input avec la nouvelle première valeur  
                     selectedValue = values[0]; // Mettre à jour selectedValue avec la nouvelle première valeur  
+                    input.value = selectedValue; // Mettre à jour l'input avec la nouvelle première valeur  
                 } else {
                     input.value = ''; // Réinitialiser l'input s'il n'y a plus de valeurs  
                     textArea.style.display = 'none'; // Masquer le textarea s'il n'y a plus de valeurs  
@@ -137,16 +126,10 @@ function createPopupForInput(input, container) {
 
     // Événement pour mettre à jour le textarea lors de la modification de l'input  
     input.addEventListener('input', () => {
-        console.log("Input value:", input.value); // Log de la valeur de l'input  
-        console.log("Selected Value before update:", selectedValue); // Log de la valeur sélectionnée
-
         if (selectedValue !== null) {
             const index = values.indexOf(selectedValue);
-            console.log("Index of selected value:", index); // Log de l'index de la valeur sélectionnée  
             if (index !== -1) {
-                // Remplacez complètement l'ancienne valeur par la nouvelle saisie  
-                values[index] = input.value; // Remplacez complètement  
-                console.log("Updated values:", values); // Log des valeurs après mise à jour  
+                selectedValue = values[index] = input.value; // Remplacer l'ancienne valeur par la nouvelle saisie  
                 updateTextArea(); // Mettre à jour l'affichage du textarea  
             }
         }
