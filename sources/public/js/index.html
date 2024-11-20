@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head onload="init();">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popup Input</title>
+    <style>
+        .input-container {
+            display: flex;
+            flex-direction: column; /* Aligne l'input et la popup verticalement */
+            position: relative; /* Pour que la popup soit positionnée par rapport à cet élément */
+            margin-bottom: 20px; /* Espace entre les inputs */
+        }
+        .input-row {
+            display: flex; /* Aligne l'input et le bouton horizontalement */
+            align-items: center; /* Centre verticalement le bouton par rapport à l'input */
+        }
+    </style>
+</head>
+<body>
+
+<div class="input-container" id="container1">
+    <div class="input-row">
+        <input type="text" class="multivalues" name="attr1" value='[ "test1", "test2", "test3"]'
+	/>
+    </div>
+</div>
+<div class="input-container" id="container2">
+    <div class="input-row">
+        <input type="text" class="multivalues" name="attr2" />
+    </div>
+</div>
+
+<!-- Inclure le fichier multiInput.js -->
+<script src="multiInput.js"></script>
+
+</body>
+</html>
