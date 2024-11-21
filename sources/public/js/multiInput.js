@@ -1,19 +1,23 @@
 // Exemple de fonction qui s'exécute lors du chargement de la page pour créer l'objet
 //window.onload = function() {createMultiValuesInput();};
-document.addEventListener('DOMContentLoaded', createMultiValuesInput('.input-container', '.multivalues'));
+//document.addEventListener('DOMContentLoaded', createMultiValuesInput('.container', '.multiValuesEditClass'));
 
 
 function createMultiValuesInput(containerClass, inputClass) {
     const containers = document.querySelectorAll(containerClass);
     containers.forEach(container => {
-        const input = container.querySelector(inputClass);
-        createPopupForInput(input, container); // Créer le champ pour chaque input  
+        const input = container.querySelector('input[type="text"]' + inputClass);
+		if (input)
+            createPopupForInput(input, container); // Créer le champ pour chaque input  
+		else
+			console.warn('Aucun input trouvé avec le sélecteur:', 'input[type="text"]' + inputClass);
     });
 }
 
 function createPopupForInput(input, container) {
     const values = []; // Tableau pour stocker les valeurs saisies  
     let selectedValue = null; // Valeur actuellement sélectionnée
+console.log('input' + input.name + 'initialisé! ');
 
     // Créer une div englobante pour l'input, les boutons et le textarea  
     const inputWrapper = document.createElement('div');
