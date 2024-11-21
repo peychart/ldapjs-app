@@ -19,20 +19,30 @@
 </head>
 <body>
 
-<div class="input-container" id="container1">
+<div class="container" id="container1">
     <div class="input-row">
-        <input type="text" class="multivalues" name="attr1" value='[ "test1", "test2", "test3"]'
-	/>
+        <input type="text" class="multiValuesEditClass" name="attr1" value='[ "testtest1", "testtest2", "testtest3"]' />
     </div>
 </div>
-<div class="input-container" id="container2">
+<div class="container" id="container2">
     <div class="input-row">
-        <input type="text" class="multivalues" name="attr2" />
+        <input type="text" class="multiValuesEditClass" name="attr2" />
     </div>
 </div>
 
 <!-- Inclure le fichier multiInput.js -->
-<script src="multiInput.js"></script>
+<script src="multiValues.js"></script>
+
+<script>
+        function init() {
+                console.log('GAZOU 0!');
+                createMultiValuesInput('.container', '.multiValuesEditClass');
+                console.log('GAZOU 1!');
+        }
+
+document.addEventListener('DOMContentLoaded', init);
+
+</script>
 
 </body>
 </html>
