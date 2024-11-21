@@ -1,3 +1,16 @@
+// Exemple de fonction qui s'exécute lors du chargement de la page pour créer l'objet
+//window.onload = function() {createMultiValuesInput();};
+document.addEventListener('DOMContentLoaded', createMultiValuesInput('.input-container', '.multivalues'));
+
+
+function createMultiValuesInput(containerClass, inputClass) {
+    const containers = document.querySelectorAll(containerClass);
+    containers.forEach(container => {
+        const input = container.querySelector(inputClass);
+        createPopupForInput(input, container); // Créer le champ pour chaque input  
+    });
+}
+
 function createPopupForInput(input, container) {
     const values = []; // Tableau pour stocker les valeurs saisies  
     let selectedValue = null; // Valeur actuellement sélectionnée
@@ -29,12 +42,18 @@ function createPopupForInput(input, container) {
     textArea.style.width = `${input.offsetWidth}px`; // Ajuster la largeur pour qu'elle corresponde à l'input  
     textArea.style.overflowY = 'auto'; // Permettre le défilement  
 
+    // Créer un champ cacher pour soumission du formulaire
+    const hiddenInput = input.cloneNode(false);
+    hiddenInput.type = 'hidden'; //Champ hidden pour transmettre les valeurs au formulaire
+    inputWrapper.appendChild(hiddenInput); // Ajouter le hiddenInput - dans le wrapper
+
     // Définir le name du textarea comme l'original (avant la modification)
-    textArea.name = input.name; // Le name du textarea est le name d'origine de l'input  
+    //textArea.name = input.name; // Le name du textarea est le name d'origine de l'input  
     inputWrapper.appendChild(textArea); // Ajouter le textarea dans le wrapper
 
     // Modifier le name de l'input pour y ajouter le suffixe "_multivalues"
-    input.name = input.name + "_multivalues"; 
+    //input.name = input.name + "_multivalues"; 
+    input.removeAttribute('name');
 
     // Initialiser les valeurs existantes dans l'input 
     if (input.value) {
@@ -64,6 +83,7 @@ function createPopupForInput(input, container) {
     function updateTextArea() {
         textArea.value = values.join('\n'); // Mettre à jour le textarea avec toutes les valeurs du tableau sur des lignes séparées  
         textArea.rows = Math.max(values.length, 1); // Ajuster le nombre de lignes du textarea en fonction du nombre de valeurs  
+	hiddenInput.value = JSON.stringify(values);
     }
 
     // Ajouter une valeur à la liste lors du clic sur le bouton +  
@@ -147,12 +167,3 @@ function createPopupForInput(input, container) {
         }
     });
 }
-
-// Fonction qui s'exécute lors du chargement de la page  
-window.onload = function() {
-    const containers = document.querySelectorAll('.input-container');
-    containers.forEach(container => {
-        const input = container.querySelector('.multivalues');
-        createPopupForInput(input, container); // Créer le champ pour chaque input  
-    });
-};
