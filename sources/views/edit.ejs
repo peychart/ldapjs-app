@@ -106,17 +106,32 @@
             flex: 1; /* Permet à chaque bouton de prendre une part égale de l'espace disponible */
             text-align: center; /* Centre le texte de chaque bouton */
         }
-        .popup {
-            position: absolute;
-            background: white;
-            border: 1px solid #ccc;
-            width: 200px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+		.popupContainer {
+            position: relative; /* Nécessaire pour positionner la popup par rapport à son conteneur */
+            margin-bottom: 20px; /* Espacement entre les conteneurs */
         }
-        .editInput {
+        .popup {
+            position: absolute; /* Positionnement absolu par rapport au conteneur */
+            background-color: white; /* Arrière-plan blanc */
+            border: 1px solid #ccc; /* Bordure légère */
+            border-radius: 4px; /* Coins arrondis */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Ombre pour donner de la profondeur */
+            z-index: 1000; /* Placer au-dessus des autres éléments */
+            max-height: 200px; /* Hauteur maximale de la popup */
+            overflow-y: auto; /* Activer le défilement vertical si nécessaire */
+            display: none; /* Masquer par défaut */
+        }
+		.popup .option {
+            padding: 10px; /* Espacement interne */
+            cursor: pointer; /* Curseur pointeur */
+        }
+        .popup .option:hover {
+            background-color: #f0f0f0; /* Couleur de fond au survol */
+        }
+        .popup .option.selected {
+            background-color: #e0e0e0; /* Couleur de fond pour l'option sélectionnée */
+        }
+        .multiValuesEditInput {
             flex: 1; /* Permet à l'input de remplir la largeur disponible */
             margin: 0; /* Supprime les marges pour un alignement parfait */
             /*margin-right: 5px;
@@ -126,7 +141,7 @@
             border-radius: 4px; /* Arrondi léger des coins */
             transition: border-color 0.3s; /* Transition douce pour les changements de couleur de bordure */
         }
-        .editInput::placeholder {
+        .multiValuesEditInput::placeholder {
             color: #b0b0b0; /* Couleur du placeholder (gris plus clair) */
             opacity: 1; /* Assurez-vous que l'opacité est à 1 pour que la couleur soit bien visible */
         }
@@ -138,12 +153,17 @@
             background-color: #e0e0e0; /* Couleur de surbrillance pour l'option sélectionnée */
         }
         .add-button {
-            background-color: green;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 5px;
+			background-color: #007bff; /* Couleur bleu */
+            color: white; /* Texte blanc */
+            border: none; /* Pas de bordure */
+            border-radius: 4px; /* Coins arrondis */
+            padding: 10px 15px; /* Espacement interne */
+            cursor: pointer; /* Curseur pointeur */
+            font-size: 14px; /* Taille de police */
+            margin-left: 10px; /* Espacement à gauche */
+        }
+		.add-button:hover {
+            background-color: #0056b3; /* Couleur bleu plus foncé au survol */
         }
         .btn-delete {
             background-color: #dc3545; /* Rouge pour indiquer une action de suppression */
@@ -292,24 +312,24 @@
                                     </button>
 									<% if (currentAttr.MULTI_VALUE !== 'SINGLE-VALUE') { %>
                                         <!-- popupMultiValues -->
-                                        <div class="popupContainer" data-attr-name="<%= attrName %>">
+										<div class="popupContainer" data-attr-name="<%= attrName %>">
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
                                                 <input type="text"
-                                                    class="editInput"
-                                                    data-object-class-index = '<%= objectClassIndex %>'
-                                                    placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
+                                                    name="<%= attrName %>"
+                                                    class="multiValuesEditClass"
+                                                    data-object-class-index='<%= objectClassIndex %>'
+                                                    placeholder="Éditez ici les valeurs de l'attribut '<%= attrName %>'"
                                                     oninput="checkInputFunction(this, '<%= attrName %>');" />
-                                                <!-- Champ caché pour soumettre les valeurs au formulaire -->
-                                                <input type="hidden"
+                                                <!--<input type="hidden"
                                                     id="<%= attrName %>"
                                                     class="hiddenInput"
                                                     name="<%= attrName %>"
-                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :Array.of(currentAttr.VALUES ?? '')) %>"
-                                                \>
-                                                <!-- Bouton d ajout d une valeur à l attribut -->
+                                                    value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ? currentAttr.VALUES : Array.of(currentAttr.VALUES ?? '')) %>" />
                                                 <button type="button" class="add-button">+</button>
                                             </div>
-                                            <div class="popup" style="display: none;"></div> <!-- Initialisation des options -->
+                                            <div class="popup" style="display: none;">
+											</div> <!-- Initialisation des options -->
+                                            </div>
                                         </div>
                                     <% } else { %>
                                         <input type="text"
@@ -444,7 +464,7 @@
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-        <script src="/js/popupMultiValues.js"></script>
+        <!-- <script src="/js/popupMultiValues.js"></script> -->
         <script>
 const urlParams = new URLSearchParams(window.location.search);
 const errMsg = urlParams.get('errMsg');
@@ -453,6 +473,11 @@ const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 let activeTabId = localStorage.getItem('activeTab');
 
 function init() {
+	// Créer tous les objects de saisie des multiValeurs des div de class '.container'
+console.log('GAZOU 0!');
+	createMultiValuesInput('.container', '.multiValuesEditClass');
+console.log('GAZOU 1!');
+
 	objectClassesDetails.forEach(objectClass => { // Hidden les onglet DELETED
 		if (objectClass.DELETED === true) {
 			// Cacher l'onglet
@@ -463,6 +488,14 @@ function init() {
 	});
 
 	if (errMsg) alert(errMsg);
+}
+
+function createMultiValuesInput() {
+	const containers = document.querySelectorAll('.input-container');
+	containers.forEach(container => {
+		const input = container.querySelector('.multivalues');
+		createPopupForInput(input, container); // Créer le champ pour chaque input  
+	});
 }
 
 function checkInputFunction(input, attrName) {
@@ -903,6 +936,7 @@ objectClassTypes.forEach(({ type, objectClassList, attributeList, attributePlace
 // Appel de la fonction pour init à la fin du chargement du DOM  
 document.addEventListener('DOMContentLoaded', init);
 		</script>
+        <script src="/js/multiValues.js"></script>
 	</div>
 </body>
 </html>
