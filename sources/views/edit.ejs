@@ -106,32 +106,17 @@
             flex: 1; /* Permet à chaque bouton de prendre une part égale de l'espace disponible */
             text-align: center; /* Centre le texte de chaque bouton */
         }
-		.popupContainer {
-            position: relative; /* Nécessaire pour positionner la popup par rapport à son conteneur */
-            margin-bottom: 20px; /* Espacement entre les conteneurs */
-        }
         .popup {
-            position: absolute; /* Positionnement absolu par rapport au conteneur */
-            background-color: white; /* Arrière-plan blanc */
-            border: 1px solid #ccc; /* Bordure légère */
-            border-radius: 4px; /* Coins arrondis */
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Ombre pour donner de la profondeur */
-            z-index: 1000; /* Placer au-dessus des autres éléments */
-            max-height: 200px; /* Hauteur maximale de la popup */
-            overflow-y: auto; /* Activer le défilement vertical si nécessaire */
-            display: none; /* Masquer par défaut */
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            width: 200px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-		.popup .option {
-            padding: 10px; /* Espacement interne */
-            cursor: pointer; /* Curseur pointeur */
-        }
-        .popup .option:hover {
-            background-color: #f0f0f0; /* Couleur de fond au survol */
-        }
-        .popup .option.selected {
-            background-color: #e0e0e0; /* Couleur de fond pour l'option sélectionnée */
-        }
-        .multiValuesEditInput {
+        .editInput {
             flex: 1; /* Permet à l'input de remplir la largeur disponible */
             margin: 0; /* Supprime les marges pour un alignement parfait */
             /*margin-right: 5px;
@@ -141,7 +126,7 @@
             border-radius: 4px; /* Arrondi léger des coins */
             transition: border-color 0.3s; /* Transition douce pour les changements de couleur de bordure */
         }
-        .multiValuesEditInput::placeholder {
+        .editInput::placeholder {
             color: #b0b0b0; /* Couleur du placeholder (gris plus clair) */
             opacity: 1; /* Assurez-vous que l'opacité est à 1 pour que la couleur soit bien visible */
         }
@@ -153,17 +138,12 @@
             background-color: #e0e0e0; /* Couleur de surbrillance pour l'option sélectionnée */
         }
         .add-button {
-			background-color: #007bff; /* Couleur bleu */
-            color: white; /* Texte blanc */
-            border: none; /* Pas de bordure */
-            border-radius: 4px; /* Coins arrondis */
-            padding: 10px 15px; /* Espacement interne */
-            cursor: pointer; /* Curseur pointeur */
-            font-size: 14px; /* Taille de police */
-            margin-left: 10px; /* Espacement à gauche */
-        }
-		.add-button:hover {
-            background-color: #0056b3; /* Couleur bleu plus foncé au survol */
+            background-color: green;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
         }
         .btn-delete {
             background-color: #dc3545; /* Rouge pour indiquer une action de suppression */
@@ -260,7 +240,7 @@
             <!-- Conteneur pour les boutons avec Flexbox -->
             <div class="d-flex justify-content-between mb-3">
                 <div class="d-flex"> <!-- Boutons à gauche -->
-                    <button type="button" id="saveButton" class="btn btn-save" style="width: 120px;" disabled onclick="removeHiddenTabs()">Valider</button>
+                    <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
                     <button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
                     <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Retour</button>
                 </div>
@@ -312,32 +292,24 @@
                                     </button>
 									<% if (currentAttr.MULTI_VALUE !== 'SINGLE-VALUE') { %>
                                         <!-- popupMultiValues -->
-										<div class="popupContainer" data-attr-name="<%= attrName %>">
+                                        <div class="popupContainer" data-attr-name="<%= attrName %>">
                                             <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
                                                 <input type="text"
                                                     name="<%= attrName %>"
-                                                    class="multiValuesEditClass"
-                                                    data-object-class-index='<%= objectClassIndex %>'
-                                                    placeholder="Éditez ici les valeurs de l'attribut '<%= attrName %>'"
+                                                    data-object-class-index = '<%= objectClassIndex %>'
+                                                    placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
+                                                    class="editInput"
+                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :Array.of(currentAttr.VALUES ?? '')) %>"
                                                     oninput="checkInputFunction(this, '<%= attrName %>');" />
-                                                <!--<input type="hidden"
-                                                    id="<%= attrName %>"
-                                                    class="hiddenInput"
-                                                    name="<%= attrName %>"
-                                                    value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ? currentAttr.VALUES : Array.of(currentAttr.VALUES ?? '')) %>" />
-                                                <button type="button" class="add-button">+</button>
-                                            </div>
-                                            <div class="popup" style="display: none;">
-											</div> <!-- Initialisation des options -->
                                             </div>
                                         </div>
                                     <% } else { %>
                                         <input type="text"
                                             name="<%= attrName %>"
-                                            value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) || '' %>"
-                                            class="form-control"
                                             data-object-class-index = '<%= objectClassIndex %>'
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
+                                            class="form-control"
+                                            value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) || '' %>"
                                             oninput="checkInputFunction(this, '<%= attrName %>');"
                                         />
                                     <% } %>
@@ -464,7 +436,7 @@
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-        <!-- <script src="/js/popupMultiValues.js"></script> -->
+        <script src="/js/popupMultiValues.js"></script>
         <script>
 const urlParams = new URLSearchParams(window.location.search);
 const errMsg = urlParams.get('errMsg');
@@ -473,11 +445,6 @@ const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 let activeTabId = localStorage.getItem('activeTab');
 
 function init() {
-	// Créer tous les objects de saisie des multiValeurs des div de class '.container'
-console.log('GAZOU 0!');
-	createMultiValuesInput('.container', '.multiValuesEditClass');
-console.log('GAZOU 1!');
-
 	objectClassesDetails.forEach(objectClass => { // Hidden les onglet DELETED
 		if (objectClass.DELETED === true) {
 			// Cacher l'onglet
@@ -488,14 +455,6 @@ console.log('GAZOU 1!');
 	});
 
 	if (errMsg) alert(errMsg);
-}
-
-function createMultiValuesInput() {
-	const containers = document.querySelectorAll('.input-container');
-	containers.forEach(container => {
-		const input = container.querySelector('.multivalues');
-		createPopupForInput(input, container); // Créer le champ pour chaque input  
-	});
 }
 
 function checkInputFunction(input, attrName) {
@@ -524,51 +483,6 @@ function checkInputFunction(input, attrName) {
 	checkSaveButton();
 }
 
-function ldapValidation(form) { // pour mise à jour dans la base
-
-
-/*
-	// Exemple de validation : vérifier si l'email est valide
-	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Expression régulière pour valider un email
-	if (!emailPattern.test(email)) {
-		errorMessage.innerText = 'Veuillez entrer une adresse email valide.';
-		return false; // Empêche l'envoi du formulaire
-	}
-*/
-	return true;
-}
-
-function validateMainForm(form) {
-	let valid = false;
-	// Marquer les attributes MULTI-VALUES
-	form.querySelectorAll('input[type="hidden"]').forEach(input => {	// Marquer les inputs hidden d'attributs multi-valués
-		input.name += '_multiValues'
-	});
-	// Marquer les objectClasses ADDED/DELETED dans l'envoi du formulaire
-	objectClassesDetails.forEach(objectClass => {
-		if (objectClass.DELETED === true || objectClass.ADD === true) {
-			const item = document.createElement('input');
-			item.name = objectClass.DELETED === true ?'objectClass_Deleted' :'objectClass_Added';
-			item.value = objectClass.NAME[0];
-			item.type = 'hidden';
-			form.appendChild(item);
-			valid = true;
-		}
-	});
-	// Juste rafraichir la page pour l'affichage du new objectClass
-	if (valid) {
-		const item = document.createElement('input');
-		item.name = 'reload';
-		item.type = 'checkbox';
-		item.checked = true;
-		item.hidden = true;
-		form.appendChild(item);
-		return true;
-	}
-
-	return ldapValidation();
-}
-
 // Sauvegrder la position de l'onglet courant
 function saveCurrentTab(){
 	const activeTab = document.querySelector('.nav-link.active');
@@ -588,18 +502,6 @@ function restoreValues() {
 
 	// Redirige vers une route du serveur d'extraction LDAP
 	window.location.href = '/clearEdit/<%= dn %>';
-}
-
-function removeHiddenTabs() {
-	objectClassesDetails.forEach(objectClass => { // remove hidden tabs
-		if (objectClass.DELETED === true) {
-			const tabLink = document.getElementById(objectClass.NAME[0] + '-tab');
-			tabLink.remove();
-		}
-	});
-
-	// Submit mainForm
-	document.getElementById('mainForm').submit();
 }
 
 // Abandon de la page
@@ -666,7 +568,7 @@ function openEditModal(button, attrName) {
 	document.getElementById(radio).checked = true;
 	document.getElementById('schema').disabled = true;
 
-	// Script de validation des saisies
+	// Script de vérification des saisies
 	document.getElementById('jsValidation').value = objectAttribute.valueCheck || '';
 
 	document.getElementById('attributeName').textContent = attrName;
@@ -770,7 +672,6 @@ function objectClassesEdit(checkbox, objectClassName) {
 	const tabLink = document.getElementById(objectClassName + '-tab');
 	const tabPane = document.getElementById(objectClassName);
 
-// Afficher l'état de tabContainer pour le débogage
 	if (checkbox.checked) {
 		if (tabLink) {
 			tabLink.style.display = "";	// Assurez-vous que l'onglet est visible
@@ -782,11 +683,8 @@ function objectClassesEdit(checkbox, objectClassName) {
 			});
 
 			// Submit mainForm
-			const form = document.getElementById('mainForm');
-			if (validateMainForm(form)) {
-				form.submit(); // Soumission du formulaire après validation  
-			}
-		}
+			document.getElementById('mainForm').submit(); // Soumission du formulaire
+		}	}
 	} else {
 		if (tabLink) {
 			let msg = 'Êtes-vous sûr de vouloir ' + (checkbox.checked ? 'ajouter' : 'supprimé')
@@ -810,16 +708,55 @@ function objectClassesEdit(checkbox, objectClassName) {
 	}
 }
 
-// Gestion de la soumission du formulaire
+function removeHiddenTabs() {
+	// Marquer les objectClasses ADDED/DELETED dans l'envoi du formulaire
+	objectClassesDetails.forEach(objectClass => {
+		if (objectClass.DELETED === true || objectClass.ADD === true) {
+			const item = document.createElement('input');
+			item.name = objectClass.DELETED === true ?'objectClass_Deleted' :'objectClass_Added';
+			item.value = objectClass.NAME[0];
+			item.type = 'hidden';
+			form.appendChild(item);
+			valid = true;
+		}
+	});
+	// Juste rafraichir la page pour l'affichage du new objectClass
+	if (valid) {
+		const item = document.createElement('input');
+		item.name = 'reload';
+		item.type = 'checkbox';
+		item.checked = true;
+		item.hidden = true;
+		form.appendChild(item);
+		return true;
+	}
+
+	objectClassesDetails.forEach(objectClass => { // remove hidden tabs
+		if (objectClass.DELETED === true) {
+			const tabLink = document.getElementById(objectClass.NAME[0] + '-tab');
+			tabLink.remove();
+		}
+	});
+
+	// Submit mainForm
+	document.getElementById('mainForm').submit();
+}
+
+// Gestion de la soumission du formulaire mainForm
 const form = document.querySelector('form'); // Sélection formulaire
 if ( form?.id === 'mainForm') {
 	form.addEventListener('submit', (event) => {
 		// Validation des données modifiées
-		if (!validateMainForm(form)) {
-			// Eviter la soumission du formulaire
-			event.preventDefault();
-			return; // Sortir de la fonction pour éviter la soumission
-		}
+		removeHiddenTabs();	// Remove des tabs hidden (effacement d'objectClasses demandés)
+
+		// Marquer au formulaire les champs de saisie (editInput) (MULTI-VALUES sont dans les hidden inputs)
+		Array.from(form.querySelectorAll('input[type="hidden"]')).filter(input => input.name.includes('_multiValues')).forEach(input => {
+			const name = input.name.replace('_multiValues', '');
+			const editInputs = document.getElementsByName(name);
+			if (editInputs.length) editInputs.forEach(editInput => {
+				editInput.removeAttribute('name');
+			});
+		});
 	});
 }
 
@@ -936,7 +873,6 @@ objectClassTypes.forEach(({ type, objectClassList, attributeList, attributePlace
 // Appel de la fonction pour init à la fin du chargement du DOM  
 document.addEventListener('DOMContentLoaded', init);
 		</script>
-        <script src="/js/multiValues.js"></script>
 	</div>
 </body>
 </html>
