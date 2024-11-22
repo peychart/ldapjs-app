@@ -443,6 +443,7 @@ const errMsg = urlParams.get('errMsg');
 const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 let activeTabId = localStorage.getItem('activeTab');
+let reloadRequested = false;
 
 function init() {
 	objectClassesDetails.forEach(objectClass => { // Hidden les onglet DELETED
@@ -674,17 +675,18 @@ function objectClassesEdit(checkbox, objectClassName) {
 
 	if (checkbox.checked) {
 		if (tabLink) {
-			tabLink.style.display = "";	// Assurez-vous que l'onglet est visible
-			tabPane.style.display = "";	// Assurez-vous que le contenu de l'onglet est visible
+			tabLink.style.display = "block";	// Assurez-vous que l'onglet est visible
+			tabPane.style.display = "block";	// Assurez-vous que le contenu de l'onglet est visible
 		} else {
 			objectClassesDetails.push({
 				NAME: [objectClassName],
 				ADD: true
 			});
 
-			// Submit mainForm
-			document.getElementById('mainForm').submit(); // Soumission du formulaire
-		}	}
+			// Submit() interceptable de mainForm
+			reloadRequested = true;	// To allow the new attributes to be entered
+			document.getElementById('mainForm').dispatchEvent(new Event('submit', { cancelable: true })); // Déclenche l'événement de soumission 
+		}
 	} else {
 		if (tabLink) {
 			let msg = 'Êtes-vous sûr de vouloir ' + (checkbox.checked ? 'ajouter' : 'supprimé')
@@ -709,6 +711,7 @@ function objectClassesEdit(checkbox, objectClassName) {
 }
 
 function removeHiddenTabs() {
+	let valid = false;
 	// Marquer les objectClasses ADDED/DELETED dans l'envoi du formulaire
 	objectClassesDetails.forEach(objectClass => {
 		if (objectClass.DELETED === true || objectClass.ADD === true) {
@@ -720,26 +723,23 @@ function removeHiddenTabs() {
 			valid = true;
 		}
 	});
-	// Juste rafraichir la page pour l'affichage du new objectClass
-	if (valid) {
+	if (reloadRequested) {
+		// Juste rafraichir la page pour l'affichage du new objectClass
 		const item = document.createElement('input');
 		item.name = 'reload';
 		item.type = 'checkbox';
-		item.checked = true;
 		item.hidden = true;
+		item.checked = true;	// Passer l'info au formulaire
 		form.appendChild(item);
-		return true;
+	} else {
+		// Remove all hidden tabs before base update
+		objectClassesDetails.forEach(objectClass => {
+			if (objectClass.DELETED === true) {
+				const tabLink = document.getElementById(objectClass.NAME[0] + '-tab');
+				tabLink.remove();
+			}
+		});
 	}
-
-	objectClassesDetails.forEach(objectClass => { // remove hidden tabs
-		if (objectClass.DELETED === true) {
-			const tabLink = document.getElementById(objectClass.NAME[0] + '-tab');
-			tabLink.remove();
-		}
-	});
-
-	// Submit mainForm
-	document.getElementById('mainForm').submit();
 }
 
 // Gestion de la soumission du formulaire mainForm
@@ -747,7 +747,7 @@ const form = document.querySelector('form'); // Sélection formulaire
 if ( form?.id === 'mainForm') {
 	form.addEventListener('submit', (event) => {
 		// Validation des données modifiées
-		removeHiddenTabs();	// Remove des tabs hidden (effacement d'objectClasses demandés)
+		removeHiddenTabs();
 
 		// Marquer au formulaire les champs de saisie (editInput) (MULTI-VALUES sont dans les hidden inputs)
 		Array.from(form.querySelectorAll('input[type="hidden"]')).filter(input => input.name.includes('_multiValues')).forEach(input => {
