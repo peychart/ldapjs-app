@@ -399,7 +399,7 @@ process.on('unhandledRejection', (reason, promise) => {
 						});
 					});
 				});
-//console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
 				return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, ldapSchema: ldapSchema});
 
@@ -491,7 +491,7 @@ process.on('unhandledRejection', (reason, promise) => {
 //console.log('objectData: ', objectData);	// Pour debug
 
 				if (objectClassesEdition) {
-						throw 254;
+					throw 254;
 				} else {
 					// Mise à jour de la base LDAP
 					await updateLDAP(client, dn, objectData);
