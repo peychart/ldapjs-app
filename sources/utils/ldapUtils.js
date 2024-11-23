@@ -377,7 +377,7 @@ async function attributeTypeDefToJson(attributeDef) {
 		const cleanedInput = attributeDef.trim();
 		//const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
 		const oidRegex = /\(\s*([\d.]+)\s/;
-		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')/;
+		const nameRegex = /\sNAME\s+\(\s*('(?:[\w-]+)'(?:\s+'(?:[\w-]+)')*)?\s*\)|\sNAME\s+('[\w-]+')/;
 		const descRegex = /DESC\s+'([^']+)'/;
 		const equalityRegex = /EQUALITY\s+([^ ]+)/;
 		const orderingRegex = /ORDERING\s+([^ ]+)/;
@@ -439,7 +439,7 @@ async function objectClassDefToJson(inputString) {
 		// Définitions des expressions régulières
 		//const oidRegex = /\(\s*([\d.]+|[A-Za-z]+:[\d.]+)\s+/; // Support pour OID ou OLcfg
 		const oidRegex = /\(\s*([\d.]+)\s/;
-		const nameRegex = /\sNAME\s+\(\s*('(?:\w+)'(?:\s+'(?:\w+)')*)?\s*\)|\sNAME\s+('\w+')/;
+		const nameRegex = /\sNAME\s+\(\s*('(?:[\w-]+)'(?:\s+'(?:[\w-]+)')*)?\s*\)|\sNAME\s+('[\w-]+')/;
 		const descRegex = /DESC\s+'([^']+)'/;
 		const supRegex = /SUP\s+([^ ]+)/;
 		const auxiliaryRegex = /AUXILIARY/;
@@ -461,13 +461,13 @@ async function objectClassDefToJson(inputString) {
 
 		const type = isStructural ?'STRUCTURAL' :isAuxiliary ?'AUXILIARY' :isAbstract ?'ABSTRACT' :'';
 
-		const mustRegex = /MUST\s+\((.*?)\)|MUST\s+(\w+)/;
+		const mustRegex = /MUST\s+\((.*?)\)|MUST\s+([\w-]+)/;
 		const mustMatch = cleanedInput.match(mustRegex);
 		const must = mustMatch ? (mustMatch[1] || mustMatch[2]) : null;
 		//const mustAttributes = must ?Object.fromEntries(must.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
 		const mustAttributes = must ? must.replace(/\$/g, '').trim().split(/\s+/) : [];
 
-		const mayRegex = /MAY\s+\((.*?)\)|MAY\s+(\w+)/;
+		const mayRegex = /MAY\s+\((.*?)\)|MAY\s+([\w-]+)/;
 		const mayMatch = cleanedInput.match(mayRegex);
 		const may = mayMatch ? (mayMatch[1] || mayMatch[2]) : null;
 		//const mayAttributes = may ?Object.fromEntries(may.replace(/\$/g, '').trim().split(/\s+/).map(attr => [attr, null])) :{};
@@ -500,7 +500,7 @@ async function loadSchema(ldap, config) {
 		
 		// Définir les options pour la recherche dans le schéma LDAP
 		const options = {
-			filter: '(olcObjectClasses=*)',		// Cherche toutes les définitions d'objectClasses
+//			filter: '(olcObjectClasses=*)',		// Cherche toutes les définitions d'objectClasses
 			scope: 'sub',						// Définit la profondeur de la recherche
 			attributes: ['olcObjectClasses', 'olcAttributeTypes']	// Attributs à récupérer
 		};
@@ -623,7 +623,7 @@ function enrichObjectClassWithAttributes(ldapSchema, objectClass) {
 
 				if (attributeDetails)
 						return { ...attributeDetails };	// Cloner l'objet d'attribut 
-				else	throw new Error(`Pas de définition d'attribut correcte dans le schema pour ${attribute}.`);
+				else	throw new Error(`Pas de définition d'attribut correcte dans le schema pour "${attribute}".`);
 			});
 
 			// Remplacer le tableau d'attributs par le tableau enrichi  
