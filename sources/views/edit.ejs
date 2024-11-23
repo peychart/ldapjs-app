@@ -201,7 +201,7 @@
         .highlight {
             background-color: #ffeb3b; /* Couleur de surbrillance */
         }
-        .placeholder {
+        .placeHolder {
             color: #888; /* Couleur grisée pour les messages d'instruction */
             font-style: italic; /* Italique pour le style */
             text-align: center; /* Centrer le texte */
@@ -337,16 +337,16 @@
                              <div class="tab-pane fade show active" id="structural" role="tabpanel" aria-labelledby="structural-tab">
 								 <div class="fixed-header">
 								     <div class="header-row">
-                                         <h4>ObjectClasses STRUCTURAL</h4>
+                                         <h4>STRUCTURAL ObjectClasses</h4>
                                          <h4 class="attribute-liste">Attributs:</h4>
                                      </div>
                                  </div>
                                  <div class="objectClassesContainer">
-                                     <div class="list" id="objectClassListStructural">
+                                     <div class="list" class="objectClassList">
                                          <!-- La liste des objectClasses STRUCTURAL sera générée ici -->
                                      </div>
-                                     <div class="list attributeList" id="attributeListStructural">
-                                         <div id="attributePlaceholderStructural" class="placeholder">
+                                     <div class="list attributeList" class="attributeList">
+                                         <div id="attributePlaceholderStructural" class="placeHolder">
                                              Cliquer sur un objectClass pour afficher les attributs ...
                                          </div>
                                          <!-- La liste des attributs sera affichée ici -->
@@ -356,16 +356,16 @@
                              <div class="tab-pane fade" id="auxiliary" role="tabpanel" aria-labelledby="auxiliary-tab">
 								 <div class="fixed-header">
 								     <div class="header-row">
-                                         <h4>ObjectClasses STRUCTURAL</h4>
+                                         <h4>AUXILIARY ObjectClasses</h4>
                                          <h4 class="attribute-liste">Attributs:</h4>
                                      </div>
                                  <div class="objectClassesContainer">
-                                     <div class="list" id="objectClassListAuxiliary">
+                                     <div class="list" class="objectClassList">
                                          <!-- La liste des objectClasses AUXILIARY sera générée ici -->
                                      </div>
-                                     <div class="list attributeList" id="attributeListAuxiliary">
+                                     <div class="list attributeList" class="attributeList">
                                          <h4>Attributs:</h4>
-                                         <div id="attributePlaceholderAuxiliary" class="placeholder">
+                                         <div id="attributePlaceholderAuxiliary" class="placeHolder">
                                              Cliquer sur un objectClass pour afficher les attributs ...
                                          </div>
                                          <!-- La liste des attributs sera affichée ici -->
@@ -744,8 +744,9 @@ function removeHiddenTabs() {
 
 // Gestion de la soumission du formulaire mainForm
 const form = document.querySelector('form'); // Sélection formulaire
-if ( form?.id === 'mainForm') {
+if (form?.id === 'mainForm') {
 	form.addEventListener('submit', (event) => {
+
 		// Validation des données modifiées
 		removeHiddenTabs();
 
@@ -757,6 +758,7 @@ if ( form?.id === 'mainForm') {
 				editInput.removeAttribute('name');
 			});
 		});
+		form.submit();
 	});
 }
 
@@ -779,96 +781,110 @@ function findAttrPropertyByName(name, property) {
 }
 
 // AFFICHAGE de l'onglet "+"
-const structuralObjectClassList = document.getElementById('objectClassListStructural');
-const auxiliaryObjectClassList = document.getElementById('objectClassListAuxiliary');
-const attributeListStructural = document.getElementById('attributeListStructural');
-const attributeListAuxiliary = document.getElementById('attributeListAuxiliary');
-const attributePlaceholderStructural = document.getElementById('attributePlaceholderStructural');
-const attributePlaceholderAuxiliary = document.getElementById('attributePlaceholderAuxiliary');
-const attributeHeader = document.querySelector('.attribute-liste');
+const objectClassLists = Array.from(document.querySelectorAll('.objectClassList'));
+const attributeLists = Array.from(document.querySelectorAll('.attributeList'));
+const attributePlaceholders = Array.from(document.querySelectorAll('.placeHolder'));
+const attributeHeaders = Array.from(document.querySelectorAll('.attribute-liste'));
 
-// Créer un tableau des types d'objectClasses
-const objectClassTypes = [
-	{ type: 'STRUCTURAL', objectClassList: structuralObjectClassList, attributeList: attributeListStructural, attributePlaceholder: attributePlaceholderStructural },
-	{ type: 'AUXILIARY', objectClassList: auxiliaryObjectClassList, attributeList: attributeListAuxiliary, attributePlaceholder: attributePlaceholderAuxiliary }
-];
+// Assurez-vous que les sélections sont valides  
+if (objectClassLists.length < 2 || attributeLists.length < 2 || attributePlaceholders.length < 2) {
+    console.error('Pas assez d\'éléments trouvés pour les listes d\'objectClasses ou les attributs.');
+} else {
+    // Créer un tableau des types d'objectClasses  
+    const objectClassTypes = [
+        { type: 'STRUCTURAL', objectClassList: objectClassLists[0], attributeList: attributeLists[0], attributePlaceholder: attributePlaceholders[0] },
+        { type: 'AUXILIARY', objectClassList: objectClassLists[1], attributeList: attributeLists[1], attributePlaceholder: attributePlaceholders[1] }
+    ];
 
-// Remplir la liste des objectClasses
-objectClassTypes.forEach(({ type, objectClassList, attributeList, attributePlaceholder }) => {
-	ldapSchema.objectClasses.forEach((objectClass) => {
-		if (objectClass.TYPE !== type) return;
+    // Remplir la liste des objectClasses  
+    ldapSchema.objectClasses.forEach((objectClass) => {
+        const objectClassInfo = objectClassTypes.find(cls => cls.type === objectClass.TYPE);
+        
+        // Vérifier si le type d'objectClass est trouvé  
+        if (!objectClassInfo) return;
 
-		const listItem = document.createElement('div');
-		listItem.className = 'list-item';
+        const { objectClassList, attributeList, attributePlaceholder } = objectClassInfo;
 
-		// Vérifier si l'objectClass est présente dans objectClassesDetails
-		const isChecked = objectClass && 
-			objectClassesDetails.some(detail => 
-				detail.NAME.includes(objectClass.NAME[0]) && detail.DELETED !== true  
-			);
+        const listItem = document.createElement('div');
+        listItem.className = 'list-item';
 
-		// Créer la case à cocher
-		const checkbox = document.createElement('input');
-		checkbox.type = 'checkbox';
-		checkbox.className = 'checkbox objectClassesCheckbox';
-		checkbox.checked = isChecked;
+        // Vérifier si l'objectClass est présente dans objectClassesDetails  
+        const isChecked = objectClass && 
+            objectClassesDetails.some(detail => 
+                detail.NAME.includes(objectClass.NAME[0]) && detail.DELETED !== true  
+            );
 
-		// Ajouter la case à cocher et le nom de l'ObjectClass dans l'élément de liste
-		listItem.appendChild(checkbox);
-		listItem.appendChild(document.createTextNode(objectClass.NAME[0]));
-		listItem.title = objectClass.DESC || "Pas de description disponible";
+        // Créer la case à cocher  
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'checkbox objectClassesCheckbox';
+        checkbox.checked = isChecked;
 
-		// Événement de clic pour gérer l'état de la case à cocher
-		checkbox.onclick = function(event) {
-			event.stopPropagation(); // Empêche la propagation du clic pour ne pas déclencher la surbrillance
-			objectClassesEdit(checkbox, objectClass.NAME[0]);
-		};
+        // Ajouter la case à cocher et le nom de l'ObjectClass dans l'élément de liste  
+        listItem.appendChild(checkbox);
+        listItem.appendChild(document.createTextNode(objectClass.NAME[0]));
+        listItem.title = objectClass.DESC || "Pas de description disponible";
 
-		// Événement de clic pour mettre en surbrillance l'objectClass et afficher les attributs
-		listItem.onclick = function() {
-			let hasAttributes = false;
+        // Événement de clic pour gérer l'état de la case à cocher  
+        checkbox.addEventListener('click', function(event) {
+            event.stopPropagation(); // Empêche la propagation du clic pour ne pas déclencher la surbrillance  
+            objectClassesEdit(checkbox, objectClass.NAME[0]);
+        });
 
-			// Vérifiez si l'item est déjà surligné
-			const isHighlighted = listItem.classList.contains('highlight');
+        // Événement de clic pour mettre en surbrillance l'objectClass et afficher les attributs  
+        listItem.addEventListener('click', function() {
+            // Vérifiez si l'item est déjà surligné  
+            const isHighlighted = listItem.classList.toggle('highlight');
 
-			// Surbrillance de l'objectClass cliqué
-			const highlighted = objectClassList.getElementsByClassName('highlight');
-			Array.from(highlighted).forEach(item => {
-				item.classList.remove('highlight');
-			});
+            // Supprimer la surbrillance des autres éléments  
+            Array.from(objectClassList.getElementsByClassName('highlight')).forEach(item => {
+                if (item !== listItem) {
+                    item.classList.remove('highlight');
+                }
+            });
 
-			// Vider la liste des attributs
-			attributeList.innerHTML = '';
-			attributeList.appendChild(attributePlaceholder);
+            // Remplir la liste des attributs si l'item est surligné  
+            if (isHighlighted) {
+                fillAttributeList(objectClass, attributeList, attributePlaceholder);
+            } else {
+                attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher ses attributs ...';
+                attributeList.innerHTML = ''; // Vider la liste des attributs  
+                attributeList.appendChild(attributePlaceholder); // Réafficher le placeholder  
+            }
+        });
 
-			if (!isHighlighted) {
-				listItem.classList.add('highlight');
+        objectClassList.appendChild(listItem);
+    });
+}
 
-				// Ajouter les attributs MUST et MAY correspondants
-				['MUST', 'MAY'].forEach(key => {
-					for (const attrKey in objectClass[key]) {
-						const attrItem = document.createElement('div');
-						attrItem.className = 'list-item';
-						attrItem.innerText = `${objectClass[key][attrKey]} (${key})`; // Le nom de l'attribut
-						attrItem.title = findAttrPropertyByName(objectClass[key][attrKey], 'DESC') || 'Aucune description disponible.';
-						attributeList.appendChild(attrItem);
-						hasAttributes = true; // Indiquer qu'il y a des attributs
-					}
-				});
-				attributeHeader.innerHTML = 'Attributs' + (hasAttributes ? ' de \'<strong>' + objectClass.NAME[0] + '</strong>\'' : '') + ':';
-				attributePlaceholder.innerText = hasAttributes ? '' : 'Aucun attribut pour cet objectClass.';
-			} else {
-				listItem.classList.remove('highlight');
-				attributePlaceholder.innerText = 'Cliquer sur un objectClass pour afficher ses attributs ...';
-			}
+// Fonction pour remplir la liste des attributs  
+function fillAttributeList(objectClass, attributeList, attributePlaceholder) {
+    let hasAttributes = false;
 
-			// Si aucun attribut n'est trouvé, afficher le message approprié
-			//attributeList.innerHTML = '<h4>Attributs' + (hasAttributes ? ' de \'' + objectClass.NAME[0] + '\'' : '') + ':</h4>' + attributeList.innerHTML;
-		}
+    // Vider la liste des attributs  
+    attributeList.innerHTML = '';
+    attributeList.appendChild(attributePlaceholder);
 
-		objectClassList.appendChild(listItem);
-	});
-});
+    // Ajouter les attributs MUST et MAY correspondants  
+    ['MUST', 'MAY'].forEach(key => {
+        if (objectClass[key]) {
+            objectClass[key].forEach(attrName => {
+                const attrItem = document.createElement('div');
+                attrItem.className = 'list-item';
+                attrItem.innerText = `${attrName} (${key})`; // Le nom de l'attribut  
+                attrItem.title = findAttrPropertyByName(attrName, 'DESC') || 'Aucune description disponible.';
+                attributeList.appendChild(attrItem);
+                hasAttributes = true; // Indiquer qu'il y a des attributs  
+            });
+            // Mettre à jour l'en-tête  
+            const headerIndex = key === 'MUST' ? 0 : 1;
+            attributeHeaders[headerIndex].innerHTML = `Attributs de '<strong>${objectClass.NAME[0]}</strong>':`;
+        }
+    });
+    
+    // Mettre à jour le placeholder  
+    attributePlaceholder.innerText = hasAttributes ? '' : 'Aucun attribut pour cet objectClass.';
+}
 
 // Appel de la fonction pour init à la fin du chargement du DOM  
 document.addEventListener('DOMContentLoaded', init);
