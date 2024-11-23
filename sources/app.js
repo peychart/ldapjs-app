@@ -50,9 +50,8 @@ level: 'error', // 'info' Niveau de log par défaut
 	config = loadConfig();
 
 	try {
+		// Récupération du schéma LDAP
 		const ldapSchema = await loadSchema(ldap, config);
-
-console.log('ldapSchema: ', JSON.stringify(ldapSchema, null, 2));	// Pour debug
 
 		// Configuration des middlewares
 		app.use(bodyParser.json()); // Pour traiter les JSON
