@@ -52,6 +52,8 @@ level: 'error', // 'info' Niveau de log par défaut
 	try {
 		const ldapSchema = await loadSchema(ldap, config);
 
+console.log('ldapSchema: ', JSON.stringify(ldapSchema, null, 2));	// Pour debug
+
 		// Configuration des middlewares
 		app.use(bodyParser.json()); // Pour traiter les JSON
 		app.use(bodyParser.urlencoded({ extended: true })); // Pour parser les données de formulaire
@@ -286,7 +288,7 @@ process.on('unhandledRejection', (reason, promise) => {
 				// Récupération des Data à éditer
 				objectData = req.session.edit?.objectData;
 
-//console.log('\nreq.session.edit.objectData: ', req.session.edit?.objectData);	// Pour debug
+//console.clear(); console.log('\nreq.session.edit: ', req.session.edit);	// Pour debug
 
 				if (!objectData) {
 					const options = {
@@ -323,9 +325,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
 				// Ajouter la propriété ADDED/DELEETD=true aux objectClasses éventuellement concernés
 				['ADDED', 'DELETED'].forEach(type => {
-					objectClassesDetails.forEach(obj => {
+					objectClassesDetails.forEach(objCls => {
 						if (req.session.edit?.[type])
-							if (req.session.edit[type].includes(obj.NAME[0])) obj[type]=true;
+							if (req.session.edit[type].includes(objCls.NAME[0])) objCls[type]=true;
 					});
 					if (req.session.edit?.[type]) delete req.session.edit[type];
 				});
@@ -344,7 +346,7 @@ process.on('unhandledRejection', (reason, promise) => {
 //console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConfig, null, 2)); // Display for debug
 
 				// Enrich chaque objectClass du dn courant avec les data d'objectData et d'attributesConfig
-				// 1: avec les éventuelles customConf d'attributs définies dans attributesConfig
+				//		1: avec les éventuelles customConf d'attributs définies dans attributesConfig
 				objectClassesDetails.forEach(objectClass => {
 					// Parcours des attributs de MUST et MAY
 					['MUST', 'MAY'].forEach(key => {
@@ -367,7 +369,7 @@ process.on('unhandledRejection', (reason, promise) => {
 					});
 				});
 
-				// 2: avec les data d'objectData de chaque attribut
+				//		2: avec les data d'objectData de chaque attribut
 				Object.keys(objectData).forEach(attrDataName => { // on parcourt les DATA
 					if (attrDataName === 'dn')	return;
 					const attrData = objectData[attrDataName]; // Obtenir les data pour chaque attribut
@@ -399,7 +401,7 @@ process.on('unhandledRejection', (reason, promise) => {
 						});
 					});
 				});
-console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
+//console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
 				return res.render('edit', {dn, objectClassesDetails: objectClassesDetails, ldapSchema: ldapSchema});
 
@@ -443,6 +445,8 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 						:Array.from(new Set(val?.filter(el => el !== null && el !== undefined && el !== '' && el !== false && !Number.isNaN(el))));
 				}
 
+//console.clear(); console.log('req.body: ', JSON.stringify(req.body, null, 2));	// Pour debug
+
 				// Traitement de la réponse
 				objectData = Object.keys(req.body).reduce((acc, key) => {
 					// Ajout/suppression d'objectClasses
@@ -454,14 +458,12 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 						const statusKey = key.endsWith('Deleted') ? 'DELETED' : 'ADDED';
 						req.session.edit = {
 							...req.session.edit,
-							[statusKey]: [
-								...(req.session.edit?.[statusKey] || []),
-								req.body[key]
-							]
+							 [statusKey]: (req.session.edit?.[statusKey] || []).concat(req.body[key])
 						};
 						objectClassesEdition = true;
 						return acc;
 					}
+
 
 					// Dédoubler les champs input dupliquées entre onglets :
 					//	on retient le premier élément du getElementByName...
@@ -488,7 +490,8 @@ console.clear(); console.log('EnrichObjectClassesDetails: ', JSON.stringify(obje
 					return acc;
 				}, {});
 
-//console.log('objectData: ', objectData);	// Pour debug
+//console.log('req.session.edit: ', JSON.stringify(req.session.edit, null, 2));	// Pour debug
+//console.log('/n/nobjectData: ', objectData);	// Pour debug
 
 				if (objectClassesEdition) {
 					throw 254;
