@@ -2,7 +2,8 @@ function initializePopup(container) {
     const attrName = container.getAttribute('data-attr-name'); // Récupérer le nom dynamique  
     const editInput = container.querySelector('.editInput');
     const hiddenInput = document.createElement('input'); // Création du champ caché pour values au formulaire
-	hiddenInput.type = 'hidden'; hiddenInput.name = editInput.name + '_multiValues';
+	hiddenInput.type = 'hidden';
+	hiddenInput.name = editInput.name; editInput.id = editInput.name; editInput.removeAttribute('name');
 	editInput.parentElement.appendChild(hiddenInput);
     const popupOptions = document.createElement('div');
 	popupOptions.className = 'popup'; popupOptions.classList.add('hidden');
