@@ -453,6 +453,7 @@ function init() {
 			document.getElementById(objectClass.NAME[0]).style.display="none";
 		}
 	});
+	checkSaveButton();
 
 	// Affichage d'un eventuel message transmis du serveur
 	if (errMsg) alert(errMsg);
@@ -470,11 +471,12 @@ function checkInputFunction(input, attrName) {
 		check(input, objectClassesDetails, input.defaultValue);
 	}
 
-	// Mise à jour de l áttribut dans les autres oglets
+	// Mise à jour de l'attribut dans les autres oglets
 	const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
 	allTabs.forEach(tab => {
 		tab.querySelectorAll('input').forEach((field) => {
-			if (field.name === input.name ) {
+			if (field.name && field.name === input.name ) {
+console.log('field.name: ', field.name);
 				field.value = input.value;
 			}
 		});
@@ -645,24 +647,25 @@ function changeModalSize(increase) {
 // Valide le bouton 'saveButton' seulement sur modification d'attributs
 function checkSaveButton() {
 	const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
-	let isAnyInputChanged = false;
 
-	inputs.forEach(input => {
-		if (input.name)
-			if (input.value !== input.defaultValue)
-				isAnyInputChanged = true;
-	});
+	// Vérifie si des entrées ont été modifiées
+	const isAnyInputChanged = Array.from(inputs).some(input =>
+		input.name && input.value !== input.defaultValue
+	);
 
+	// Vérifie si des objetClasses ont été ajoutés ou supprimés
+	const objClsModified = objectClassesDetails.some(item => 
+		(item.DELETED && !item.ADDED) || (item.ADDED && !item.DELETED)
+	);
+
+	// État du bouton de sauvegarde
 	const saveButton = document.getElementById('saveButton');
-	if (isAnyInputChanged) {
-		saveButton.disabled = false;
-		saveButton.classList.add('enabled');
-		saveButton.classList.remove('disabled');
-	} else {
-		saveButton.disabled = true;
-		saveButton.classList.remove('enabled');
-		saveButton.classList.add('disabled');
-	}
+	const isButtonEnabled = isAnyInputChanged || objClsModified;
+
+	// Mise à jour de l'état du bouton
+	saveButton.disabled = !isButtonEnabled;
+	saveButton.classList.toggle('enabled', isButtonEnabled);
+	saveButton.classList.toggle('disabled', !isButtonEnabled);
 }
 
 function objectClassesEdit(checkbox, objectClassName) {
@@ -714,9 +717,18 @@ function objectClassesEdit(checkbox, objectClassName) {
 			}
 		}
 	}
+	checkSaveButton();
 }
 
 function removeHiddenTabs() {
+	// MArquer les inputs multi-values
+	const inputs = document.getElementById('mainForm').querySelectorAll('input[type="hidden"]');
+	if (inputs.length>0) {
+		Array.from(inputs).forEach(input => {
+			if (document.getElementById(input.name)) input.name += "_multiValues";
+		});
+	}
+
 	// Marquer les objectClasses ADDED/DELETED dans l'envoi du formulaire
 	objectClassesDetails.forEach(objectClass => {
 		if (!!objectClass.DELETED || !!objectClass.ADD) {
@@ -750,16 +762,6 @@ if (form) {
 		// Elimination des objectClasses deleted (onglets hidden)
 		removeHiddenTabs();
 
-		// Effacer les inputs de saisie des champs multi-valeurs (editInput)
-		Array.from(form.querySelectorAll('input[type="hidden"]')).filter(input => input.name.includes('_multiValues')).forEach(input => {
-			const name = input.name.replace('_multiValues', '');
-			const editInputs = document.getElementsByName(name);
-			if (editInputs.length) {	// Supprimer les champs de saisie
-				editInputs.forEach(editInput => {
-					editInput.removeAttribute('name');
-				});
-			}
-		});
 		form.submit();
 	});
 }
