@@ -9,7 +9,7 @@ function initializePopup(container) {
 	popupOptions.className = 'popup'; popupOptions.classList.add('hidden');
 	editInput.parentElement.appendChild(popupOptions); // Création de la popup d'affichage des MULTI-VALUES
 	const button = document.createElement('button');
-	button.className = 'add-button'; button.textContent = '+';
+	button.className = 'add-button'; button.textContent = '...';
 	editInput.parentElement.appendChild(button); // Création du bouton d'ajout d'une nouvelle valeur
 
 	let index = 0; // Index de la position de la sélection  
