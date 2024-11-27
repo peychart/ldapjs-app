@@ -368,6 +368,7 @@ process.on('unhandledRejection', (reason, promise) => {
 					});
 				});
 
+//console.clear(); console.log('objectData: ', JSON.stringify(objectData, null, 2)); // Display for debug
 				//		2: avec les data d'objectData de chaque attribut
 				Object.keys(objectData).forEach(attrDataName => { // on parcourt les DATA
 					if (attrDataName === 'dn')	return;
@@ -479,9 +480,10 @@ process.on('unhandledRejection', (reason, promise) => {
 						value = Array.isArray(value) ?value.map(safeParse) :(safeParse(value));
 						value = noEmpty(value);
 
-						if (Array.isArray(value) && value.length)
-							acc[baseKey] = value;
-						else if (value)
+						if (Array.isArray(value)) {
+							if (value.length>0)
+								acc[baseKey] = value;
+						} else if (value)
 							acc[baseKey] = [value];
 					} else // Pour les autres champs, conserver la valeur non vide en l'état
 						if (value) acc[key] = value;
