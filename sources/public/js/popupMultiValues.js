@@ -8,10 +8,10 @@ function initializePopup(container) {
 	const popupOptions = document.createElement('div');
 	popupOptions.className = 'popup'; popupOptions.classList.add('hidden');
 	editInput.parentElement.appendChild(popupOptions); // Création de la popup d'affichage des MULTI-VALUES
-	const button = document.createElement('button');
-	//button.className = 'add-button'; button.textContent = '...';
-	button.className = 'edit-btn'; button.innerHTML = '<b>...</b>';
-	editInput.parentElement.appendChild(button); // Création du bouton d'ajout d'une nouvelle valeur
+//	const button = document.createElement('button');
+//	//button.className = 'add-button'; button.innerHTML = '<b>...</b>';
+//	button.className = 'edit-btn'; button.innerHTML = '<b>...</b>';
+//	editInput.parentElement.appendChild(button); // Création du bouton d'ajout d'une nouvelle valeur
 
 	let index = 0; // Index de la position de la sélection  
 	let options = JSON.parse(editInput.value || "[]").slice(); // Créer une copie des valeurs initiales
@@ -76,8 +76,8 @@ function initializePopup(container) {
 		}
 		if (!popupOptions.contains(event.target)
 				&& !editInput.contains(event.target)
-//				&& button.contains(event.target)
-				&& event.target !== button
+//				//&& button.contains(event.target)
+//				&& event.target !== button
 		)	popupOptions.style.display = 'none'; // Fermer la popup  
 	});
 
@@ -92,11 +92,11 @@ function initializePopup(container) {
 	}
 
 	// Gestionnaire d'événements pour ajouter une nouvelle option
-	button.addEventListener('click', (event) => {
-		event.preventDefault(); // Empêcher le comportement par défaut du bouton
-		addNewOption(); // Appeler la fonction pour ajouter une nouvelle option
-		editInput.focus();
-	});
+//	button.addEventListener('click', (event) => {
+//		event.preventDefault(); // Empêcher le comportement par défaut du bouton
+//		addNewOption(); // Appeler la fonction pour ajouter une nouvelle option
+//		editInput.focus();
+//	});
 
 	// Gestionnaire d'événements pour ajouter une nouvelle option
 	editInput.addEventListener('keydown', (event) => {
