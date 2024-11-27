@@ -4,6 +4,7 @@ function initializePopup(container) {
 	const hiddenInput = document.createElement('input'); // Création du champ caché pour values au formulaire
 	hiddenInput.type = 'hidden';
 	hiddenInput.name = editInput.name; editInput.id = editInput.name; editInput.removeAttribute('name');
+	hiddenInput.onInput = editInput.onInput; editInput.removeAttribute('onInput');
 	editInput.parentElement.appendChild(hiddenInput);
 	const popupOptions = document.createElement('div');
 	popupOptions.className = 'popup'; popupOptions.classList.add('hidden');
@@ -14,11 +15,10 @@ function initializePopup(container) {
 //	editInput.parentElement.appendChild(button); // Création du bouton d'ajout d'une nouvelle valeur
 
 	let index = 0; // Index de la position de la sélection  
-	let options = JSON.parse(editInput.value || "[]").slice(); // Créer une copie des valeurs initiales
+	let options = JSON.parse(editInput.value.length>0 ?editInput.value :[]); // Créer une copie des valeurs initiales
 
 	// Initialiser le champ d'entrée et le champ caché avec la première valeur  
-	if (options.length > 0)
-		editInput.value = options[index];
+	editInput.value = options.length > 0 ?options[index] :'';
 	hiddenInput.value = JSON.stringify(options); // Stocker le tableau dans hiddenInput
 
 	// Fonction pour rendre les options dans la popup  
@@ -50,6 +50,7 @@ function initializePopup(container) {
 		if (editInput.value.trim() !== '') {
 			options[index] = editInput.value; // Mettre à jour la valeur actuelle pointée par l'index  
 			hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
+			hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
 			renderOptions(); // Rendre les options pour mettre à jour  
 		}
 	});
@@ -61,6 +62,7 @@ function initializePopup(container) {
 			index = Array.from(popupOptions.children).indexOf(clickedOption); // Mettre à jour l'index  
 			editInput.value = options[index]; // Mettre la valeur sélectionnée dans le champ d'entrée  
 			hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
+			hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
 			popupOptions.style.display = 'none'; // Fermer la popup après sélection  
 			renderOptions(); // Rendre les options pour mettre à jour la sélection  
 		}
@@ -73,6 +75,7 @@ function initializePopup(container) {
 			if (options.length > 0)
 				editInput.value = options[(index=0)];
 			hiddenInput.value = JSON.stringify(options);
+			hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
 		}
 		if (!popupOptions.contains(event.target)
 				&& !editInput.contains(event.target)
@@ -88,6 +91,7 @@ function initializePopup(container) {
 		index = options.length - 1; // Mettre l'index sur la nouvelle valeur
 		editInput.value = options[index]; // Commencer l'édition dans le champ d'entrée
 		hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché temporairement pour la gestion des options
+		hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
 		renderOptions(); // Rendre les options pour mettre à jour
 	}
 
@@ -98,28 +102,26 @@ function initializePopup(container) {
 //		editInput.focus();
 //	});
 
-	// Gestionnaire d'événements pour ajouter une nouvelle option
-	editInput.addEventListener('keydown', (event) => {
+	// Gestionnaire d'événements
+	editInput.addEventListener('keydown', (event) => { // Ajouter une nouvelle option
 		if (event.key === 'Enter') { // Vérifier si la touche appuyée est <Enter>
+			 if (editInput.value.trim() === '') {
+				event.preventDefault(); // Empêcher le comportement par défaut du bouton
+				addNewOption(); // Appeler la fonction pour ajouter une nouvelle option
+			} else {
+				// Mettre la valeur de l'option sélectionnée dans le champ d'entrée  
+				editInput.value = options[index]; 
+				hiddenInput.value = JSON.stringify(options);
+				hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+				popupOptions.style.display = 'none'; // Fermer la popup après sélection  
+			}
+		} else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
 			event.preventDefault(); // Empêcher le comportement par défaut du bouton
-			addNewOption(); // Appeler la fonction pour ajouter une nouvelle option
-		}
-	});
-
-	// Gestion de la navigation par les flèches haut/bas  
-	editInput.addEventListener('keydown', (event) => {
-		if (event.key === 'ArrowDown') {
-			index = (index + 1) % options.length; // Passer à l'option suivante  
-			renderOptions(); // Rendre les options pour mettre à jour  
-			editInput.value = options[index]; // Mettre à jour l'input avec la valeur actuelle  
-		} else if (event.key === 'ArrowUp') {
-			index = (index - 1 + options.length) % options.length; // Passer à l'option précédente  
-			renderOptions(); // Rendre les options pour mettre à jour  
-			editInput.value = options[index]; // Mettre à jour l'input avec la valeur actuelle  
-		} else if (event.key === 'Enter') {
-			editInput.value = options[index]; // Mettre la valeur de l'option sélectionnée dans le champ d'entrée  
-			hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
-			popupOptions.style.display = 'none'; // Fermer la popup après sélection  
+			index = (event.key === 'ArrowDown')
+				? (index + 1) % options.length
+				: (index - 1 + options.length) % options.length; // Passer à l'option suivante ou précédente  
+			editInput.value = options[index]; // Mettre à jour l'input avec la valeur actuelle
+			renderOptions();
 		}
 	});
 }
