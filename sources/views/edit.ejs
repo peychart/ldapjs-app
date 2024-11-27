@@ -49,14 +49,14 @@
             margin-top: -1px; /* Pour ajuster la superposition de la bordure avec les onglets */
         }
         .edit-btn {
-            background: none;
+            background: transparent;
             border: none;
             cursor: pointer;
             color: #007bff; /* Couleur du bouton d'édition */
             padding: 0; /* Supprime le padding pour un bouton plus compact */
             font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
             margin-left: 5px; /* Ajoute un espacement à gauche du bouton */
-            color: #000000; /* Couleur du texte en noir */
+/*          color: #000000; /* Couleur du texte en noir */
         }
         .edit-btn {
             font-size: 0.8em; /* Réduit la taille de l'icône */
@@ -478,7 +478,6 @@ function checkInputFunction(input, attrName) {
 	allTabs.forEach(tab => {
 		tab.querySelectorAll('input').forEach((field) => {
 			if (field.name && field.name === input.name ) {
-console.log('field.name: ', field.name);
 				field.value = input.value;
 			}
 		});
@@ -651,9 +650,23 @@ function checkSaveButton() {
 	const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
 
 	// Vérifie si des entrées ont été modifiées
-	const isAnyInputChanged = Array.from(inputs).some(input =>
-		input.name && input.value !== input.defaultValue
-	);
+	const isAnyInputChanged = Array.from(inputs).some(field =>{
+		let result=false;
+		if (field.name) { // Pour les inputs multi-values (hidden), la valeur initiale est dans le champ de saisie
+			const editInput = document.getElementById(field.name);
+			result = (editInput && editInput !== field)
+					?(field.value !== editInput.defaultValue)
+					:(field.value !== field.defaultValue);
+
+/*if (result) {
+console.log('\n\nfield.name: ', field.name);
+console.log('\n\nfield.value: ', field.value);
+console.log('field.defaultValue: ', field.defaultValue);
+if (editInput) console.log('editInput.defaultValue: ', editInput.defaultValue);
+}*/
+
+		} return result;
+	});
 
 	// Vérifie si des objetClasses ont été ajoutés ou supprimés
 	const objClsModified = objectClassesDetails.some(item => 
