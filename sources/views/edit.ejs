@@ -472,16 +472,15 @@ function checkInputFunction(input) {
 		// Excution des scripts personnailisés
 		if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
 			eval(objectAttribute.valueCheck[0]);
-			check(input, objectClassesDetails, input.defaultValue);
+			// Transmettre l'input de saisie ( ->id(name) ) pour les champs multi-values :
+			check(document.getElementById(input.name) ?? input, objectClassesDetails, input.defaultValue);
 		}
 
-		// Mise à jour de l'attribut dans les autres oglets
+		// Mise à jour de l'attribut dans les autres onglets
 		const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
 		allTabs.forEach(tab => {
-			tab.querySelectorAll('input[name="${attrName}"]').forEach(field => {
-				if (field.name === attrName) {
-					field.value = input.DefaultValue;
-				}
+			tab.querySelectorAll(`input[name="${attrName}"]`).forEach(field => {
+				field.value = input.value;
 			});
 		});
 
@@ -653,27 +652,22 @@ function checkSaveButton() {
 	const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
 
 	// Vérifie si des entrées ont été modifiées
-	const isAnyInputChanged = Array.from(inputs).some(field =>{
+	const isAnyInputChanged = Array.from(inputs)
+								.filter(field => field.closest('.tab-pane').style.display !== 'none')
+								.some(field =>{
 		let result=false;
 		if (field.name) { // Pour les inputs multi-values (hidden), la valeur initiale est dans le champ de saisie
 			const editInput = document.getElementById(field.name);
 			result = (editInput && editInput !== field)
 					?(field.value !== editInput.defaultValue)
 					:(field.value !== field.defaultValue);
-
-/*if (field.name === 'businessCategory') {
-console.log('\n\nfield.name: ', field.name);
-console.log('\n\nfield.value: ', field.value);
-console.log('field.defaultValue: ', field.defaultValue);
-if (editInput) console.log('editInput.defaultValue: ', editInput.defaultValue);
-}*/
-
-		} return result;
+		}
+		return result;
 	});
 
 	// Vérifie si des objetClasses ont été ajoutés ou supprimés
 	const objClsModified = objectClassesDetails.some(item => 
-		(item.DELETED && !item.ADDED) || (item.ADDED && !item.DELETED)
+		(!!item.DELETED && !item.ADDED) || (!!item.ADDED && !item.DELETED)
 	);
 
 	// État du bouton de sauvegarde
@@ -729,7 +723,8 @@ function objectClassesEdit(checkbox, objectClassName) {
 
 				// Marquer l'objectClass DELETED
 				const objectClass = objectClassesDetails.find(item => item.NAME.includes(objectClassName)); 
-				if (objectClass) objectClass.DELETED = true; // Positionner la propriété DELETED
+				if (!!objectClass)
+					objectClass.DELETED = true; // Positionner la propriété DELETED
 			} else {
 				checkbox.checked = true;
 			}
