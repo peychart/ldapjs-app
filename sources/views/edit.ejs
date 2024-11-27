@@ -301,8 +301,8 @@
                                                     data-object-class-index = '<%= objectClassIndex %>'
                                                     placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
                                                     class="editInput"
-                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :Array.of(currentAttr.VALUES ?? '')) %>"
-                                                    oninput="checkInputFunction(this, '<%= attrName %>');" />
+                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :(currentAttr.VALUES != null ?[currentAttr.VALUES] :[])) %>"
+                                                    oninput="checkInputFunction(this);" />
                                             </div>
                                         </div>
                                     <% } else { %>
@@ -311,8 +311,8 @@
                                             data-object-class-index = '<%= objectClassIndex %>'
                                             placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
                                             class="form-control"
-                                            value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) || '' %>"
-                                            oninput="checkInputFunction(this, '<%= attrName %>');"
+                                            value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) ?? '' %>"
+                                            oninput="checkInputFunction(this);"
                                         />
                                     <% } %>
                                 </li>
@@ -461,30 +461,33 @@ function init() {
 	if (errMsg) alert(errMsg);
 }
 
-function checkInputFunction(input, attrName) {
-	const objectClassIndex = parseInt(input.dataset.objectClassIndex);
-	const objectClass = objectClassesDetails[objectClassIndex];
-	const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
-							|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
+function checkInputFunction(input) {
+	let attrName = input.name;
+	if (attrName) {
+		const objectClassIndex = parseInt(input.dataset.objectClassIndex);
+		const objectClass = objectClassesDetails[objectClassIndex];
+		const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
+								|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 
-	// Excution des scripts personnailisés
-	if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
-		eval(objectAttribute.valueCheck[0]);
-		check(input, objectClassesDetails, input.defaultValue);
-	}
+		// Excution des scripts personnailisés
+		if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
+			eval(objectAttribute.valueCheck[0]);
+			check(input, objectClassesDetails, input.defaultValue);
+		}
 
-	// Mise à jour de l'attribut dans les autres oglets
-	const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
-	allTabs.forEach(tab => {
-		tab.querySelectorAll('input').forEach((field) => {
-			if (field.name && field.name === input.name ) {
-				field.value = input.value;
-			}
+		// Mise à jour de l'attribut dans les autres oglets
+		const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
+		allTabs.forEach(tab => {
+			tab.querySelectorAll('input[name="${attrName}"]').forEach(field => {
+				if (field.name === attrName) {
+					field.value = input.DefaultValue;
+				}
+			});
 		});
-	});
 
-	// Mise à jour de l'état du bouton de Validaion
-	checkSaveButton();
+		// Mise à jour de l'état du bouton de Validaion
+		checkSaveButton();
+	}
 }
 
 // Sauvegrder la position de l'onglet courant
@@ -658,7 +661,7 @@ function checkSaveButton() {
 					?(field.value !== editInput.defaultValue)
 					:(field.value !== field.defaultValue);
 
-/*if (result) {
+/*if (field.name === 'businessCategory') {
 console.log('\n\nfield.name: ', field.name);
 console.log('\n\nfield.value: ', field.value);
 console.log('field.defaultValue: ', field.defaultValue);
