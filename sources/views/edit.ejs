@@ -258,7 +258,7 @@
 						const objName = objectClass.NAME[0];
 						const description = objectClass.DESC ?? 'No description available';
 					%>
-					<li class="nav-item" title="<%= description%>">
+					<li class="nav-item" title="<%= description %>">
 						<a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>"
 							id="<%= objName %>-tab"
 							data-toggle="tab"
@@ -287,10 +287,11 @@
 							<ul>
 								<% objectClass[TYPE].forEach(currentAttr => {
 									const attrName = currentAttr.NAME[0];
+									const description = currentAttr.DESC ?? 'No description available';
 								%>
 								<li>
-									<strong><%= currentAttr.customWording || attrName %>:</strong>
-									<button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
+									<strong title="<%= description %>"><%= currentAttr.customWording || attrName %>:</strong>
+									<button type="button" class="edit-btn" title="Edition des propriétés d'attributs" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
 										<i class="fas fa-pencil-alt"></i>
 									</button>
 									<% if (currentAttr.MULTI_VALUE !== 'SINGLE-VALUE') { %>
