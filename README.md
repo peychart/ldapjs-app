@@ -168,6 +168,8 @@ function check(input, data, initialValue) {
 4. Exemple de popup de saisie d'un mot de passe SSHA :
 
 ...
+
+```
 function check(input,data,initialValue){
 input.value=initialValue;
 const s=document.createElement('script');
@@ -183,6 +185,8 @@ passwordInput.addEventListener('keypress',function(e){if(e.key==='Enter'){submit
 function closePopup(){overlay.style.display='none';document.body.removeChild(overlay);document.body.removeChild(popup);document.head.removeChild(style);}document.getElementById('closePopup').onclick=closePopup;overlay.onclick=closePopup;};
 document.body.appendChild(s);
 }
+```
+
 ...
 
  ![](doc/images/passwordEdit.png)
