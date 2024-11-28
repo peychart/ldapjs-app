@@ -191,9 +191,11 @@ Ce qui donnera :
  ![](doc/images/passwordEdit.png)
 
 
-6. (à suivre) ...
+6. (à suivre)
 
-Connexion :
+...
+
+Page de connexion :
  ![](doc/images/login.png)
 
 Recherche :
@@ -202,7 +204,7 @@ Recherche :
 Edition :
  ![](doc/images/edit.png)
 
-Edition d'objectClasses :
+Ajout/suppression d'objectClasses :
 ![](doc/images/addObjectClass.png)
 
 
