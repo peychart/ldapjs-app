@@ -165,7 +165,7 @@ function generateLDIF(oldObject, newObject, dn) {
 function ldapValidate(object) {
 	const errors = []; // Stocke les messages d'erreur
 
-errors.push('(ceci est un break de debug ...)');
+//errors.push('(ceci est un break de debug ...)');
 	return errors.length > 0 ? errors : null; // Retourne les erreurs, sinon null
 }
 
