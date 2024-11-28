@@ -234,7 +234,7 @@
 </head>
 <body>
 	<div class="container mt-5 position-relative">
-		<h1>Carnet d'Annuaire</h1>
+		<h1 title="LDAP Editor">Carnet d'Annuaire</h1>
 
 		<!-- Formulaire principal -->
 		<form id="mainForm" action="/edit/<%= dn %>" method="POST">
@@ -248,7 +248,7 @@
 				</div>
 
 				<div class="d-flex"> <!-- Boutons à droite -->
-					<button type="button" id="deleteButton" class="btn btn-delete ml-2" onclick="deleteEntry()">Supprimer</button>
+					<button type="button" id="deleteButton" class="btn btn-delete ml-2" title='La totalité de cette entrée sera supprimée ...' onclick="deleteEntry()">Supprimer</button>
 				</div>
 			</div>
 
@@ -256,8 +256,9 @@
 			<ul class="nav nav-tabs" id="myTab" role="tablist">
 				<% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
 						const objName = objectClass.NAME[0];
+						const description = objectClass.DESC ?? 'No description available';
 					%>
-					<li class="nav-item">
+					<li class="nav-item" title="<%= description%>">
 						<a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>"
 							id="<%= objName %>-tab"
 							data-toggle="tab"
@@ -270,7 +271,7 @@
 					</li>
 				<% }) %>
 				<li class="nav-item">
-					<a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false">+</a>
+					<a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false" title="Add/remove objectClasses">+</a>
 				</li>
 			</ul>
 
@@ -458,7 +459,8 @@ function init() {
 	checkSaveButton();
 
 	// Affichage d'un eventuel message transmis du serveur
-	if (errMsg) alert(errMsg);
+	if (errMsg)
+		alert(errMsg);
 }
 
 function checkInputFunction(input) {
@@ -502,10 +504,7 @@ function restoreValues() {
 	if (isDataChanged()) {
 		if (!confirm("Des modifications sont en cours : êtes-vous sûr de vouloir les abandonner ?"))
 			return;
-	} else {
-		alert("Ausune modification courante ...");
-		return;
-	}
+	} else return;
 
 	// Rafraichir la page
 	saveCurrentTab();
@@ -692,13 +691,25 @@ function areAllMUSTAttributesFilled() {
 }
 
 function checkSaveButton() {
-	const saveButton = document.getElementById('saveButton');
-	const isButtonEnabled = areAllMUSTAttributesFilled() && isDataChanged();
+	const allMUSTAttributesFilled = areAllMUSTAttributesFilled();
+	const dataChanged = isDataChanged();
+	const isButtonEnabled = allMUSTAttributesFilled && dataChanged;
 
-	// Mise à jour de l'état du bouton
+	// Mise à jour de l'état du bouton 'saveButton'
+	const saveButton = document.getElementById('saveButton');
+	saveButton.title = allMUSTAttributesFilled ?(dataChanged ?'Des données ont été modifiées !' :'Aucune donnée n\'a encore été modifiée ...') :'Certains attributs obligatoires sont manquants !...';
+
 	saveButton.disabled = !isButtonEnabled;
 	saveButton.classList.toggle('enabled', isButtonEnabled);
 	saveButton.classList.toggle('disabled', !isButtonEnabled);
+
+	// Mise à jour de l'état du bouton 'restoreButton'
+	const restoreButton = document.getElementById('restoreButton');
+	restoreButton.title = dataChanged ?'Attention : certaines données ont été modifiées !' :'Aucune donnée n\'a encore été modifiée.';
+
+	// Mise à jour de l'état du bouton 'restoreButton'
+	const exitButton = document.getElementById('exitButton');
+	exitButton.title = dataChanged ?'Attention : les modifications en cours seront perdues !' :'Retour à la recherche ...';
 }
 
 function objectClassesEdit(checkbox, objectClassName) {
