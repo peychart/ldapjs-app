@@ -1,444 +1,444 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carnet d'Annuaire</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        html, body {
-            height: 100%; /* S'assure que html et body prennent toute la hauteur */
-            margin: 0; /* Enlève les marges par défaut */
-        }
-        body {
-            /* background-color: #FFFCC4; */ /* Commenté, vous avez déjà un dégradé */
-            background: linear-gradient(to bottom, #fff4b2, #d1c93b); /* Dégradé du jaune clair vers un jaune plus doux */
-            min-height: 100vh; /* La hauteur minimale du corps est de 100% de la fenêtre */
-        }
-        .form-control::placeholder {
-            color: #b0b0b0; /* Couleur du placeholder (gris clair) */
-            opacity: 1; /* Assurez-vous que l'opacité est à 1 */
-        }
-        .nav-tabs .nav-item .nav-link {
-            border: 1px solid #fff4b2; /* Bordure pour tous les onglets */
-            border-bottom: none; /* Enlève la bordure inférieure pour tous les onglets */
-            background-color: #B19F8C; /* Fond beige pour les onglets */
-            border-radius: 5px 5px 0 0; /* Arrondir uniquement le haut des onglets */
-            margin-right: -1px; /* Pour éviter que les bordures se chevauchent */
-            color: #000000; /* Couleur du texte en noir */
-        }
-        .nav-tabs .nav-item .nav-link.active {
-            border: 1px solid #000000; /* Bordure noire pour l'onglet actif */
-            border-bottom: none; /* Retire la bordure inférieure de l'onglet actif */
-            border-right: 2px solid #000000; /* Assure que la bordure droite est visible */
-            background-color: #ffffe0; /* Fond clair pour l'onglet actif */
-            color: #000000; /* Couleur du texte de l'onglet actif en noir */
-            padding-top: 9px; /* Ajustez selon vos besoins */
-        }
-        .nav-tabs .nav-item .nav-link:not(.active) { /* Cibler spécifiquement les onglets non actifs */
-            background-color: #D1C6A9; /* Fond beige clair pour l'onglet non actif */
-            border-bottom: 1px solid #000000; /* Ajoute une bordure inférieure noire pour les onglets non actifs */
-            color: #000000; /* Couleur du texte en noir */
-        }
-        .tab-content {
-            background-color: #ffffe0; /* Fond jaune clair pour le contenu des onglets */
-            padding: 15px; /* Ajout de padding pour l'intérieur des onglets */
-            border: 1px solid #000000; /* Bordure noire pour le contenu des onglets */
-            border-radius: 5px; /* Coins arrondis pour le contenu des onglets */
-            margin-top: -1px; /* Pour ajuster la superposition de la bordure avec les onglets */
-        }
-        .edit-btn {
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            color: #007bff; /* Couleur du bouton d'édition */
-            padding: 0; /* Supprime le padding pour un bouton plus compact */
-            font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
-            margin-left: 5px; /* Ajoute un espacement à gauche du bouton */
-/*          color: #000000; /* Couleur du texte en noir */
-        }
-        .edit-btn {
-            font-size: 0.8em; /* Réduit la taille de l'icône */
-        }
-        .btn-restore {
-            background-color: #FFE0B2; /* Couleur orange plus clair */
-            border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
-            color: black; /* Couleur du texte en noir */
-        }
-        .btn-restore:hover {
-            background-color: #FFA726; /* Couleur plus foncée au survol */
-        }
-        .btn-exit {
-            background-color: #FFCC80; /* Couleur orange pastel */
-            border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
-            color: black; /* Couleur du texte en black */
-        }
-        .btn-exit:hover {
-            background-color: #FFA726; /* Couleur plus foncée au survol */
-        }
-        .btn-save {
-            position: relative;
-            background-color: #FFFFF0; /* Couleur beige pour le bouton */
-            border: 0px solid #3A6A2A; /* Bordure vert foncé pour un meilleur contraste */
-            color: #000; /* Couleur du texte par défaut */
-        }
-        .btn-save:hover {
-            background-color: #E0E0E0; /* Couleur beige plus foncé au survol */
-        }
-        .btn-save.disabled:hover {
-            background-color: #F5F5DC; /* Rétablir la couleur d'origine lorsqu'il est désactivé */
-            cursor: not-allowed; /* Change le curseur pour indiquer que le bouton est désactivé */
-        }
-        .btn-save.enabled {
-            color: #9B111E; /* Rouge rubis lorsqu'il est activé */
-            background-color: #98FB98; /* Vert tendre lorsque activé */
-        }
-        .modal-content {
-            background-color: #ffffe0; /* Fond jaune clair pour la modale */
-            border-radius: 15px; /* Arrondir les angles de la fenêtre modale */
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ajoute une ombre douce autour de la modale */
-        }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Carnet d'Annuaire</title>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+	<style>
+		html, body {
+			height: 100%; /* S'assure que html et body prennent toute la hauteur */
+			margin: 0; /* Enlève les marges par défaut */
+		}
+		body {
+			/* background-color: #FFFCC4; */ /* Commenté, vous avez déjà un dégradé */
+			background: linear-gradient(to bottom, #fff4b2, #d1c93b); /* Dégradé du jaune clair vers un jaune plus doux */
+			min-height: 100vh; /* La hauteur minimale du corps est de 100% de la fenêtre */
+		}
+		.form-control::placeholder {
+			color: #b0b0b0; /* Couleur du placeholder (gris clair) */
+			opacity: 1; /* Assurez-vous que l'opacité est à 1 */
+		}
+		.nav-tabs .nav-item .nav-link {
+			border: 1px solid #fff4b2; /* Bordure pour tous les onglets */
+			border-bottom: none; /* Enlève la bordure inférieure pour tous les onglets */
+			background-color: #B19F8C; /* Fond beige pour les onglets */
+			border-radius: 5px 5px 0 0; /* Arrondir uniquement le haut des onglets */
+			margin-right: -1px; /* Pour éviter que les bordures se chevauchent */
+			color: #000000; /* Couleur du texte en noir */
+		}
+		.nav-tabs .nav-item .nav-link.active {
+			border: 1px solid #000000; /* Bordure noire pour l'onglet actif */
+			border-bottom: none; /* Retire la bordure inférieure de l'onglet actif */
+			border-right: 2px solid #000000; /* Assure que la bordure droite est visible */
+			background-color: #ffffe0; /* Fond clair pour l'onglet actif */
+			color: #000000; /* Couleur du texte de l'onglet actif en noir */
+			padding-top: 9px; /* Ajustez selon vos besoins */
+		}
+		.nav-tabs .nav-item .nav-link:not(.active) { /* Cibler spécifiquement les onglets non actifs */
+			background-color: #D1C6A9; /* Fond beige clair pour l'onglet non actif */
+			border-bottom: 1px solid #000000; /* Ajoute une bordure inférieure noire pour les onglets non actifs */
+			color: #000000; /* Couleur du texte en noir */
+		}
+		.tab-content {
+			background-color: #ffffe0; /* Fond jaune clair pour le contenu des onglets */
+			padding: 15px; /* Ajout de padding pour l'intérieur des onglets */
+			border: 1px solid #000000; /* Bordure noire pour le contenu des onglets */
+			border-radius: 5px; /* Coins arrondis pour le contenu des onglets */
+			margin-top: -1px; /* Pour ajuster la superposition de la bordure avec les onglets */
+		}
+		.edit-btn {
+			background: transparent;
+			border: none;
+			cursor: pointer;
+			color: #007bff; /* Couleur du bouton d'édition */
+			padding: 0; /* Supprime le padding pour un bouton plus compact */
+			font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
+			margin-left: 5px; /* Ajoute un espacement à gauche du bouton */
+/*		  color: #000000; /* Couleur du texte en noir */
+		}
+		.edit-btn {
+			font-size: 0.8em; /* Réduit la taille de l'icône */
+		}
+		.btn-restore {
+			background-color: #FFE0B2; /* Couleur orange plus clair */
+			border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
+			color: black; /* Couleur du texte en noir */
+		}
+		.btn-restore:hover {
+			background-color: #FFA726; /* Couleur plus foncée au survol */
+		}
+		.btn-exit {
+			background-color: #FFCC80; /* Couleur orange pastel */
+			border: 0px solid #F5F5DC; /* Bordure d'une teinte légèrement plus foncée */
+			color: black; /* Couleur du texte en black */
+		}
+		.btn-exit:hover {
+			background-color: #FFA726; /* Couleur plus foncée au survol */
+		}
+		.btn-save {
+			position: relative;
+			background-color: #FFFFF0; /* Couleur beige pour le bouton */
+			border: 0px solid #3A6A2A; /* Bordure vert foncé pour un meilleur contraste */
+			color: #000; /* Couleur du texte par défaut */
+		}
+		.btn-save:hover {
+			background-color: #E0E0E0; /* Couleur beige plus foncé au survol */
+		}
+		.btn-save.disabled:hover {
+			background-color: #F5F5DC; /* Rétablir la couleur d'origine lorsqu'il est désactivé */
+			cursor: not-allowed; /* Change le curseur pour indiquer que le bouton est désactivé */
+		}
+		.btn-save.enabled {
+			color: #9B111E; /* Rouge rubis lorsqu'il est activé */
+			background-color: #98FB98; /* Vert tendre lorsque activé */
+		}
+		.modal-content {
+			background-color: #ffffe0; /* Fond jaune clair pour la modale */
+			border-radius: 15px; /* Arrondir les angles de la fenêtre modale */
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ajoute une ombre douce autour de la modale */
+		}
 		.custom-radio-group {
-            display: flex;
-            justify-content: space-between; /* Ecarte les boutons au maximum */
-            width: 100%; /* S'assure que le conteneur prend toute la largeur disponible */
-        }
-        .form-check {
-            flex: 1; /* Permet à chaque bouton de prendre une part égale de l'espace disponible */
-            text-align: center; /* Centre le texte de chaque bouton */
-        }
-        .popup {
-            position: absolute;
-            background: white;
-            border: 1px solid #ccc;
-            width: 200px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .editInput {
-            flex: 1; /* Permet à l'input de remplir la largeur disponible */
-            margin: 0; /* Supprime les marges pour un alignement parfait */
-            /*margin-right: 5px;
-            margin-left: 0px;*/
-            padding: 8px; /* Espace intérieur pour un meilleur confort visuel */
-            border: 1px solid #d3d3d3; /* Bordure grise */
-            border-radius: 4px; /* Arrondi léger des coins */
-            transition: border-color 0.3s; /* Transition douce pour les changements de couleur de bordure */
-        }
-        .editInput::placeholder {
-            color: #b0b0b0; /* Couleur du placeholder (gris plus clair) */
-            opacity: 1; /* Assurez-vous que l'opacité est à 1 pour que la couleur soit bien visible */
-        }
-        .option {
-            padding: 5px;
-            cursor: pointer;
-        }
-        .option:hover, .option.selected {
-            background-color: #e0e0e0; /* Couleur de surbrillance pour l'option sélectionnée */
-        }
-        .add-button {
-            background-color: gray;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .btn-delete {
-            background-color: #dc3545; /* Rouge pour indiquer une action de suppression */
-            color: white; /* Texte en blanc pour un bon contraste */
-            border: none; /* Retirer la bordure par défaut */
-            padding: 10px 15px; /* Espacement interne */
-            cursor: pointer; /* Changer le curseur pour indiquer que c'est cliquable */
-            border-radius: 5px; /* Coins arrondis */
-            transition: background-color 0.3s; /* Animation de changement de couleur */
-        }
-        .btn-delete:hover {
-            background-color: #c82333; /* Couleur plus foncée au survol */
-        }
-        .objectClassesContainer {
-            display: flex; /* Utilisation de flexbox pour la mise en page */
-            justify-content: space-between; /* Espace entre les colonnes */
-            align-items: stretch; /* Alignement en haut des colonnes */
-            height: calc(70vh - 100px); /* Hauteur fixe pour le conteneur */
-        }
+			display: flex;
+			justify-content: space-between; /* Ecarte les boutons au maximum */
+			width: 100%; /* S'assure que le conteneur prend toute la largeur disponible */
+		}
+		.form-check {
+			flex: 1; /* Permet à chaque bouton de prendre une part égale de l'espace disponible */
+			text-align: center; /* Centre le texte de chaque bouton */
+		}
+		.popup {
+			position: absolute;
+			background: white;
+			border: 1px solid #ccc;
+			width: 200px;
+			max-height: 200px;
+			overflow-y: auto;
+			z-index: 1000;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+		}
+		.editInput {
+			flex: 1; /* Permet à l'input de remplir la largeur disponible */
+			margin: 0; /* Supprime les marges pour un alignement parfait */
+			/*margin-right: 5px;
+			margin-left: 0px;*/
+			padding: 8px; /* Espace intérieur pour un meilleur confort visuel */
+			border: 1px solid #d3d3d3; /* Bordure grise */
+			border-radius: 4px; /* Arrondi léger des coins */
+			transition: border-color 0.3s; /* Transition douce pour les changements de couleur de bordure */
+		}
+		.editInput::placeholder {
+			color: #b0b0b0; /* Couleur du placeholder (gris plus clair) */
+			opacity: 1; /* Assurez-vous que l'opacité est à 1 pour que la couleur soit bien visible */
+		}
+		.option {
+			padding: 5px;
+			cursor: pointer;
+		}
+		.option:hover, .option.selected {
+			background-color: #e0e0e0; /* Couleur de surbrillance pour l'option sélectionnée */
+		}
+		.add-button {
+			background-color: gray;
+			color: white;
+			border: none;
+			padding: 5px 10px;
+			cursor: pointer;
+			border-radius: 5px;
+		}
+		.btn-delete {
+			background-color: #dc3545; /* Rouge pour indiquer une action de suppression */
+			color: white; /* Texte en blanc pour un bon contraste */
+			border: none; /* Retirer la bordure par défaut */
+			padding: 10px 15px; /* Espacement interne */
+			cursor: pointer; /* Changer le curseur pour indiquer que c'est cliquable */
+			border-radius: 5px; /* Coins arrondis */
+			transition: background-color 0.3s; /* Animation de changement de couleur */
+		}
+		.btn-delete:hover {
+			background-color: #c82333; /* Couleur plus foncée au survol */
+		}
+		.objectClassesContainer {
+			display: flex; /* Utilisation de flexbox pour la mise en page */
+			justify-content: space-between; /* Espace entre les colonnes */
+			align-items: stretch; /* Alignement en haut des colonnes */
+			height: calc(70vh - 100px); /* Hauteur fixe pour le conteneur */
+		}
 		.fixed-header {
-            position: sticky; /* Rendre la position fixe quand on fait défiler */
-            top: 0; /* Positionner en haut */
-            background-color: #ffffe0; /* Fond blanc pour le titre */
-            z-index: 10; /* Assurez-vous que le titre soit au-dessus du contenu */
-            padding: 10px; /* Ajoute un peu de rembourrage */
-            border-bottom: 1px solid #ccc; /* Optionnel : une bordure pour séparer du contenu */
-        }
-        .header-row {
-            display: flex; /* Utiliser flexbox pour aligner les éléments en ligne */
-            align-items: center; /* Centrer verticalement les éléments */
-        }
-        .header-row h4 {
-            margin-right: 10px; /* Ajouter un peu d'espace entre le titre et le label */
-        }
+			position: sticky; /* Rendre la position fixe quand on fait défiler */
+			top: 0; /* Positionner en haut */
+			background-color: #ffffe0; /* Fond blanc pour le titre */
+			z-index: 10; /* Assurez-vous que le titre soit au-dessus du contenu */
+			padding: 10px; /* Ajoute un peu de rembourrage */
+			border-bottom: 1px solid #ccc; /* Optionnel : une bordure pour séparer du contenu */
+		}
+		.header-row {
+			display: flex; /* Utiliser flexbox pour aligner les éléments en ligne */
+			align-items: center; /* Centrer verticalement les éléments */
+		}
+		.header-row h4 {
+			margin-right: 10px; /* Ajouter un peu d'espace entre le titre et le label */
+		}
 		.attribute-liste {
-            margin-left: auto; /* Pousse cet élément vers la droite */
-            text-align: right; /* Assurez-vous que le texte est aligné à droite */
-        }
-        .list {
-            flex: 1; /* Permet aux listes de prendre une part égale de l'espace */
-            overflow-y: auto; /* Activer le défilement si le contenu déborde */
-            border: 1px solid #ccc; /* Bordure pour les listes */
-            border-radius: 4px; /* Coins arrondis pour les listes */
-            padding: 10px; /* Rembourrage intérieur */
-            margin-top: 10px; /* Espace au-dessus des listes */
-        }
-        .list-item {
-            margin: 5px 0;
-            cursor: pointer;
-            padding: 5px;
-        }
-        .list-item:hover {
-            background-color: #f0f0f0;
-        }
-        .highlight {
-            background-color: #ffeb3b; /* Couleur de surbrillance */
-        }
-        .placeholder {
-            color: #888; /* Couleur grisée pour les messages d'instruction */
-            font-style: italic; /* Italique pour le style */
-            text-align: center; /* Centrer le texte */
-            margin-top: 10px; /* Espace au-dessus du message */
-        }
+			margin-left: auto; /* Pousse cet élément vers la droite */
+			text-align: right; /* Assurez-vous que le texte est aligné à droite */
+		}
+		.list {
+			flex: 1; /* Permet aux listes de prendre une part égale de l'espace */
+			overflow-y: auto; /* Activer le défilement si le contenu déborde */
+			border: 1px solid #ccc; /* Bordure pour les listes */
+			border-radius: 4px; /* Coins arrondis pour les listes */
+			padding: 10px; /* Rembourrage intérieur */
+			margin-top: 10px; /* Espace au-dessus des listes */
+		}
+		.list-item {
+			margin: 5px 0;
+			cursor: pointer;
+			padding: 5px;
+		}
+		.list-item:hover {
+			background-color: #f0f0f0;
+		}
+		.highlight {
+			background-color: #ffeb3b; /* Couleur de surbrillance */
+		}
+		.placeholder {
+			color: #888; /* Couleur grisée pour les messages d'instruction */
+			font-style: italic; /* Italique pour le style */
+			text-align: center; /* Centrer le texte */
+			margin-top: 10px; /* Espace au-dessus du message */
+		}
 		.attributeList {
-            position: sticky; /* L'élément reste fixe dans la fenêtre */
-            top: 10px; /* Distance depuis le haut de la fenêtre */
-            right: 20px; /* Distance depuis le bord droit de la fenêtre */
-            width: 48%;
-            max-height: 80vh; /* Hauteur maximale pour le défilement */
-            overflow-y: auto; /* Activer le défilement si le contenu déborde */
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 10px;
-            z-index: 10; /* Assurez-vous que l'élément est au-dessus des autres éléments */
-        }
+			position: sticky; /* L'élément reste fixe dans la fenêtre */
+			top: 10px; /* Distance depuis le haut de la fenêtre */
+			right: 20px; /* Distance depuis le bord droit de la fenêtre */
+			width: 48%;
+			max-height: 80vh; /* Hauteur maximale pour le défilement */
+			overflow-y: auto; /* Activer le défilement si le contenu déborde */
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			padding: 10px;
+			z-index: 10; /* Assurez-vous que l'élément est au-dessus des autres éléments */
+		}
 		.objectClassesCheckbox {
-            margin-right: 10px; /* Ajustez la valeur pour plus ou moins d'espace */
-        }
-        h4 {
-            margin: 0; /* Réinitialiser la marge */
-            padding: 10px; /* Ajouter un peu de rembourrage pour le style */
-            background-color: #fffacd; /* Couleur de fond pour les titres (jaune un peu plus foncé) */
-            border-bottom: 1px solid #ccc; /* Bordure pour séparer le titre du contenu */
-        }
-    </style>
+			margin-right: 10px; /* Ajustez la valeur pour plus ou moins d'espace */
+		}
+		h4 {
+			margin: 0; /* Réinitialiser la marge */
+			padding: 10px; /* Ajouter un peu de rembourrage pour le style */
+			background-color: #fffacd; /* Couleur de fond pour les titres (jaune un peu plus foncé) */
+			border-bottom: 1px solid #ccc; /* Bordure pour séparer le titre du contenu */
+		}
+	</style>
 </head>
 <body>
-    <div class="container mt-5 position-relative">
-        <h1>Carnet d'Annuaire</h1>
+	<div class="container mt-5 position-relative">
+		<h1>Carnet d'Annuaire</h1>
 
-        <!-- Formulaire principal -->
-        <form id="mainForm" action="/edit/<%= dn %>" method="POST">
+		<!-- Formulaire principal -->
+		<form id="mainForm" action="/edit/<%= dn %>" method="POST">
 
-            <!-- Conteneur pour les boutons avec Flexbox -->
-            <div class="d-flex justify-content-between mb-3">
-                <div class="d-flex"> <!-- Boutons à gauche -->
-                    <button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
-                    <button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
-                    <button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Retour</button>
-                </div>
+			<!-- Conteneur pour les boutons avec Flexbox -->
+			<div class="d-flex justify-content-between mb-3">
+				<div class="d-flex"> <!-- Boutons à gauche -->
+					<button type="submit" id="saveButton" class="btn btn-save" style="width: 120px;" disabled>Valider</button>
+					<button type="button" id="restoreButton" class="btn btn-restore" onclick="restoreValues()">Restaurer les valeurs</button>
+					<button type="button" id="exitButton" class="btn btn-exit ml-2" style="width: 120px;" onclick="exit()">Retour</button>
+				</div>
 
-                <div class="d-flex"> <!-- Boutons à droite -->
-                    <button type="button" id="deleteButton" class="btn btn-delete ml-2" onclick="deleteEntry()">Supprimer</button>
-                </div>
-            </div>
+				<div class="d-flex"> <!-- Boutons à droite -->
+					<button type="button" id="deleteButton" class="btn btn-delete ml-2" onclick="deleteEntry()">Supprimer</button>
+				</div>
+			</div>
 
-            <!-- Nav tabs -->
-            <ul class="nav nav-tabs" id="myTab" role="tablist">
-                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
-                        const objName = objectClass.NAME[0];
-                    %>
-                    <li class="nav-item">
-                        <a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>"
-                            id="<%= objName %>-tab"
-                            data-toggle="tab"
-                            href="#<%= objName %>"
-                            role="tab"
-                            aria-controls="<%= objName %>"
-                            aria-selected="<%= objectClassIndex === 0 %>">
-                                <%= objName %>
-                            </a>
-                    </li>
-                <% }) %>
-                <li class="nav-item">
-                    <a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false">+</a>
-                </li>
-            </ul>
+			<!-- Nav tabs -->
+			<ul class="nav nav-tabs" id="myTab" role="tablist">
+				<% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
+						const objName = objectClass.NAME[0];
+					%>
+					<li class="nav-item">
+						<a class="nav-link <%= objectClassIndex === 0 ? 'active' : '' %>"
+							id="<%= objName %>-tab"
+							data-toggle="tab"
+							href="#<%= objName %>"
+							role="tab"
+							aria-controls="<%= objName %>"
+							aria-selected="<%= objectClassIndex === 0 %>">
+								<%= objName %>
+							</a>
+					</li>
+				<% }) %>
+				<li class="nav-item">
+					<a class="nav-link" id="add-tab" data-toggle="tab" href="#add" role="tab" aria-controls="add" aria-selected="false">+</a>
+				</li>
+			</ul>
 
-            <!-- Tab panes -->
-            <div class="tab-content" id="myTabContent">
-                <% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
-                    const objName = objectClass.NAME[0];
-                %>
-                    <input type="hidden" name="objectClass" value="<%= objName %>"/>
-                    <div class="tab-pane fade <%= objectClassIndex === 0 ? 'show active' : '' %>" id="<%= objName %>" role="tabpanel" aria-labelledby="<%= objName %>-tab">
-                        <% ['MUST', 'MAY'].forEach(TYPE => { %>
-                            <h3 class="underline">Attributs <%= (TYPE === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
-                            <ul>
-                                <% objectClass[TYPE].forEach(currentAttr => {
-                                    const attrName = currentAttr.NAME[0];
-                                %>
-                                <li>
-                                    <strong><%= currentAttr.customWording || attrName %>:</strong>
-                                    <button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </button>
+			<!-- Tab panes -->
+			<div class="tab-content" id="myTabContent">
+				<% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
+					const objName = objectClass.NAME[0];
+				%>
+					<input type="hidden" name="objectClass" value="<%= objName %>"/>
+					<div class="tab-pane fade <%= objectClassIndex === 0 ? 'show active' : '' %>" id="<%= objName %>" role="tabpanel" aria-labelledby="<%= objName %>-tab">
+						<% ['MUST', 'MAY'].forEach(TYPE => { %>
+							<h3 class="underline">Attributs <%= (TYPE === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
+							<ul>
+								<% objectClass[TYPE].forEach(currentAttr => {
+									const attrName = currentAttr.NAME[0];
+								%>
+								<li>
+									<strong><%= currentAttr.customWording || attrName %>:</strong>
+									<button type="button" class="edit-btn" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
+										<i class="fas fa-pencil-alt"></i>
+									</button>
 									<% if (currentAttr.MULTI_VALUE !== 'SINGLE-VALUE') { %>
-                                        <!-- popupMultiValues -->
-                                        <div class="popupContainer" data-attr-name="<%= attrName %>">
-                                            <div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
-                                                <input type="text"
-                                                    name="<%= attrName %>"
-                                                    data-object-class-index = '<%= objectClassIndex %>'
-                                                    placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
-                                                    class="editInput"
-                                            		value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :(currentAttr.VALUES != null ?[currentAttr.VALUES] :[])) %>"
-                                                    oninput="checkInputFunction(this);" />
-                                            </div>
-                                        </div>
-                                    <% } else { %>
-                                        <input type="text"
-                                            name="<%= attrName %>"
-                                            data-object-class-index = '<%= objectClassIndex %>'
-                                            placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
-                                            class="form-control"
-                                            value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) ?? '' %>"
-                                            oninput="checkInputFunction(this);"
-                                        />
-                                    <% } %>
-                                </li>
-                                <% }) %>
-                            </ul>
-                        <% }) %>
-                    </div>
-                <% }) %>
+										<!-- popupMultiValues -->
+										<div class="popupContainer" data-attr-name="<%= attrName %>">
+											<div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
+												<input type="text"
+													name="<%= attrName %>"
+													data-object-class-index = '<%= objectClassIndex %>'
+													placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
+													class="editInput"
+													value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :(currentAttr.VALUES != null ?[currentAttr.VALUES] :[])) %>"
+													oninput="checkInputFunction(this);" />
+											</div>
+										</div>
+									<% } else { %>
+										<input type="text"
+											name="<%= attrName %>"
+											data-object-class-index = '<%= objectClassIndex %>'
+											placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
+											class="form-control"
+											value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) ?? '' %>"
+											oninput="checkInputFunction(this);"
+										/>
+									<% } %>
+								</li>
+								<% }) %>
+							</ul>
+						<% }) %>
+					</div>
+				<% }) %>
 
-                <!-- Tab pour ajouter une nouvelle objectClass -->
-                <div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
-                    <div class="sub-tabs">
-                         <ul class="nav nav-tabs" id="subTab" role="tablist">
-                             <li class="nav-item">
-                                 <a class="nav-link active" id="structural-tab" data-toggle="tab" href="#structural" role="tab" aria-controls="structural" aria-selected="true">ObjectClasses STRUCTURAL</a>
-                             </li>
-                             <li class="nav-item">
-                                 <a class="nav-link" id="auxiliary-tab" data-toggle="tab" href="#auxiliary" role="tab" aria-controls="auxiliary" aria-selected="false">ObjectClasses AUXILIARY</a>
-                             </li>
-                         </ul>
+				<!-- Tab pour ajouter une nouvelle objectClass -->
+				<div class="tab-pane fade" id="add" role="tabpanel" aria-labelledby="add-tab">
+					<div class="sub-tabs">
+						 <ul class="nav nav-tabs" id="subTab" role="tablist">
+							 <li class="nav-item">
+								 <a class="nav-link active" id="structural-tab" data-toggle="tab" href="#structural" role="tab" aria-controls="structural" aria-selected="true">ObjectClasses STRUCTURAL</a>
+							 </li>
+							 <li class="nav-item">
+								 <a class="nav-link" id="auxiliary-tab" data-toggle="tab" href="#auxiliary" role="tab" aria-controls="auxiliary" aria-selected="false">ObjectClasses AUXILIARY</a>
+							 </li>
+						 </ul>
 
-                         <!-- Contenu des sous-onglets -->
-                         <div class="tab-content" id="subTabContent">
-                             <div class="tab-pane fade show active" id="structural" role="tabpanel" aria-labelledby="structural-tab">
+						 <!-- Contenu des sous-onglets -->
+						 <div class="tab-content" id="subTabContent">
+							 <div class="tab-pane fade show active" id="structural" role="tabpanel" aria-labelledby="structural-tab">
 								 <div class="fixed-header">
-								     <div class="header-row">
-                                         <h4>STRUCTURAL ObjectClasses</h4>
-                                         <h4 class="attribute-liste" name='attributeHeaders'>Attributs:</h4>
-                                     </div>
-                                 </div>
-                                 <div class="objectClassesContainer">
-                                     <div class="list" name="objectClassList">
-                                         <!-- La liste des objectClasses STRUCTURAL sera générée ici -->
-                                     </div>
-                                     <div class="list attributeList" name="attributeList">
-                                         <div id="attributePlaceholderStructural" name="placeHolder">
-                                             Cliquer sur un objectClass pour afficher les attributs ...
-                                         </div>
-                                         <!-- La liste des attributs sera affichée ici -->
-                                     </div>
-                                 </div>
-                             </div>
-                             <div class="tab-pane fade" id="auxiliary" role="tabpanel" aria-labelledby="auxiliary-tab">
+									 <div class="header-row">
+										 <h4>STRUCTURAL ObjectClasses</h4>
+										 <h4 class="attribute-liste" name='attributeHeaders'>Attributs:</h4>
+									 </div>
+								 </div>
+								 <div class="objectClassesContainer">
+									 <div class="list" name="objectClassList">
+										 <!-- La liste des objectClasses STRUCTURAL sera générée ici -->
+									 </div>
+									 <div class="list attributeList" name="attributeList">
+										 <div id="attributePlaceholderStructural" name="placeHolder">
+											 Cliquer sur un objectClass pour afficher les attributs ...
+										 </div>
+										 <!-- La liste des attributs sera affichée ici -->
+									 </div>
+								 </div>
+							 </div>
+							 <div class="tab-pane fade" id="auxiliary" role="tabpanel" aria-labelledby="auxiliary-tab">
 								 <div class="fixed-header">
-								     <div class="header-row">
-                                         <h4>AUXILIARY ObjectClasses</h4>
-                                         <h4 class="attribute-liste" name='attributeHeaders'>Attributs:</h4>
-                                     </div>
-                                 <div class="objectClassesContainer">
-                                     <div class="list" name="objectClassList">
-                                         <!-- La liste des objectClasses AUXILIARY sera générée ici -->
-                                     </div>
-                                     <div class="list attributeList" name="attributeList">
-                                         <div id="attributePlaceholderAuxiliary" name="placeHolder">
-                                             Cliquer sur un objectClass pour afficher les attributs ...
-                                         </div>
-                                         <!-- La liste des attributs sera affichée ici -->
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                </div>
-            </div>
-        </form>
+									 <div class="header-row">
+										 <h4>AUXILIARY ObjectClasses</h4>
+										 <h4 class="attribute-liste" name='attributeHeaders'>Attributs:</h4>
+									 </div>
+								 <div class="objectClassesContainer">
+									 <div class="list" name="objectClassList">
+										 <!-- La liste des objectClasses AUXILIARY sera générée ici -->
+									 </div>
+									 <div class="list attributeList" name="attributeList">
+										 <div id="attributePlaceholderAuxiliary" name="placeHolder">
+											 Cliquer sur un objectClass pour afficher les attributs ...
+										 </div>
+										 <!-- La liste des attributs sera affichée ici -->
+									 </div>
+								 </div>
+							 </div>
+						 </div>
+					 </div>
+				</div>
+			</div>
+		</form>
 
-        <!-- Modale pour l'édition d'attributs -->
-        <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <form id="attrForm" action="/update-attributeCtl/<%= dn  %>" method="POST">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="editModalLabel"><strong>Modifier le libellé d'attribut "<span id="attributeName"></span>"</strong></h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="form-group">
-                                <label for="newLabel"><strong>Libellé d'affichage de l'attribut :</strong></label>
-                                <input type="text" class="form-control" id="newLabel" name="newLabel" style='color:black;'>
-                            </div>
-                            <!-- Ajout des boutons radio -->
-                            <div class="form-group">
-                                <label><strong>Type d'attribut :</strong></label><br>
-                                <div class="custom-radio-group"> <!-- Container flex pour les boutons radio -->
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="attributeType" id="singleValue" value="SINGLE-VALUE">
-                                        <label class="form-check-label" for="singleValue">SINGLE-VALUE</label>
-                                    </div>
-                                    <div class="form-check" hidden>
-                                        <input class="form-check-input" type="radio" name="attributeType" id="schema" value="SCHEMA" disabled>
-                                        <label class="form-check-label" for="schema">SCHEMA</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="attributeType" id="multiValue" value="MULTI-VALUE" checked>
-                                        <label class="form-check-label" for="schema">MULTI-VALUES</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="jsValidation"><strong>Code JS de contrôle de saisie :</strong></label>
-                                <textarea class="form-control" id="jsValidation" name="jsValidation" rows="5" placeholder="Saisissez le code JavaScript ici..."></textarea>
-                            </div>
-                            <input type="hidden" id="attributeId" name="attributeId"> <!-- Champ caché pour l'attributeName -->
-                        </div>
-                        <div class="modal-footer d-flex justify-content-between">
-                            <div>
-                                <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(false)" style="background-color: #ffffe0; border: none;"> &gt;&lt; </button>
-                                <button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(true)" style="background-color: #ffffe0; border: none;"> &lt;&gt; </button>
-                            </div>
-                            <div>
-                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                                <button type="button" class="btn btn-primary" id="validerModale" onclick="submitModal(this)">Valider</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+		<!-- Modale pour l'édition d'attributs -->
+		<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<form id="attrForm" action="/update-attributeCtl/<%= dn  %>" method="POST">
+						<div class="modal-header">
+							<h5 class="modal-title" id="editModalLabel"><strong>Modifier le libellé d'attribut "<span id="attributeName"></span>"</strong></h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
+								<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+						<div class="modal-body">
+							<div class="form-group">
+								<label for="newLabel"><strong>Libellé d'affichage de l'attribut :</strong></label>
+								<input type="text" class="form-control" id="newLabel" name="newLabel" style='color:black;'>
+							</div>
+							<!-- Ajout des boutons radio -->
+							<div class="form-group">
+								<label><strong>Type d'attribut :</strong></label><br>
+								<div class="custom-radio-group"> <!-- Container flex pour les boutons radio -->
+									<div class="form-check">
+										<input class="form-check-input" type="radio" name="attributeType" id="singleValue" value="SINGLE-VALUE">
+										<label class="form-check-label" for="singleValue">SINGLE-VALUE</label>
+									</div>
+									<div class="form-check" hidden>
+										<input class="form-check-input" type="radio" name="attributeType" id="schema" value="SCHEMA" disabled>
+										<label class="form-check-label" for="schema">SCHEMA</label>
+									</div>
+									<div class="form-check">
+										<input class="form-check-input" type="radio" name="attributeType" id="multiValue" value="MULTI-VALUE" checked>
+										<label class="form-check-label" for="schema">MULTI-VALUES</label>
+									</div>
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="jsValidation"><strong>Code JS de contrôle de saisie :</strong></label>
+								<textarea class="form-control" id="jsValidation" name="jsValidation" rows="5" placeholder="Saisissez le code JavaScript ici..."></textarea>
+							</div>
+							<input type="hidden" id="attributeId" name="attributeId"> <!-- Champ caché pour l'attributeName -->
+						</div>
+						<div class="modal-footer d-flex justify-content-between">
+							<div>
+								<button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(false)" style="background-color: #ffffe0; border: none;"> &gt;&lt; </button>
+								<button type="button" class="btn btn-light btn-sm" onclick="changeModalSize(true)" style="background-color: #ffffe0; border: none;"> &lt;&gt; </button>
+							</div>
+							<div>
+								<button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+								<button type="button" class="btn btn-primary" id="validerModale" onclick="submitModal(this)">Valider</button>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
 
-        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-        <script src="/js/popupMultiValues.js"></script>
-        <script>
+		<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+		<script src="/js/popupMultiValues.js"></script>
+		<script>
 const urlParams = new URLSearchParams(window.location.search);
 const errMsg = urlParams.get('errMsg');
 const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
@@ -489,7 +489,7 @@ function checkInputFunction(input) {
 	}
 }
 
-// Sauvegrder la position de l'onglet courant
+// Sauvegarder la position de l'onglet courant
 function saveCurrentTab(){
 	const activeTab = document.querySelector('.nav-link.active');
 	if (activeTab ? activeTab.id : null) {
@@ -499,9 +499,13 @@ function saveCurrentTab(){
 
 // Rafraichir la page et se repositionner sur l'onglet courant
 function restoreValues() {
-	if (!document.getElementById('saveButton').disabled
-		&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir les abandonner ?") )
+	if (isDataChanged()) {
+		if (!confirm("Des modifications sont en cours : êtes-vous sûr de vouloir les abandonner ?"))
 			return;
+	} else {
+		alert("Ausune modification courante ...");
+		return;
+	}
 
 	// Rafraichir la page
 	saveCurrentTab();
@@ -512,7 +516,7 @@ function restoreValues() {
 
 // Abandon de la page
 function exit() {
-	if (!document.getElementById('saveButton').disabled
+	if (isDataChanged()
 		&& !confirm("Des modifications sont en cours : êtes-vous sûr de vouloir quitter ?") )
 			return;
 
@@ -553,7 +557,7 @@ function openEditModal(button, attrName) {
 	const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
 		|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 	document.getElementById('validerModale').dataset.objectClassIndex = objectClassIndex;
-	if (!document.getElementById('saveButton').disabled) {
+	if (isDataChanged()) {
 		alert("Opération impossible : il y a des modifications d'attributs en cours !");
 		return;
 	}
@@ -648,7 +652,7 @@ function changeModalSize(increase) {
 }
 
 // Valide le bouton 'saveButton' seulement sur modification d'attributs
-function checkSaveButton() {
+function isDataChanged() {
 	const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
 
 	// Vérifie si des entrées ont été modifiées
@@ -659,8 +663,8 @@ function checkSaveButton() {
 		if (field.name) { // Pour les inputs multi-values (hidden), la valeur initiale est dans le champ de saisie
 			const editInput = document.getElementById(field.name);
 			result = (editInput && editInput !== field)
-					?(field.value !== editInput.defaultValue)
-					:(field.value !== field.defaultValue);
+				?(field.value !== editInput.defaultValue)
+				:(field.value !== field.defaultValue);
 		}
 		return result;
 	});
@@ -670,9 +674,26 @@ function checkSaveButton() {
 		(!!item.DELETED && !item.ADDED) || (!!item.ADDED && !item.DELETED)
 	);
 
-	// État du bouton de sauvegarde
+	return isAnyInputChanged || objClsModified;
+}
+
+function areAllMUSTAttributesFilled() {
+	const allMUSTAttributeNames = [...new Set(objectClassesDetails.flatMap(objectClass => 
+		objectClass.MUST.map(attr => attr.NAME[0])
+	))];
+
+	return allMUSTAttributeNames.every(name => {
+		const inputs = document.getElementsByName(name);
+		const input  = document.getElementById(name);
+		return (input && !Array.from(inputs).includes(input))
+			?JSON.parse(inputs[0].value).length>0	// C'est un popup multi-values[]
+			:inputs[0].value.trim().length>0;		// C'est un input simple
+	});
+}
+
+function checkSaveButton() {
 	const saveButton = document.getElementById('saveButton');
-	const isButtonEnabled = isAnyInputChanged || objClsModified;
+	const isButtonEnabled = areAllMUSTAttributesFilled() && isDataChanged();
 
 	// Mise à jour de l'état du bouton
 	saveButton.disabled = !isButtonEnabled;
@@ -905,7 +926,7 @@ function fillAttributeList(objectClass, attributeList, attributePlaceholder, att
 
 // Appel de la fonction pour init à la fin du chargement du DOM
 document.addEventListener('DOMContentLoaded', init);
-        </script>
-    </div>
+		</script>
+	</div>
 </body>
 </html>
