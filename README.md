@@ -167,7 +167,6 @@ function check(input, data, initialValue) {
 
 4. Exemple de popup de saisie d'un mot de passe SSHA :
 
-...
 
 ```
 function check(input,data,initialValue){
@@ -187,7 +186,7 @@ document.body.appendChild(s);
 }
 ```
 
-...
+Ce qui donnera :
 
  ![](doc/images/passwordEdit.png)
 
