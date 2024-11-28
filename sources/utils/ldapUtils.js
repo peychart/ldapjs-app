@@ -1,3 +1,25 @@
+/*  LDAP-editor (Version 0.1 - 2022/06)
+    <https://github.com/peychart/croncpp>
+
+    Copyright (C) 2022  -  peychart
+
+    This program is free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of
+    the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See the GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public
+    License along with this program.
+    If not, see <http://www.gnu.org/licenses/>.
+
+    Details of this licence are available online under:
+                        http://www.gnu.org/licenses/gpl-3.0.html
+*/
 const ldap = require('ldapjs');
 const {
 	isEqual
@@ -143,7 +165,7 @@ function generateLDIF(oldObject, newObject, dn) {
 function ldapValidate(object) {
 	const errors = []; // Stocke les messages d'erreur
 
-errors.push('Break de debug ...');
+errors.push('(ceci est un break de debug ...)');
 	return errors.length > 0 ? errors : null; // Retourne les erreurs, sinon null
 }
 
