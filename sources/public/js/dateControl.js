@@ -1,4 +1,4 @@
-function check(input, data, initialValue) {
+function check(input, data, initialValue) { // Exemple de procédure de contrôle de saisie JS stockée dans la base ...
     let value = input.value.replace(/[^0-9/]/g, '').replace(/\/+/g, '/');
     if (
         (value.length === 1 && parseInt(value.slice(0, 1), 10) > 3) ||
