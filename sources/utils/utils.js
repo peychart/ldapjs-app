@@ -23,8 +23,8 @@ function isEqual(value1, value2) {
         }
 
         // Si ce sont des objets (non tableaux)
-        const keys1 = Object.keys(value1);
-        const keys2 = Object.keys(value2);
+        const keys1 = Object.getOwnPropertyNames(value1);
+        const keys2 = Object.getOwnPropertyNames(value2);
 
         if (keys1.length !== keys2.length) {
             return false; // Les objets ont des nombres de clés différents  
