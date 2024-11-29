@@ -1,24 +1,24 @@
-/*  LDAP-editor (Version 0.1 - 2022/06)
-    <https://github.com/peychart/croncpp>
+/*	LDAP-editor (Version 0.1 - 2022/06)
+	<https://github.com/peychart/croncpp>
 
-    Copyright (C) 2022  -  peychart
+	Copyright (C) 2022  -  peychart
 
-    This program is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of
-    the License, or (at your option) any later version.
+	This program is free software: you can redistribute it and/or
+	modify it under the terms of the GNU General Public License as
+	published by the Free Software Foundation, either version 3 of
+	the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-    See the GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty
+	of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public
-    License along with this program.
-    If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public
+	License along with this program.
+	If not, see <http://www.gnu.org/licenses/>.
 
-    Details of this licence are available online under:
-                        http://www.gnu.org/licenses/gpl-3.0.html
+	Details of this licence are available online under:
+						http://www.gnu.org/licenses/gpl-3.0.html
 */
 const ldap = require('ldapjs');
 const {
@@ -111,7 +111,7 @@ function generateLDIF(oldObject, newObject, dn) {
 					operation: 'delete',
 					modification: {
 						type: key,
-						values: [oldObject[key]]
+						values: Array.isArray(oldObject[key]) ? oldObject[key] : [oldObject[key]]
 					}
 				});
 			} else {
@@ -120,7 +120,31 @@ function generateLDIF(oldObject, newObject, dn) {
 						? (Array.isArray(oldObject[key]) ? oldObject[key] : [oldObject[key]])
 						: (Array.isArray(oldObject[key]) ? oldObject[key][0] : oldObject[key]);
 
-				if (!isEqual(oldValue, newValue)) {
+				if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+					// Vérifie les ajouts et suppressions dans les tableaux
+					const addedValues = newValue.filter(value => !oldValue.includes(value));
+					const removedValues = oldValue.filter(value => !newValue.includes(value));
+
+					if (addedValues.length > 0) {
+						changes.push({
+							operation: 'add',
+							modification: {
+								type: key,
+								values: addedValues
+							}
+						});
+					}
+
+					if (removedValues.length > 0) {
+						changes.push({
+							operation: 'delete',
+							modification: {
+								type: key,
+								values: removedValues
+							}
+						});
+					}
+				} else if (!isEqual(oldValue, newValue)) {
 					// Si la clé existe dans les deux objets mais avec des valeurs différentes
 					changes.push({
 						operation: 'replace',
@@ -617,7 +641,7 @@ function setInheritedMustAttributes(ldapSchema, objectClass) {
 				results = Array.from(new Set([...results, ...supMustAttributes]));
 			}
 		}
-		return results; // Retourner le tableau des attributs MUST  
+		return results; // Retourner le tableau des attributs MUST
 	};
 
 	return {
@@ -639,16 +663,16 @@ function enrichObjectClassWithAttributes(ldapSchema, objectClass) {
 		// Pour chaque attribut, obtenir sa définition
 		['MUST', 'MAY'].forEach(key => {
 				const enrichedAttributes = objectClass[key].map(attribute => {
-                    const attributeDetails = ldapSchema.attributes.find(attr =>
-                        attr.NAME.some(name => name.toLowerCase() === attribute.toLowerCase())
-                    );
+					const attributeDetails = ldapSchema.attributes.find(attr =>
+						attr.NAME.some(name => name.toLowerCase() === attribute.toLowerCase())
+					);
 
 				if (attributeDetails)
-						return { ...attributeDetails };	// Cloner l'objet d'attribut 
+						return { ...attributeDetails };	// Cloner l'objet d'attribut
 				else	throw new Error(`Pas de définition d'attribut correcte dans le schema pour "${attribute}".`);
 			});
 
-			// Remplacer le tableau d'attributs par le tableau enrichi  
+			// Remplacer le tableau d'attributs par le tableau enrichi
 			objectClass[key] = enrichedAttributes;
 		});
 
