@@ -214,7 +214,7 @@ async function updateLDAP(client, dn, newObject) {
 
 		return true;
 	} catch(err) {
-		if (err === 255)
+		if (err >= 250)
 			throw err;
 		else {
 			console.error(`Une erreur est survenue: ${err.message}`);
