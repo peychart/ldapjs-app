@@ -104,7 +104,7 @@ function generateLDIF(oldObject, newObject, dn) {
 
 	// Parcourir les propriétés de l'ancien objet
 	if (oldObject !== null && typeof oldObject === 'object') Object.keys(oldObject).forEach(key => {
-		if (oldObject.hasOwnProperty(key) && key !== 'dn' && key !== 'objectClass') {
+		if (oldObject.hasOwnProperty(key) && key !== 'dn') {
 			if (!newObject || !newObject.hasOwnProperty(key)) {
 				// Si la clé n'est pas dans le nouvel objet, elle a été supprimée
 				changes.push({
