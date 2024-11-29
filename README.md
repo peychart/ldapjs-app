@@ -206,7 +206,23 @@ function check(input, data, initialValue) {
         (value.length > 10)
     ) value = value.slice(0, -1);
     input.value = value;
+
+    const blurHandler = input.onblur = function() {
+        if (!isValidDate(value)) input.value = initialValue; 
+        input.removeEventListener('blur', blurHandler);
+    };
 }
+
+function isValidDate(value) {
+    const regex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/;
+    if (!regex.test(value)) return false;
+    const parts = value.split('/');
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+    const daysInMonth = [31, (isLeapYear(year) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth[month - 1];
+} function isLeapYear(year) {return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);}
 ```
 
 6. (à suivre)
