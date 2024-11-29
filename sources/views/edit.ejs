@@ -775,17 +775,19 @@ function removeHiddenTabs() {
 		});
 	}
 
-	// Marquer les objectClasses ADDED/DELETED dans l'envoi du formulaire
-	objectClassesDetails.forEach(objectClass => {
-		if (!!objectClass.DELETED || !!objectClass.ADD) {
-			const item = document.createElement('input');
-			item.name = !!objectClass.DELETED ?'objectClass_Deleted' :'objectClass_Added';
-			item.value = objectClass.NAME[0];
-			item.type = 'hidden';
-			form.appendChild(item);
-		}
-	});
 	if (reloadRequest) { // Juste rafraichir la page pour l'affichage du new objectClass
+		// Marquer les objectClasses ADDED/DELETED dans l'envoi du formulaire
+		objectClassesDetails.forEach(objectClass => {
+			if (!!objectClass.DELETED || !!objectClass.ADD) {
+				const item = document.createElement('input');
+				item.name = !!objectClass.DELETED ?'objectClass_Deleted' :'objectClass_Added';
+				item.value = objectClass.NAME[0];
+				item.type = 'hidden';
+				form.appendChild(item);
+			}
+		});
+		
+		// Marquer le formulaire pour un simple reload
 		const item = document.createElement('input');
 		item.name = 'reload';
 		item.type = 'checkbox';
@@ -794,8 +796,12 @@ function removeHiddenTabs() {
 		form.appendChild(item);
 	} else { // Remove all hidden tabs before base update
 		objectClassesDetails.forEach(objectClass => {
-			if (!!objectClass.DELETED)
+			if (!!objectClass.DELETED) {
 				document.getElementById(objectClass.NAME[0] + '-tab').remove();
+				Array.from(document.getElementsByName('objectClass')).forEach(el => {
+					if (el.value === objectClass.NAME[0]) el.remove();
+				});
+			}
 		});
 	}
 }
