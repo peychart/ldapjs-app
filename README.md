@@ -206,7 +206,7 @@ function check(input, data, initialValue) {
   (value.length > 10)
  ) value = value.slice(0, -1);
  input.value = value;
-
+ // Validation ou annulation sur sortie du champ de saisie
  const blurHandler = input.onblur = function() {
   if (!isValidDate(value)) input.value = initialValue; 
   input.removeEventListener('blur', blurHandler);
