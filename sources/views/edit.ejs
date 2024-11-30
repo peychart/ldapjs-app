@@ -279,8 +279,8 @@
 				<% objectClassesDetails.forEach((objectClass, objectClassIndex) => {
 					const objName = objectClass.NAME[0];
 				%>
-					<input type="hidden" name="objectClass" value="<%= objName %>"/>
 					<div class="tab-pane fade <%= objectClassIndex === 0 ? 'show active' : '' %>" id="<%= objName %>" role="tabpanel" aria-labelledby="<%= objName %>-tab">
+						<input type="hidden" name="objectClass" value="<%= objName %>"/>
 						<% ['MUST', 'MAY'].forEach(TYPE => { %>
 							<h3 class="underline">Attributs <%= (TYPE === 'MUST' ?'obligatoires' :'optionnels') %> :</h3>
 							<ul>
@@ -473,9 +473,10 @@ function checkInputFunction(input) {
 
 		// Excution des scripts personnailisés
 		if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
-			eval(objectAttribute.valueCheck[0]);
+console.log('objectAttribute.valueCheck[0]: ', objectAttribute.valueCheck[0]);
+			eval (objectAttribute.valueCheck[0]);
 			// Transmettre l'input de saisie ( ->id(name) ) pour les champs multi-values :
-			check(document.getElementById(input.name) ?? input, objectClassesDetails, input.defaultValue);
+			check (document.getElementById(input.name) ?? input, objectClassesDetails, input.defaultValue);
 		}
 
 		// Mise à jour de l'attribut dans les autres onglets
@@ -510,7 +511,7 @@ function restoreValues() {
 	saveCurrentTab();
 
 	// Redirige vers une route du serveur d'extraction LDAP
-	window.location.href = '/clearEdit/<%= dn %>';
+	window.location.href = '/newEdit/<%= dn %>';
 }
 
 // Abandon de la page
@@ -782,7 +783,7 @@ function removeHiddenTabs() {
 				item.name = !!objectClass.DELETED ?'objectClass_Deleted' :'objectClass_Added';
 				item.value = objectClass.NAME[0];
 				item.type = 'hidden';
-				form.appendChild(item);
+				mainForm.appendChild(item);
 			}
 		});
 		
@@ -792,25 +793,24 @@ function removeHiddenTabs() {
 		item.type = 'checkbox';
 		item.hidden = true;
 		item.checked = true;	// Passer l'info au formulaire
-		form.appendChild(item);
+		mainForm.appendChild(item);
 	} else { // Remove all hidden tabs before base update
 		objectClassesDetails.forEach(objectClass => {
 			if (!!objectClass.DELETED) {
 				document.getElementById(objectClass.NAME[0] + '-tab').remove();
-				Array.from(document.getElementsByName('objectClass')).forEach(el => {
-					if (el.value === objectClass.NAME[0]) el.remove();
-				});
+				document.getElementById(objectClass.NAME[0]).remove();
 			}
 		});
 	}
 }
 
 // Gestion de la soumission du formulaire mainForm
-document.getElementById('mainForm').addEventListener('submit', (event) => {
+const mainForn = document.getElementById('mainForm');
+mainForn.addEventListener('submit', (event) => {
 	removeHiddenTabs(); // Elimination des objectClasses deleted (onglets hidden)
-	form.submit();
+	mainForn.submit();
 });
-document.getElementById('mainForm').addEventListener('keydown', (event) => {
+mainForm.addEventListener('keydown', (event) => {
 	// Récupérer l'élément actif
 	const activeElement = document.activeElement;
 
