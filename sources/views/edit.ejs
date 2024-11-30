@@ -295,13 +295,13 @@
 									</button>
 									<% if (currentAttr.MULTI_VALUE !== 'SINGLE-VALUE') { %>
 										<!-- popupMultiValues -->
-										<div class="popupContainer" data-attr-name="<%= attrName %>">
+										<div class="popupContainer">
 											<div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
 												<input type="text"
 													name="<%= attrName %>"
 													data-object-class-index = '<%= objectClassIndex %>'
 													placeholder="Éditez ici les valeurs de l'attribut '<%= attrName %>'"
-													class="editInput"
+													class="editInput field"
 													value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :(currentAttr.VALUES != null ?[currentAttr.VALUES] :[])) %>"
 													oninput="checkInputFunction(this);" />
 											</div>
@@ -311,7 +311,7 @@
 											name="<%= attrName %>"
 											data-object-class-index = '<%= objectClassIndex %>'
 											placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
-											class="form-control"
+											class="form-control field"
 											value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) ?? '' %>"
 											oninput="checkInputFunction(this);"
 										/>
@@ -444,7 +444,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const errMsg = urlParams.get('errMsg');
 const objectClassesDetails = <%- JSON.stringify(objectClassesDetails) %>;
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
-let activeTabId = localStorage.getItem('activeTab');
 let reloadRequest = false;
 
 function init() {
@@ -473,7 +472,6 @@ function checkInputFunction(input) {
 
 		// Excution des scripts personnailisés
 		if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
-console.log('objectAttribute.valueCheck[0]: ', objectAttribute.valueCheck[0]);
 			eval (objectAttribute.valueCheck[0]);
 			// Transmettre l'input de saisie ( ->id(name) ) pour les champs multi-values :
 			check (document.getElementById(input.name) ?? input, objectClassesDetails, input.defaultValue);
@@ -492,14 +490,6 @@ console.log('objectAttribute.valueCheck[0]: ', objectAttribute.valueCheck[0]);
 	}
 }
 
-// Sauvegarder la position de l'onglet courant
-function saveCurrentTab(){
-	const activeTab = document.querySelector('.nav-link.active');
-	if (activeTab ? activeTab.id : null) {
-		localStorage.setItem('activeTab', activeTab.id);
-	}
-}
-
 // Rafraichir la page et se repositionner sur l'onglet courant
 function restoreValues() {
 	if (isDataChanged()) {
@@ -509,8 +499,6 @@ function restoreValues() {
 
 	// Rafraichir la page
 	saveCurrentTab();
-
-	// Redirige vers une route du serveur d'extraction LDAP
 	window.location.href = '/newEdit/<%= dn %>';
 }
 
@@ -653,28 +641,42 @@ function changeModalSize(increase) {
 
 // Valide le bouton 'saveButton' seulement sur modification d'attributs
 function isDataChanged() {
-	const inputs = document.querySelectorAll('.tab-pane input[type="text"], .tab-pane input[type="hidden"]');
-
-	// Vérifie si des entrées ont été modifiées
-	const isAnyInputChanged = Array.from(inputs)
-								.filter(field => field.closest('.tab-pane').style.display !== 'none')
-								.some(field =>{
-		let result=false;
-		if (field.name) { // Pour les inputs multi-values (hidden), la valeur initiale est dans le champ de saisie
-			const editInput = document.getElementById(field.name);
-			result = (editInput && editInput !== field)
-				?(field.value !== editInput.defaultValue)
-				:(field.value !== field.defaultValue);
-		}
-		return result;
+	// Sélectionne tous les inputs de type text et hidden dans .tab-pane
+	const inputs = document.querySelectorAll('.tab-pane input.field[type="text"], .tab-pane input.field[type="hidden"]');
+	const inputMap = {}; // Tableau pour stocker les inputs non clonés
+	inputs.forEach(input => {
+		if (input.name) inputMap[input.name] = input; // Garantir l'unicité des input.name traités
 	});
 
-	// Vérifie si des objetClasses ont été ajoutés ou supprimés
-	const objClsModified = objectClassesDetails.some(item => 
+	const arraysEqualWithDuplicates = (arr1, arr2) => {
+		if (arr1.length !== arr2.length)			return false;
+		const arr2Copy = [...arr2]; // Copie de arr2
+		for (let item of arr1) {
+			const index = arr2Copy.indexOf(item);
+			if (index === -1)						return false;
+			arr2Copy.splice(index, 1); // Supprime l'élément à l'index trouvé  
+		}
+		// Si arr2Copy est vide après le parcours de arr1, les tableaux sont égaux  
+		return arr2Copy.length === 0;
+	};
+
+	// Vérifier les changements
+	const hasChanged = Object.values(inputMap).some(input => {
+		if (input.classList.contains('cloned')) {		// Vérifiez si les multi-valeurs ont changé
+			const defaultValue = JSON.parse(input.getAttribute('data-default-value') || '[]');
+			const currentValue = JSON.parse(input.value || '[]');
+			return !arraysEqualWithDuplicates(defaultValue, currentValue);
+		} else {										// Vérifie si la valeur a changé
+			return input.value !== input.defaultValue;
+		}
+	});
+
+	// Vérifiez également s'il y a modification dans les objetsClasses
+	const objClsModified = objectClassesDetails.some(item =>
 		(!!item.DELETED && !item.ADDED) || (!!item.ADDED && !item.DELETED)
 	);
 
-	return isAnyInputChanged || objClsModified;
+	return hasChanged || objClsModified; // Retourne true si des changements ont été détectés
 }
 
 function areAllMUSTAttributesFilled() {
@@ -744,6 +746,7 @@ function objectClassesEdit(checkbox, objectClassName) {
 
 			// Submit() interceptable de mainForm
 			reloadRequest = true;	// To allow the new attributes to be entered
+			saveCurrentTab();
 			document.getElementById('mainForm').dispatchEvent(new Event('submit', { cancelable: true })); // Déclenche l'événement de soumission 
 		}
 	} else {
@@ -808,6 +811,7 @@ function removeHiddenTabs() {
 const mainForn = document.getElementById('mainForm');
 mainForn.addEventListener('submit', (event) => {
 	removeHiddenTabs(); // Elimination des objectClasses deleted (onglets hidden)
+	saveCurrentTab();
 	mainForn.submit();
 });
 mainForm.addEventListener('keydown', (event) => {
@@ -820,23 +824,34 @@ mainForm.addEventListener('keydown', (event) => {
 	}
 });
 
+// Sauvegarder la position de l'onglet courant
+function saveCurrentTab(){
+	let activeTab;
+	['myTab', 'add'].forEach(tabsId => {
+		activeTab = document.getElementById(tabsId).querySelector('.nav-link.active');
+		if (activeTab && activeTab.id) localStorage.setItem(tabsId === 'myTab' ?'activeObjectClassTab' :'activeObjectClassAddTab', activeTab.id);
+	});
+}
+
+// Retablir la position sur le tab ADD/REMOVE objectClasses
+document.getElementById('add-tab').addEventListener('click', function(event) {
+	let activeTabId = localStorage.getItem('activeObjectClassAddTab');
+	if (!activeTabId) activeTabId = document.getElementById('add').querySelectorAll('.nav-link')[0].id;
+	document.getElementById(activeTabId).click();
+});
+// Ajout des gestionnaires d'événements pour ses deux sous-onglets
+document.querySelectorAll('#add .nav-link').forEach(link => {
+	link.addEventListener('click', function(event) {
+		saveCurrentTab(); // Appelle la fonction pour sauvegarder l'onglet actif
+	});
+});
+
 // Fonction pour restaurer la position sur l'onglet actif après le rechargement page
 window.onload = function() {
-	activeTabId = localStorage.getItem('activeTab');
-	if (activeTabId) {
-		const targetTab = document.getElementById(activeTabId);
-		if (targetTab) {
-			targetTab.click(); // Simule le clic sur l'onglet actif
-		}
-	}
+	const activeTabId = localStorage.getItem('activeObjectClassTab')
+		|| document.getElementById('myTab').querySelectorAll('.nav-link')[0].id;
+	document.getElementById(activeTabId).click(); // Simule le clic sur l'onglet actif
 };
-
-function findAttrPropertyByName(name, property) {
-	const attribute = ldapSchema.attributes.find(attr =>
-		attr.NAME.includes(name) // Vérifie si le NAME contient le nom recherché
-	);
-	return attribute ?attribute[property] || null :null;
-}
 
 // AFFICHAGE de l'onglet "+"
 const objectClassLists = Array.from(document.getElementsByName('objectClassList'));
@@ -929,9 +944,10 @@ function fillAttributeList(objectClass, attributeList, attributePlaceholder, att
 		if (objectClass[key]) {
 			objectClass[key].forEach(attrName => {
 				const attrItem = document.createElement('div');
+				const attribute = ldapSchema.attributes.find(attr => attr.NAME.includes(attrName));
 				attrItem.className = 'list-item';
 				attrItem.innerText = `${attrName} (${key})`; // Le nom de l'attribut
-				attrItem.title = findAttrPropertyByName(attrName, 'DESC') || 'Aucune description disponible.';
+				attrItem.title = attribute?.DESC || 'Aucune description disponible.';
 				attributeList.appendChild(attrItem);
 				hasAttributes = true; // Indiquer qu'il y a des attributs
 			});
