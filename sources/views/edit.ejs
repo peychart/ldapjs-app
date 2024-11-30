@@ -807,16 +807,16 @@ function removeHiddenTabs() {
 }
 
 // Gestion de la soumission du formulaire mainForm
-const form = document.getElementById('mainForm'); // Sélection formulaire
-if (form) {
-	form.addEventListener('submit', (event) => {
-
-		// Elimination des objectClasses deleted (onglets hidden)
-		removeHiddenTabs();
-
-		form.submit();
-	});
-}
+document.getElementById('mainForm').addEventListener('submit', (event) => {
+	removeHiddenTabs(); // Elimination des objectClasses deleted (onglets hidden)
+	form.submit();
+});
+document.getElementById('mainForm').addEventListener('keydown', (event) => {
+	// Vérifier si la touche pressée est 'Enter' et que le focus est sur le formulaire lui-même
+	if (event.key === 'Enter') {
+		event.preventDefault(); // Empêche la soumission du formulaire
+	}
+});
 
 // Fonction pour restaurer la position sur l'onglet actif après le rechargement page
 window.onload = function() {
