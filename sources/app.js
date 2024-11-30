@@ -1,24 +1,24 @@
-/*  LDAP-editor (Version 0.1 - 2022/06)
-    <https://github.com/peychart/croncpp>
+/*	LDAP-editor (Version 0.1 - 2022/06)
+	<https://github.com/peychart/croncpp>
 
-    Copyright (C) 2022  -  peychart
+	Copyright (C) 2022  -  peychart
 
-    This program is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of
-    the License, or (at your option) any later version.
+	This program is free software: you can redistribute it and/or
+	modify it under the terms of the GNU General Public License as
+	published by the Free Software Foundation, either version 3 of
+	the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-    See the GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty
+	of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+	See the GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public
-    License along with this program.
-    If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public
+	License along with this program.
+	If not, see <http://www.gnu.org/licenses/>.
 
-    Details of this licence are available online under:
-                        http://www.gnu.org/licenses/gpl-3.0.html
+	Details of this licence are available online under:
+						http://www.gnu.org/licenses/gpl-3.0.html
 */
 const express = require('express');
 const ldap = require('ldapjs');
@@ -59,15 +59,15 @@ let config;
 (async () => {
 	// Chargement initial de la configuration
 	const logger = createLogger({
-level: 'error', // 'info' Niveau de log par défaut  
-    format: format.combine(
-        format.timestamp(),
-        format.json()
-    ),
-    transports: [
-        new transports.Console(), // Journalisation dans la console  
-        new transports.File({ filename: 'error.log', level: 'error' }), // Journalisation des erreurs dans un fichier  
-    ],
+level: 'error', // 'info' Niveau de log par défaut
+	format: format.combine(
+		format.timestamp(),
+		format.json()
+	),
+	transports: [
+		new transports.Console(), // Journalisation dans la console
+		new transports.File({ filename: 'error.log', level: 'error' }), // Journalisation des erreurs dans un fichier
+	],
 });
 	config = loadConfig();
 
@@ -125,14 +125,6 @@ level: 'error', // 'info' Niveau de log par défaut
 			// Rendre la vue de connexion avec le login précédent
 			res.render('login', { login, error: null, ldapUrl: `${config.ldap.url}:${config.ldap.port}` });
 		});
-
-process.on('uncaughtException', (err) => {
-   console.error('Uncaught Exception:', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
 
 		// ***********************************************************
 		// Route pour traiter la soumission du formulaire de connexion
@@ -289,11 +281,11 @@ process.on('unhandledRejection', (reason, promise) => {
 		/* *****************************
 		 * Route d'édition de l'oject dn
 		 */
-		app.get('/clearEdit/:dn', async (req, res) => {
+		app.get('/newEdit/:dn', async (req, res) => {
 			const dn = req.params.dn;
 			delete req.session.edit;
 
-			return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
+			return res.redirect(`/edit/${dn}`);
 			//return res.redirect(`/edit/${dn}`);
 		});
 
@@ -323,7 +315,7 @@ process.on('unhandledRejection', (reason, promise) => {
 							throw new Error(`Objet ${dn} non trouvé`); // Lancer une erreur vers le catch
 						})
 					)[0];
-				} 
+				}
 
 				// On élimie l'objectClass === 'top'
 				const objectClassesToSearch = [
@@ -375,8 +367,8 @@ process.on('unhandledRejection', (reason, promise) => {
 							const attrCustomizations = attributesConfig.find(item => item.cn.includes(currentAttr.OID)) ?? null;
 
 							// Déterminer si la data d'attribut doit être [] ou SINGLE_VALUE
-                    		const customMultiValue = attrCustomizations?.ou ?? null;
-                    		const isMultiValue = !currentAttr.SINGLE_VALUE && (customMultiValue?.[0] !== 'SINGLE-VALUE');
+							const customMultiValue = attrCustomizations?.ou ?? null;
+							const isMultiValue = !currentAttr.SINGLE_VALUE && (customMultiValue?.[0] !== 'SINGLE-VALUE');
 							if (!isMultiValue) currentAttr.MULTI_VALUE = 'SINGLE-VALUE';
 
 							if (attrCustomizations) {
@@ -517,7 +509,7 @@ process.on('unhandledRejection', (reason, promise) => {
 //console.log('/n/nobjectData: ', objectData);	// Pour debug
 
 				if (objectClassesEdition) {
-					throw 254;
+					throw 255;
 				} else {
 					// Mise à jour de la base LDAP
 					await updateLDAP(client, dn, objectData);
@@ -525,10 +517,10 @@ process.on('unhandledRejection', (reason, promise) => {
 
 				// Redirection vers la page d'édition du dn
 				//return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
-				return res.status(200).redirect(`/edit/${dn}`);
+				return res.status(200).redirect(`/newEdit/${dn}`);
 				//return res.redirect(`/edit/${dn}`);
 			} catch(err) {
-				if (err.code === 255 || err === 254 ) {						// Poursuite de l'édition du dn
+				if (err.code === 255 || err === 255 ) {						// Poursuite de l'édition du dn
 					req.session.edit = {...req.session.edit, objectData: objectData};
 					return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
 					//return res.redirect(`/edit/${dn}`);
@@ -617,7 +609,7 @@ process.on('unhandledRejection', (reason, promise) => {
 				// Mise à jour dans la base LDAP
 				await updateAttributeConfigInLDAP(client, config, attrName, attrConf);
 
-				return res.redirect(`/edit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
+				return res.redirect(`/newEdit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
 				//return res.redirect(`/edit/${dn}`);
 
 			} catch(error) {
