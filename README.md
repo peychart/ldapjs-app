@@ -195,33 +195,31 @@ Ce qui donnera :
 
 ```
 function check(input, data, initialValue) {
-    let value = input.value.replace(/[^0-9/]/g, '').replace(/\/+/g, '/');
-    if (
-        (value.length === 1 && parseInt(value.slice(0, 1), 10) > 3) ||
-        (value.length < 3 && parseInt(value.slice(0, 2), 10) > 31) ||
-        (value.length < 5 && parseInt(value.slice(3, 4), 10) > 1) ||
-        (value.length < 6 && parseInt(value.slice(3, 5), 10) > 12) ||
-        (value.length > 2 && value[2] !== '/') ||
-        (value.length > 5 && value[5] !== '/') ||
-        (value.length > 10)
-    ) value = value.slice(0, -1);
-    input.value = value;
+ let value = input.value.replace(/[^0-9/]/g, '').replace(/\/+/g, '/');
+ if (value.length === 3 || value.length === 6) value = value.slice(0, -1) + '/';
+ if ((value.length === 1 && parseInt(value.slice(0, 1), 10) > 3) ||
+  (value.length < 3 && parseInt(value.slice(0, 2), 10) > 31) ||
+  (value.length < 5 && parseInt(value.slice(3, 4), 10) > 1) ||
+  (value.length < 6 && parseInt(value.slice(3, 5), 10) > 12) ||
+  (value.length > 2 && value[2] !== '/') ||
+  (value.length > 5 && value[5] !== '/') ||
+  (value.length > 10)
+ ) value = value.slice(0, -1);
+ input.value = value;
 
-    const blurHandler = input.onblur = function() {
-        if (!isValidDate(value)) input.value = initialValue; 
-        input.removeEventListener('blur', blurHandler);
-    };
-}
-
+ const blurHandler = input.onblur = function() {
+  if (!isValidDate(value)) input.value = initialValue; 
+  input.removeEventListener('blur', blurHandler);
+};}
 function isValidDate(value) {
-    const regex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/;
-    if (!regex.test(value)) return false;
-    const parts = value.split('/');
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    const year = parseInt(parts[2], 10);
-    const daysInMonth = [31, (isLeapYear(year) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth[month - 1];
+ const regex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/;
+ if (!regex.test(value)) return false;
+ const parts = value.split('/');
+ const day = parseInt(parts[0], 10);
+ const month = parseInt(parts[1], 10);
+ const year = parseInt(parts[2], 10);
+ const daysInMonth = [31, (isLeapYear(year) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+ return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth[month - 1];
 } function isLeapYear(year) {return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);}
 ```
 
