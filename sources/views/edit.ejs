@@ -56,7 +56,6 @@
 			padding: 0; /* Supprime le padding pour un bouton plus compact */
 			font-size: 0.9em; /* Réduit la taille de la police pour le bouton */
 			margin-left: 5px; /* Ajoute un espacement à gauche du bouton */
-/*		  color: #000000; /* Couleur du texte en noir */
 		}
 		.edit-btn {
 			font-size: 0.8em; /* Réduit la taille de l'icône */
@@ -301,7 +300,7 @@
 												<input type="text"
 													name="<%= attrName %>"
 													data-object-class-index = '<%= objectClassIndex %>'
-													placeholder="Éditez ici les valeurs  de l'attribut '<%= attrName %>'"
+													placeholder="Éditez ici les valeurs de l'attribut '<%= attrName %>'"
 													class="editInput"
 													value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :(currentAttr.VALUES != null ?[currentAttr.VALUES] :[])) %>"
 													oninput="checkInputFunction(this);" />
@@ -385,7 +384,7 @@
 		<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
 			<div class="modal-dialog" role="document">
 				<div class="modal-content">
-					<form id="attrForm" action="/update-attributeCtl/<%= dn  %>" method="POST">
+					<form id="attrForm" action="/update-attributeCtl/<%= dn %>" method="POST">
 						<div class="modal-header">
 							<h5 class="modal-title" id="editModalLabel"><strong>Modifier le libellé d'attribut "<span id="attributeName"></span>"</strong></h5>
 							<button type="button" class="close" data-dismiss="modal" aria-label="Fermer">
@@ -812,8 +811,11 @@ document.getElementById('mainForm').addEventListener('submit', (event) => {
 	form.submit();
 });
 document.getElementById('mainForm').addEventListener('keydown', (event) => {
+	// Récupérer l'élément actif
+	const activeElement = document.activeElement;
+
 	// Vérifier si la touche pressée est 'Enter' et que le focus est sur le formulaire lui-même
-	if (event.key === 'Enter') {
+	if (event.key === 'Enter' && !['TEXTAREA'].includes(activeElement.tagName)) {
 		event.preventDefault(); // Empêche la soumission du formulaire
 	}
 });
