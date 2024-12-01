@@ -164,12 +164,13 @@ function generateLDIF(oldObject, newObject, dn) {
 		if (Array.isArray(newObject[key]))
 			newObject[key] = newObject[key].filter(value => value !== null);
 
+		// Vérifiez si la clé est dans le nouvel objet mais pas dans l'ancien
 		if (newObject.hasOwnProperty(key)
 			&& (!oldObject || !oldObject.hasOwnProperty(key))
 			&& newObject[key] !== null
 			&& newObject[key] !== undefined
 			&& newObject[key] !== ''
-			&& !(Array.isArray(newObject[key]) && (newObject[key].length === 0 || newObject[key][0]))
+			&& !(Array.isArray(newObject[key]) && newObject[key].length === 0)
 			) {
 			// Si la clé est dans le nouvel objet mais pas dans l'ancien, c'est un ajout
 			changes.push({
@@ -216,7 +217,8 @@ async function updateLDAP(client, dn, newObject) {
 			throw new Error(`Aucun objet trouvé pour DN: ${dn}`);
 		}
 
-//console.log('oldObject:', oldObject);	//pour debug
+//console.clear();
+//console.log('\n\noldObject:', oldObject[0]);	//pour debug
 //console.log('\n\nnewObject:', newObject);	//pour debug
 
 		// Génération du LDIF des changements
