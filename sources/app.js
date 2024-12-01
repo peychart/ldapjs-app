@@ -455,11 +455,6 @@ level: 'error', // 'info' Niveau de log par défaut
 						// En cas d'erreur : retourne la valeur d'origine en string pour LDAP-JS
 						return (typeof val !== 'string') ?JSON.stringify(val) :val;
 				}	};
-				const noEmpty = (val) => {
-					return (!val || !Array.isArray(val))
-						?val
-						:Array.from(new Set(val?.filter(el => el !== null && el !== undefined && el !== '' && el !== false && !Number.isNaN(el))));
-				}
 
 //console.clear(); console.log('req.body: ', JSON.stringify(req.body, null, 2), '\n\n');	// Pour debug
 
