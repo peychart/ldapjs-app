@@ -1,24 +1,19 @@
 function initializePopup(container) {
-	const attrName = container.getAttribute('data-attr-name'); // Récupérer le nom dynamique  
 	const editInput = container.querySelector('.editInput');
 	const hiddenInput = editInput.cloneNode(true); // Création du champ caché pour values au formulaire
-	hiddenInput.type = 'hidden';
-	editInput.id = editInput.name; editInput.removeAttribute('name'); editInput.removeAttribute('oninput');
+	hiddenInput.classList.add('cloned'); hiddenInput.type = 'hidden';
+	hiddenInput.setAttribute('data-default-value', hiddenInput.defaultValue);
+	editInput.removeAttribute('name'); editInput.removeAttribute('oninput');
 	editInput.parentElement.appendChild(hiddenInput);
 	const popupOptions = document.createElement('div');
 	popupOptions.className = 'popup'; popupOptions.classList.add('hidden');
 	editInput.parentElement.appendChild(popupOptions); // Création de la popup d'affichage des MULTI-VALUES
-//	const button = document.createElement('button');
-//	//button.className = 'add-button'; button.innerHTML = '<b>...</b>';
-//	button.className = 'edit-btn'; button.innerHTML = '<b>...</b>';
-//	editInput.parentElement.appendChild(button); // Création du bouton d'ajout d'une nouvelle valeur
 
 	let index = 0; // Index de la position de la sélection  
-	let options = JSON.parse(editInput.value.length>0 ?editInput.value :[]); // Créer une copie des valeurs initiales
+	let options = JSON.parse(hiddenInput.value.length>0 ?editInput.value :[]); // Créer une copie des valeurs initiales
 
 	// Initialiser le champ d'entrée et le champ caché avec la première valeur  
 	editInput.value = options.length > 0 ?options[index] :'';
-//	hiddenInput.value = JSON.stringify(options); // Stocker le tableau dans hiddenInput
 
 	// Fonction pour rendre les options dans la popup  
 	function renderOptions() {
@@ -46,12 +41,11 @@ function initializePopup(container) {
 
 	// Mise à jour de la valeur pointée par l'index en temps réel  
 	editInput.addEventListener('input', () => {
-		if (editInput.value.trim() !== '') {
-			options[index] = editInput.value; // Mettre à jour la valeur actuelle pointée par l'index  
-			hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
-			renderOptions(); // Rendre les options pour mettre à jour  
-			hiddenInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-		}
+		options[index] = editInput.value; // Mettre à jour la valeur actuelle pointée par l'index  
+		options = options.filter(item => item !== ""); 
+		hiddenInput.value = JSON.stringify(options); // Mettre à jour le champ caché  
+		renderOptions(); // Rendre les options pour mettre à jour  
+		hiddenInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
 	});
 
 	// Sélection d'une option dans la popup  
@@ -69,17 +63,12 @@ function initializePopup(container) {
 
 	// Fermer la popup si l'utilisateur clique en dehors  
 	document.addEventListener('click', (event) => {
-		if (index != -1 && !editInput.value) {
-			options.splice(index, 1);
-			if (options.length > 0)
-				editInput.value = options[(index=0)];
-			hiddenInput.value = JSON.stringify(options);
-		}
+		options = options.filter(item => item !== ""); 
+		if (options.length > 0) editInput.value = options[(index=0)];
+		hiddenInput.value = JSON.stringify(options);
 		hiddenInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
 		if (!popupOptions.contains(event.target)
 				&& !editInput.contains(event.target)
-//				//&& button.contains(event.target)
-//				&& event.target !== button
 		)	popupOptions.style.display = 'none'; // Fermer la popup  
 	});
 
@@ -93,13 +82,6 @@ function initializePopup(container) {
 		renderOptions(); // Rendre les options pour mettre à jour
 		editInput.dispatchEvent(new Event('focus', { bubbles: true, cancelable: true }));
 	}
-
-	// Gestionnaire d'événements pour ajouter une nouvelle option
-//	button.addEventListener('click', (event) => {
-//		event.preventDefault(); // Empêcher le comportement par défaut du bouton
-//		addNewOption(); // Appeler la fonction pour ajouter une nouvelle option
-//		editInput.focus();
-//	});
 
 	// Gestionnaire d'événements
 	editInput.addEventListener('keydown', (event) => { // Ajouter une nouvelle option
