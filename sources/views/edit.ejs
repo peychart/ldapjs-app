@@ -685,11 +685,10 @@ function areAllMUSTAttributesFilled() {
 	))];
 
 	return allMUSTAttributeNames.every(name => {
-		const inputs = document.getElementsByName(name);
-		const input  = document.getElementById(name);
-		return (input && !Array.from(inputs).includes(input))
-			?JSON.parse(inputs[0].value).length>0	// C'est un popup multi-values[]
-			:inputs[0].value.trim().length>0;		// C'est un input simple
+		const input = document.getElementsByName(name)[0];
+		return (input && input.classList.contains('cloned'))
+			?JSON.parse(input.value).length>0	// C'est un popup multi-values[]
+			:input.value.trim().length>0;		// C'est un input simple
 	});
 }
 
