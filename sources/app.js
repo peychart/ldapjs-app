@@ -317,6 +317,8 @@ level: 'error', // 'info' Niveau de log par défaut
 					)[0];
 				}
 
+//console.clear(); console.log('objectData: ', JSON.stringify(objectData, null, 2)); // Display for debug
+
 				// On élimie l'objectClass === 'top'
 				const objectClassesToSearch = [
 					...(objectData?.objectClass.filter(item => item !== 'top') || []),
@@ -446,20 +448,20 @@ level: 'error', // 'info' Niveau de log par défaut
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
 				// Fonction parse JSON sécurisée
-				const safeParse = (val) => {
-					try {
+				const safeJSONParse = (val) => {
+					try{
 						return JSON.parse(val);
 					} catch(error) {
-						return val; // Retourne la valeur d'origine en cas d'erreur
-					}
-				};
+						// En cas d'erreur : retourne la valeur d'origine en string pour LDAP-JS
+						return (typeof val !== 'string') ?JSON.stringify(val) :val;
+				}	};
 				const noEmpty = (val) => {
 					return (!val || !Array.isArray(val))
 						?val
 						:Array.from(new Set(val?.filter(el => el !== null && el !== undefined && el !== '' && el !== false && !Number.isNaN(el))));
 				}
 
-//console.clear(); console.log('req.body: ', JSON.stringify(req.body, null, 2));	// Pour debug
+//console.clear(); console.log('req.body: ', JSON.stringify(req.body, null, 2), '\n\n');	// Pour debug
 
 				// Traitement de la réponse
 				objectData = Object.keys(req.body).reduce((acc, key) => {
@@ -478,40 +480,43 @@ level: 'error', // 'info' Niveau de log par défaut
 						return acc;
 					}
 
-
 					// Dédoubler les champs input dupliquées entre onglets :
 					//	on retient le premier élément du getElementByName...
 					let value = (key.startsWith('objectClass') || !Array.isArray(req.body[key]))
 						?req.body[key]
 						:req.body[key][0];
 
+					value = Array.isArray(value) ?value.map(safeJSONParse) :safeJSONParse(value);
+//console.log(key, ` : `, value); // Pour debug
+
+					let baseKey;
 					// Parse des clées multiValeurs (de valeurs Array[])
 					if (key.endsWith('_multiValues')) {
 						// Rétablir le nom d'attribut
-						const baseKey = key.substring(0, key.indexOf('_'));
+						baseKey = key.substring(0, key.indexOf('_'));
 
 						// Si la valeur est bien un tableau, parser ses valeurs
-						value = Array.isArray(value) ?value.map(safeParse) :(safeParse(value));
-						value = noEmpty(value);
+						//value = Array.isArray(value) ?value.map(safeJSONParse) :(safeJSONParse(value));
+						//value = noEmpty(value);
+					} else baseKey = key;
 
-						if (Array.isArray(value)) {
-							if (value.length>0)
-								acc[baseKey] = value;
-						} else if (value)
-							acc[baseKey] = [value];
-					} else // Pour les autres champs, conserver la valeur non vide en l'état
-						if (value) acc[key] = value;
+					if (Array.isArray(value)) {
+						if (value.length > 0)
+							acc[baseKey] = value;
+					} else if (value != null && value !== '')
+						acc[baseKey] = [(typeof value === 'string') ?value :JSON.stringify(value)];
 
 					return acc;
 				}, {});
 
 //console.log('req.session.edit: ', JSON.stringify(req.session.edit, null, 2));	// Pour debug
-//console.log('/n/nobjectData: ', objectData);	// Pour debug
+//console.log('\n\nobjectData: ', objectData);	// Pour debug
 
 				if (objectClassesEdition) {
 					throw 255;
 				} else {
 					// Mise à jour de la base LDAP
+					if (!objectData.objectClass.includes('top')) objectData.objectClass.push('top');
 					await updateLDAP(client, dn, objectData);
 				}
 
