@@ -10,7 +10,7 @@ function isEqual(value1, value2) {
         
         // Si les deux valeurs sont des tableaux  
         if (Array.isArray(value1) && Array.isArray(value2)) {
-            if (value1.length !== value2.length) {
+/*            if (value1.length !== value2.length) {
                 return false; // Les tableaux ont des longueurs différentes  
             }
             // Compare chaque élément des tableaux  
@@ -19,7 +19,8 @@ function isEqual(value1, value2) {
                     return false; // Un élément ne correspond pas  
                 }
             }
-            return true; // Tous les éléments correspondent  
+            return true; // Tous les éléments correspondent */
+			return arraysEqualWithDuplicates(value1, value2);
         }
 
         // Si ce sont des objets (non tableaux)
@@ -42,5 +43,17 @@ function isEqual(value1, value2) {
     // Si ce ne sont ni des objets ni des tableaux, ils ne sont pas égaux  
     return false;
 }
+
+const arraysEqualWithDuplicates = (arr1, arr2) => {
+        if (arr1.length !== arr2.length)            return false;
+        const arr2Copy = [...arr2]; // Copie de arr2
+        for (let item of arr1) {
+            const index = arr2Copy.indexOf(item);
+            if (index === -1)                       return false;
+            arr2Copy.splice(index, 1); // Supprime l'élément à l'index trouvé  
+        }
+        // Si arr2Copy est vide après le parcours de arr1, les tableaux sont égaux  
+        return arr2Copy.length === 0;
+    };
 
 module.exports = { isEqual };
