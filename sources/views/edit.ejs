@@ -836,8 +836,10 @@ function saveCurrentTab(){
 // Retablir la position sur le tab ADD/REMOVE objectClasses
 document.getElementById('add-tab').addEventListener('click', function(event) {
 	let activeTabId = localStorage.getItem('activeObjectClassAddTab');
-	if (!activeTabId) activeTabId = document.getElementById('add').querySelectorAll('.nav-link')[0].id;
-	document.getElementById(activeTabId).click();
+	if (!activeTabId) {
+		activeTabId = document.getElementById('add').querySelectorAll('.nav-link')[0].id;
+		document.getElementById(activeTabId).click();
+	}
 });
 // Ajout des gestionnaires d'événements pour ses deux sous-onglets
 document.querySelectorAll('#add .nav-link').forEach(link => {
