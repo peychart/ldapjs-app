@@ -117,7 +117,7 @@
 			z-index: 1000;
 			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 		}
-		.editInput {
+		.multi-values {
 			flex: 1; /* Permet à l'input de remplir la largeur disponible */
 			margin: 0; /* Supprime les marges pour un alignement parfait */
 			/*margin-right: 5px;
@@ -127,7 +127,7 @@
 			border-radius: 4px; /* Arrondi léger des coins */
 			transition: border-color 0.3s; /* Transition douce pour les changements de couleur de bordure */
 		}
-		.editInput::placeholder {
+		.multi-values::placeholder {
 			color: #b0b0b0; /* Couleur du placeholder (gris plus clair) */
 			opacity: 1; /* Assurez-vous que l'opacité est à 1 pour que la couleur soit bien visible */
 		}
@@ -293,29 +293,20 @@
 									<button type="button" class="edit-btn" title="Edition des propriétés d'attributs" data-object-class-index='<%= objectClassIndex %>' onclick="openEditModal(this, '<%= attrName %>')">
 										<i class="fas fa-pencil-alt"></i>
 									</button>
-									<% if (currentAttr.MULTI_VALUE !== 'SINGLE-VALUE') { %>
 										<!-- popupMultiValues -->
-										<div class="popupContainer">
-											<div class="container" style="display: flex; width: 100%; padding: 0; margin: 0;">
-												<input type="text"
-													name="<%= attrName %>"
-													data-object-class-index = '<%= objectClassIndex %>'
-													placeholder="Éditez ici les valeurs de l'attribut '<%= attrName %>'"
-													class="editInput field"
-													value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :(currentAttr.VALUES != null ?[currentAttr.VALUES] :[])) %>"
-													oninput="checkInputFunction(this);" />
-											</div>
-										</div>
-									<% } else { %>
 										<input type="text"
 											name="<%= attrName %>"
 											data-object-class-index = '<%= objectClassIndex %>'
-											placeholder="Éditez ici la valeur de l'attribut '<%= attrName %>'"
-											class="form-control field"
-											value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) ?? '' %>"
+											placeholder="Éditez ici les valeurs de l'attribut '<%= attrName %>'"
 											oninput="checkInputFunction(this);"
+											<% if (currentAttr.MULTI_VALUE === 'SINGLE-VALUE') { %>
+												class="form-control field"
+												value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) ?? '' %>"
+											<% } else { %>
+												class="multi-values form-control field"
+												value="<%= JSON.stringify(Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES :(currentAttr.VALUES != null ?[currentAttr.VALUES] :[])) %>"
+											<% } %>
 										/>
-									<% } %>
 								</li>
 								<% }) %>
 							</ul>
@@ -463,7 +454,7 @@ function init() {
 }
 
 function checkInputFunction(input) {
-	let attrName = input.name;
+	let attrName = input.name || input.getAttribute('data-name');
 	if (attrName) {
 		const objectClassIndex = parseInt(input.dataset.objectClassIndex);
 		const objectClass = objectClassesDetails[objectClassIndex];
@@ -639,15 +630,23 @@ function changeModalSize(increase) {
 	}
 }
 
+function safeJSONParse(val) {
+	try{return JSON.parse(val);
+	} catch(error) {
+		// En cas d'erreur : retourne la valeur d'origine en string pour LDAP-JS
+		return (typeof val !== 'string') ?JSON.stringify(val) :val;
+}	}
+
 // Valide le bouton 'saveButton' seulement sur modification d'attributs
 function isDataChanged() {
 	// Sélectionne tous les inputs de type text et hidden dans .tab-pane
-	const inputs = document.querySelectorAll('.tab-pane input.field[type="text"], .tab-pane input.field[type="hidden"]');
+	const inputs = document.querySelectorAll('.tab-pane input.field[type="text"]');
 	const inputMap = {}; // Tableau pour stocker les inputs non clonés
 	inputs.forEach(input => {
 		if (input.name) inputMap[input.name] = input; // Garantir l'unicité des input.name traités
 	});
 
+	// fonction de comparaison des valeurs de deux tableaux
 	const arraysEqualWithDuplicates = (arr1, arr2) => {
 		if (arr1.length !== arr2.length)			return false;
 		const arr2Copy = [...arr2]; // Copie de arr2
@@ -662,9 +661,9 @@ function isDataChanged() {
 
 	// Vérifier les changements
 	const hasChanged = Object.values(inputMap).some(input => {
-		if (input.classList.contains('cloned')) {		// Vérifiez si les multi-valeurs ont changé
-			const defaultValue = JSON.parse(input.getAttribute('data-default-value') || '[]');
-			const currentValue = JSON.parse(input.value || '[]');
+		if (input.classList.contains('multi-values')) {		// Vérifiez si les multi-valeurs ont changé
+			const defaultValue = safeJSONParse(input.getAttribute('data-default-value') || '[]');
+			const currentValue = safeJSONParse(input.getAttribute('data-value') || '[]');
 			return !arraysEqualWithDuplicates(defaultValue, currentValue);
 		} else {										// Vérifie si la valeur a changé
 			return input.value !== input.defaultValue;
@@ -686,9 +685,7 @@ function areAllMUSTAttributesFilled() {
 
 	return allMUSTAttributeNames.every(name => {
 		const input = document.getElementsByName(name)[0];
-		return (input && input.classList.contains('cloned'))
-			?JSON.parse(input.value).length>0	// C'est un popup multi-values[]
-			:input.value.trim().length>0;		// C'est un input simple
+		return (input.classList.contains('multi-values') ?safeJSONParse(input.getAttribute('data-default-value') || '[]') :input.value.trim()).length > 0;
 	});
 }
 
@@ -802,6 +799,11 @@ function removeHiddenTabs() {
 				document.getElementById(objectClass.NAME[0] + '-tab').remove();
 				document.getElementById(objectClass.NAME[0]).remove();
 			}
+		});
+
+		// Mettre à jour les input.value des champs multi-values
+		document.querySelectorAll('input.multi-values').forEach(input => {
+			input.value = input.getAttribute('data-value');
 		});
 	}
 }
