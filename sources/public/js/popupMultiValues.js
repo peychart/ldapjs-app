@@ -27,7 +27,7 @@ function initializePopup(input) {
 
 	// Ouvrir la popup lorsque le champ input reçoit le focus
 	input.addEventListener('focus', () => {
-		const values = JSON.parse(input.getAttribute('data-default-value') || "[]");
+		const values = JSON.parse(input.getAttribute('data-value') || "[]");
 		if (values.length > 1) { // Vérifiez qu'il y a au moins 2 valeurs
 			renderOptions(); // Rendre les options dans la popup
 			const rect = input.getBoundingClientRect();
@@ -41,7 +41,7 @@ function initializePopup(input) {
 	input.addEventListener('input', () => {
 		options[index] = input.value; // Mettre à jour la valeur actuelle pointée par l'index
 		options = options.filter(item => item !== "");
-		input.setAttribute('data-default-value', JSON.stringify(options)); // Mettre à jour les multi-values
+		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		renderOptions(); // Rendre les options pour mettre à jour
 	});
 
@@ -60,7 +60,7 @@ function initializePopup(input) {
 		options = options.filter(item => item !== "");
 //		if (index >= options.length) input.value = options[(index=0)];
 		refreshIndex();
-		input.setAttribute('data-default-value', JSON.stringify(options)); // Mettre à jour les multi-values
+		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		if (!popupOptions.contains(event.target)
 				&& !input.contains(event.target)
 		)	popupOptions.style.display = 'none'; // Fermer la popup
@@ -72,7 +72,7 @@ function initializePopup(input) {
 		// Ajouter une nouvelle ligne vide pour l'édition
 		options.push(''); // Ajouter une nouvelle valeur vide (pour l'édition)
 		refreshIndex(options.length - 1); // Mettre l'index sur la nouvelle valeur
-		input.setAttribute('data-default-value', JSON.stringify(options)); // Mettre à jour les multi-values
+		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		renderOptions(); // Rendre les options pour mettre à jour
 	}
 
