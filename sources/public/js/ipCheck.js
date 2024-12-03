@@ -1,4 +1,4 @@
-function checkIP(input, data, initialValue) {
+function check(input, data, initialValue) {
     let value = input.value.replace(/[^0-9.]/g, '');
     const parts = value.split('.');
     // Limiter le nombre de parties à 4
