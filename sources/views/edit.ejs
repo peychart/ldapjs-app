@@ -639,7 +639,7 @@ function safeJSONParse(val) {
 
 // Valide le bouton 'saveButton' seulement sur modification d'attributs
 function isDataChanged() {
-	// Sélectionne tous les inputs de type text et hidden dans .tab-pane
+	// Sélectionne tous les inputs de type text et multi-values dans .tab-pane
 	const inputs = document.querySelectorAll('.tab-pane input.field[type="text"]');
 	const inputMap = {}; // Tableau pour stocker les inputs non clonés
 	inputs.forEach(input => {
@@ -767,7 +767,7 @@ function objectClassesEdit(checkbox, objectClassName) {
 
 function removeHiddenTabs() {
 	// MArquer les inputs multi-values
-	const inputs = document.getElementById('mainForm').querySelectorAll('input[type="hidden"]');
+	const inputs = document.getElementById('mainForm').querySelectorAll('input.multi-values');
 	if (inputs.length>0) {
 		Array.from(inputs).forEach(input => {
 			if (document.getElementById(input.name)) input.name += "_multiValues";
