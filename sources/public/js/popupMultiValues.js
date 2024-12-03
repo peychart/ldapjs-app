@@ -1,5 +1,6 @@
 function initializePopup(input) {
 	// Sauvegarder la defaultValue (modifiée à chaque chagement javascript de value)
+	input.setAttribute('data-value', input.defaultValue);
 	input.setAttribute('data-default-value', input.defaultValue);
 
 	let adding = false;
