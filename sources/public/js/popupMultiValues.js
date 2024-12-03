@@ -84,7 +84,7 @@ function initializePopup(input) {
 		} else if (event.key === 'Escape') {
 			if (adding) {
 				options.pop(); refreshIndex(options.length-1); renderOptions();
-			}
+			} adding = false;
 		} else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
 			event.preventDefault(); // Empêcher le comportement par défaut du bouton
 			index = (event.key === 'ArrowDown')
