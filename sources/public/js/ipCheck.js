@@ -1,3 +1,4 @@
+// WARNING: SINGLE-VALUE attribute version:
 function check(input, data, initialValue) {
     let value = input.value.replace(/[^0-9.]/g, '');
     const parts = value.split('.');
