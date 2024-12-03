@@ -7,6 +7,9 @@ function initializePopup(input) {
 	let index = 0; // Index de la position de la sélection
 	let options = JSON.parse(input.value.length>0 ?input.value :[]); // Créer une copie des valeurs initiales
 	refreshIndex();
+	// Stocker le gestionnaire oninput existant, s'il y en a un
+	const originalOnInput = (typeof input.oninput === 'function') ?input.oninput :null;
+	input.removeAttribute('oninput');
 
 	// Création de la popup d'affichage des MULTI-VALUES
 	const popupOptions = document.createElement('div');
@@ -26,6 +29,23 @@ function initializePopup(input) {
 
 	function refreshIndex(i=index) {index = i < options.length ?i :0; input.value = options[index] ?? '';}
 
+	// Mise à jour de la valeur pointée par l'index en temps réel
+	input.addEventListener('input', () => {
+		options[index] = input.value; // Mettre à jour la valeur actuelle pointée par l'index
+		options = options.filter(item => item !== "");
+		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
+		renderOptions(); // Rendre les options pour mettre à jour
+
+		// Appeler le gestionnaire oninput de l'utilisateur, s'il est défini
+		if (originalOnInput) {
+			try {
+				originalOnInput(); // Appeler le gestionnaire oninput utilisateur
+			} catch (error) {
+				console.error('Erreur dans le gestionnaire oninput de l\'utilisateur:', error);
+			}
+		}
+	});
+
 	// Ouvrir la popup lorsque le champ input reçoit le focus
 	input.addEventListener('focus', () => {
 		const values = JSON.parse(input.getAttribute('data-value') || "[]");
@@ -36,14 +56,6 @@ function initializePopup(input) {
 			popupOptions.style.top = `${rect.bottom + window.scrollY - 45}px`; // Positionner juste en dessous du champ
 			setTimeout(() => {popupOptions.style.display = 'block';}, 0);
 		} refreshIndex();
-	});
-
-	// Mise à jour de la valeur pointée par l'index en temps réel
-	input.addEventListener('input', () => {
-		options[index] = input.value; // Mettre à jour la valeur actuelle pointée par l'index
-		options = options.filter(item => item !== "");
-		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
-		renderOptions(); // Rendre les options pour mettre à jour
 	});
 
 	// Sélection d'une option dans la popup
@@ -100,6 +112,7 @@ function initializePopup(input) {
 // Initialiser toutes les popups lorsque le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
 	document.querySelectorAll('input.multi-values').forEach(input => {
-		initializePopup(input); // Appeler la fonction d'initialisation pour chaque input multi-values
+		if (input instanceof HTMLInputElement)
+			initializePopup(input); // Appeler la fonction d'initialisation pour chaque input multi-values
 	});
 });
