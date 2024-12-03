@@ -229,11 +229,21 @@
 			background-color: #fffacd; /* Couleur de fond pour les titres (jaune un peu plus foncé) */
 			border-bottom: 1px solid #ccc; /* Bordure pour séparer le titre du contenu */
 		}
+		.blinking {
+			animation: blink-animation 1s steps(5, start) infinite;
+		}
+		@keyframes blink-animation { /* Définition de l'animation */
+			to {
+				visibility: hidden; /* Cache l'élément à la fin de l'animation */
+			}
+		}
 	</style>
 </head>
 <body>
 	<div class="container mt-5 position-relative">
-		<h1 title="LDAP Editor">Carnet d'Annuaire</h1>
+		<div style="display: flex;justify-content: space-between;align-items: center;padding: 10px;">
+			<h1 title="LDAP Editor" style="margin: 0;">Carnet d'Annuaire</h1> <strong><span id="error" class="blinking" style="color: red;"></span></strong>
+		</div>
 
 		<!-- Formulaire principal -->
 		<form id="mainForm" action="/edit/<%= dn %>" method="POST">
@@ -449,16 +459,20 @@ function init() {
 	// Contrainte de définition des "input.online" pour les inputs multi-values
 	document.querySelectorAll('input.field').forEach(input => {
 		input.removeAttribute('oninput');
+		input.removeAttribute('onblur');
+
 		input.addEventListener('input', function() {
-			checkInputFunction(this); // 'this' doit faire référence à l'élément input  
+			checkInputFunction(this); // 'this' doit faire référence à l'élément input
+		});
+		input.addEventListener('blur', function() {
+			checkInputFunction(this); // 'this' doit faire référence à l'élément input
 		});
 	});
 
 	checkSaveButton();
 
 	// Affichage d'un eventuel message transmis du serveur
-	if (errMsg)
-		alert(errMsg);
+	if (errMsg)	document.getElementById('error').textContent = errMsg;
 }
 
 function checkInputFunction(input) {
@@ -472,7 +486,7 @@ function checkInputFunction(input) {
 		const objectClassIndex = parseInt(input.dataset.objectClassIndex);
 		const objectClass = objectClassesDetails[objectClassIndex];
 		const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
-								|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
+				|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 
 		// Excution des scripts personnailisés
 		if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
@@ -488,7 +502,8 @@ function checkInputFunction(input) {
 			try { // USER FUNCTION
 				check (document.getElementById(input.name) ?? input, objectClassesDetails, defaultValue, currentValue);
 			} catch (error) {
-				console.error('Erreur dans dans la fonction check() :', error);
+				document.getElementById('error').textContent = 'Erreur de définition dans la fonction check() ...';
+				setTimeout(() => {document.getElementById('error').textContent = '';}, 5000);
 			}
 		}
 
@@ -661,6 +676,18 @@ function safeJSONParse(val) {
 		return (typeof val !== 'string') ?JSON.stringify(val) :val;
 }	}
 
+function arraysEqualWithDuplicates(arr1, arr2) {
+	if (arr1.length !== arr2.length)			return false;
+	const arr2Copy = [...arr2]; // Copie de arr2
+	for (let item of arr1) {
+		const index = arr2Copy.indexOf(item);
+		if (index === -1)						return false;
+			arr2Copy.splice(index, 1); // Supprime l'élément à l'index trouvé
+	}
+	// Si arr2Copy est vide après le parcours de arr1, les tableaux sont égaux
+	return arr2Copy.length === 0;
+}
+
 // Valide le bouton 'saveButton' seulement sur modification d'attributs
 function isDataChanged() {
 	// Sélectionne tous les inputs de type text et multi-values dans .tab-pane
@@ -670,28 +697,15 @@ function isDataChanged() {
 		if (input.name) inputMap[input.name] = input; // Garantir l'unicité des input.name traités
 	});
 
-	// fonction de comparaison des valeurs de deux tableaux
-	const arraysEqualWithDuplicates = (arr1, arr2) => {
-		if (arr1.length !== arr2.length)			return false;
-		const arr2Copy = [...arr2]; // Copie de arr2
-		for (let item of arr1) {
-			const index = arr2Copy.indexOf(item);
-			if (index === -1)						return false;
-			arr2Copy.splice(index, 1); // Supprime l'élément à l'index trouvé  
-		}
-		// Si arr2Copy est vide après le parcours de arr1, les tableaux sont égaux  
-		return arr2Copy.length === 0;
-	};
-
-	// Vérifier les changements
+	// Vérifier les changements attribut par attribut dans le masque
 	const hasChanged = Object.values(inputMap).some(input => {
-		if (input.classList.contains('multi-values')) {		// Vérifiez si les multi-valeurs ont changé
-			const defaultValue = safeJSONParse(input.getAttribute('data-default-value') || '[]');
-			const currentValue = safeJSONParse(input.getAttribute('data-value') || '[]');
-			return !arraysEqualWithDuplicates(defaultValue, currentValue);
-		} else {										// Vérifie si la valeur a changé
-			return input.value !== input.defaultValue;
-		}
+		const defaultValue = input.classList.contains('multi-values')
+			?safeJSONParse(input.getAttribute('data-default-value') || '[]')
+			:input.value;
+		const currentValue = input.classList.contains('multi-values')
+			?safeJSONParse(input.getAttribute('data-value') || '[]')
+			:input.defaultValue;
+		return !arraysEqualWithDuplicates(defaultValue, currentValue);
 	});
 
 	// Vérifiez également s'il y a modification dans les objetsClasses
