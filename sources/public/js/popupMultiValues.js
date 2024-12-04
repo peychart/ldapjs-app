@@ -2,11 +2,11 @@ function initializePopup(input) {
 	// Sauvegarder la defaultValue (modifiée à chaque chagement javascript de value)
 	input.setAttribute('data-value', input.defaultValue);
 	input.setAttribute('data-default-value', input.defaultValue);
+	input.setAttribute('data-index', 0);
 
 	let adding = false;
-	let index = 0; // Index de la position de la sélection
 	let options = JSON.parse(input.value.length>0 ?input.value :[]); // Créer une copie des valeurs initiales
-	refreshIndex();
+	index(0); // Index de la position de la sélection
 	// Stocker le gestionnaire oninput existant, s'il y en a un
 	const originalOnInput = (typeof input.oninput === 'function') ?input.oninput :null;
 	input.removeAttribute('oninput');
@@ -21,48 +21,52 @@ function initializePopup(input) {
 		popupOptions.innerHTML = ''; // Vider les options existantes
 		options.forEach((value, i) => {
 			const optionElement = document.createElement('div');
-			optionElement.className = 'option' + (i === index ? ' selected' : ''); // Ajout de la classe 'selected' si c'est l'index actuel
+			optionElement.className = 'option' + (i === index() ? ' selected' : ''); // Ajout de la classe 'selected' si c'est l'index actuel
 			optionElement.textContent = value;
 			popupOptions.appendChild(optionElement);
 		});
 	}
 
-	function refreshIndex(i=index) {index = i < options.length ?i :0; input.value = options[index] ?? '';}
+	function index(i=-1) {
+		let index = input.getAttribute('data-index');
+		if (i >= 0) {index = i < options.length ?i :0; input.value = options[index] ?? '';}
+		input.setAttribute('data-index', index);
+		return parseInt(index, 10);
+	}
 
 	// Mise à jour de la valeur pointée par l'index en temps réel
 	input.addEventListener('input', () => {
-		options[index] = input.value; // Mettre à jour la valeur actuelle pointée par l'index
+		options[index()] = input.value; // Mettre à jour la valeur actuelle pointée par l'index
 		options = options.filter(item => item !== "");
 		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		renderOptions(); // Rendre les options pour mettre à jour
 
 		// Appeler le gestionnaire oninput de l'utilisateur, s'il est défini
-		if (originalOnInput) {
+		if (originalOnInput)
 			try {
 				originalOnInput(); // Appeler le gestionnaire oninput utilisateur
 			} catch (error) {
 				console.error('Erreur dans le gestionnaire oninput de l\'utilisateur:', error);
 			}
-		}
 	});
 
 	// Ouvrir la popup lorsque le champ input reçoit le focus
 	input.addEventListener('focus', () => {
 		const values = JSON.parse(input.getAttribute('data-value') || "[]");
-		if (values.length > 1) { // Vérifiez qu'il y a au moins 2 valeurs
-			renderOptions(); // Rendre les options dans la popup
+		if (values.length > 1) {									// Vérifiez qu'il y a au moins 2 valeurs
+			renderOptions();										// Rendre les options dans la popup
 			const rect = input.getBoundingClientRect();
-			popupOptions.style.width = `${input.offsetWidth}px`; // Ajuster la largeur pour qu'elle corresponde à l'input
+			popupOptions.style.width = `${input.offsetWidth}px`;	// Ajuster la largeur pour qu'elle corresponde à l'input
 			popupOptions.style.top = `${rect.bottom + window.scrollY - 45}px`; // Positionner juste en dessous du champ
 			setTimeout(() => {popupOptions.style.display = 'block';}, 0);
-		} refreshIndex();
+		} index();
 	});
 
 	// Sélection d'une option dans la popup
 	popupOptions.addEventListener('click', (event) => {
 		const clickedOption = event.target.closest('.option'); // Trouver l'élément .option cliqué
 		if (clickedOption) {
-			index = Array.from(popupOptions.children).indexOf(clickedOption); // Mettre à jour l'index
+			index(Array.from(popupOptions.children).indexOf(clickedOption)); // Mettre à jour l'index
 			input.focus();
 		}
 	});
@@ -71,8 +75,7 @@ function initializePopup(input) {
 	document.addEventListener('click', (event) => {
 		adding = false;
 		options = options.filter(item => item !== "");
-//		if (index >= options.length) input.value = options[(index=0)];
-		refreshIndex();
+//		index();
 		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		if (!popupOptions.contains(event.target)
 				&& !input.contains(event.target)
@@ -84,7 +87,7 @@ function initializePopup(input) {
 		adding = true;
 		// Ajouter une nouvelle ligne vide pour l'édition
 		options.push(''); // Ajouter une nouvelle valeur vide (pour l'édition)
-		refreshIndex(options.length - 1); // Mettre l'index sur la nouvelle valeur
+		index(options.length - 1); // Mettre l'index sur la nouvelle valeur
 		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		renderOptions(); // Rendre les options pour mettre à jour
 	}
@@ -96,14 +99,14 @@ function initializePopup(input) {
 			addNewOption(); // Appeler la fonction pour ajouter une nouvelle option
 		} else if (event.key === 'Escape') {
 			if (adding) {
-				options.pop(); refreshIndex(options.length-1); renderOptions();
+				options.pop(); index(options.length-1); renderOptions();
 			} adding = false;
-		} else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+		} else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { adding = false;
 			event.preventDefault(); // Empêcher le comportement par défaut du bouton
-			index = (event.key === 'ArrowDown')
-				? (index + 1) % options.length
-				: (index - 1 + options.length) % options.length; // Passer à l'option suivante ou précédente
-			refreshIndex(index); // Mettre à jour l'input avec la valeur actuelle
+			let i = index();
+			index ( (event.key === 'ArrowDown')
+				? (i + 1) % options.length
+				: (i - 1 + options.length) % options.length );	// Passer à l'option suivante ou précédente
 			renderOptions();
 		}
 	});
