@@ -243,7 +243,9 @@ function check(input, data, initialValue) {
  };
  input.addEventListener('change', validateHandler); 
 }
-function validateFinalInput(input, initialValue) {return input.value.split('.').length === 4;}
+function validateFinalInput(input, initialValue) {
+ const r = input.value.split('.'); return (r.length===1 || r.length=== 5) && !r[r.length-1].length;
+}
 ```
 
 7. (à suivre)
