@@ -226,7 +226,6 @@ function isValidDate(value) {
 6. Exemple de contrôle de format IPV4 (sur ipHostNumber) :
 
 ```
-// WARNING: SINGLE-VALUE attribute only:
 function check(input, data, initialValue) {
  let value = input.value.replace(/[^0-9.]+/g, '').replace(/\.+/g, '.');
  const parts = value.split('.').slice(0, 4);
