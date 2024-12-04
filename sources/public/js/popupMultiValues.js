@@ -5,7 +5,7 @@ function initializePopup(input) {
 	input.setAttribute('data-index', 0);
 
 	let adding = false;
-	let options = JSON.parse(input.value.length>0 ?input.value :[]); // Créer une copie des valeurs initiales
+	let options = JSON.parse(input.value || []); // Créer une copie des valeurs initiales
 	index(0); // Index de la position de la sélection
 	// Stocker le gestionnaire oninput existant, s'il y en a un
 	const originalOnInput = (typeof input.oninput === 'function') ?input.oninput :null;
@@ -35,9 +35,10 @@ function initializePopup(input) {
 	}
 
 	// Mise à jour de la valeur pointée par l'index en temps réel
-	input.addEventListener('input', () => {
+	function inputChanged() {
 		options[index()] = input.value; // Mettre à jour la valeur actuelle pointée par l'index
 		options = options.filter(item => item !== "");
+		if (index() >= options.lengt && options.length) index(options.length-1);
 		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		renderOptions(); // Rendre les options pour mettre à jour
 
@@ -47,8 +48,8 @@ function initializePopup(input) {
 				originalOnInput(); // Appeler le gestionnaire oninput utilisateur
 			} catch (error) {
 				console.error('Erreur dans le gestionnaire oninput de l\'utilisateur:', error);
-			}
-	});
+	}		}
+	input.addEventListener('input', () => {inputChanged();});
 
 	// Ouvrir la popup lorsque le champ input reçoit le focus
 	input.addEventListener('focus', () => {
@@ -72,15 +73,16 @@ function initializePopup(input) {
 	});
 
 	// Fermer la popup si l'utilisateur clique en dehors
-	document.addEventListener('click', (event) => {
+	function exitInput() {
 		adding = false;
+		options[index()] = input.value;
 		options = options.filter(item => item !== "");
-//		index();
 		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
+		if (!input.value && options.length) index(0);
 		if (!popupOptions.contains(event.target)
 				&& !input.contains(event.target)
-		)	popupOptions.style.display = 'none'; // Fermer la popup
-	});
+		) popupOptions.style.display = 'none'; // Fermer la popup
+	} document.addEventListener('click', (event) => {exitInput();});
 
 	// Fonction pour ajouter une nouvelle option
 	function addNewOption() {
@@ -95,6 +97,7 @@ function initializePopup(input) {
 	// Gestionnaire d'événements
 	input.addEventListener('keydown', (event) => { // Ajouter une nouvelle option
 		if (event.key === 'Enter') { // Vérifier si la touche appuyée est <Enter>
+			exitInput(); input.focus();
 			event.preventDefault(); // Empêcher le comportement par défaut du bouton
 			addNewOption(); // Appeler la fonction pour ajouter une nouvelle option
 		} else if (event.key === 'Escape') {
