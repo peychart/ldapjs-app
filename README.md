@@ -207,9 +207,9 @@ function check(input, data, initialValue) {
  ) value = value.slice(0, -1);
  input.value = value;
  // Validation ou annulation sur sortie du champ de saisie
- const blurHandler = input.onblur = function() {
+ const changeHandler = input.onchange = function() {
   if (!isValidDate(value)) input.value = initialValue; 
-  input.removeEventListener('blur', blurHandler);
+  input.removeEventListener('change', changeHandler);
 };}
 function isValidDate(value) {
  const regex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/(\d{4})$/;
