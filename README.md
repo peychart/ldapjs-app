@@ -223,7 +223,7 @@ function isValidDate(value) {
 } function isLeapYear(year) {return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);}
 ```
 
-6. Exemple de contrôle de format IPV4 :
+6. Exemple de contrôle de format IPV4 (sur ipHostNumber) :
 
 ```
 // WARNING: SINGLE-VALUE attribute only:
