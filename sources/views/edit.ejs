@@ -416,7 +416,7 @@
 							</div>
 							<div class="form-group">
 								<label for="jsValidation"><strong>Code JS de contrôle de saisie :</strong></label>
-								<textarea class="form-control" id="jsValidation" name="jsValidation" rows="5" placeholder="Saisissez le code JavaScript ici..."></textarea>
+								<textarea class="form-control" id="jsValidation" name="jsValidation" rows="10" placeholder="Saisissez le code JavaScript ici..."></textarea>
 							</div>
 							<input type="hidden" id="attributeId" name="attributeId"> <!-- Champ caché pour l'attributeName -->
 						</div>
@@ -520,7 +520,7 @@ function checkInputFunction(input) {
 		});
 
 		// Mise à jour de l'état du bouton de Validaion
-		checkSaveButton();
+		setTimeout(() => {checkSaveButton()}, 750);
 	}
 }
 
@@ -609,6 +609,7 @@ function openEditModal(button, attrName) {
 	saveCurrentTab();
 	$('#editModal').modal('show');
 }
+
 
 function submitModal(submitButton) {
 	const attrName = document.getElementById('newLabel').placeholder;
