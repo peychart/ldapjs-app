@@ -225,6 +225,29 @@ function isValidDate(value) {
 
 6. (à suivre)
 
+```
+// WARNING: SINGLE-VALUE attribute only:
+function check(input, data, initialValue) {
+ let value = input.value.replace(/[^0-9.]+/g, '').replace(/\.+/g, '.');
+ const parts = value.split('.').slice(0, 4);
+
+ for (let i = 0; i < parts.length; i++) if (parts[i].length) {
+  parts[i] = String(parseInt(parts[i], 10));
+  if (parseInt(parts[i], 10) > (i>2 ?254 :255)) parts[i] = parts[i].slice(0, -1);
+  }
+ input.value = parts.join('.');
+
+ const validateHandler = function() {
+  if (!validateFinalInput(input, initialValue)) input.value = initialValue;
+  input.removeEventListener('change', validateHandler);
+ };
+ input.addEventListener('change', validateHandler); 
+}
+function validateFinalInput(input, initialValue) {return input.value.split('.').length === 4;}
+```
+
+7. (à suivre)
+
 ...
 
 Page de connexion :
