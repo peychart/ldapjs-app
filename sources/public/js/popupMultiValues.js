@@ -75,7 +75,6 @@ function initializePopup(input) {
 	// Fermer la popup si l'utilisateur clique en dehors
 	function exitInput() {
 		adding = false;
-		options[index()] = input.value;
 		options = options.filter(item => item !== "");
 		input.setAttribute('data-value', JSON.stringify(options)); // Mettre à jour les multi-values
 		if (!input.value && options.length) index(0);
