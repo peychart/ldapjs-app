@@ -308,6 +308,7 @@
 											name="<%= attrName %>"
 											data-object-class-index = '<%= objectClassIndex %>'
 											placeholder="Éditez ici les valeurs de l'attribut '<%= attrName %>'"
+											oninput="checkInputFunction(this);"
 											<% if (currentAttr.MULTI_VALUE === 'SINGLE-VALUE') { %>
 												class="form-control field"
 												value="<%= (Array.isArray(currentAttr.VALUES) ?currentAttr.VALUES[0] :currentAttr.VALUES) ?? '' %>"
@@ -454,19 +455,6 @@ function init() {
 			// Cacher le contenu de l'onglet
 			document.getElementById(objectClass.NAME[0]).style.display="none";
 		}
-	});
-
-	// Contrainte de définition des "input.online" pour les inputs multi-values
-	document.querySelectorAll('input.field').forEach(input => {
-		input.removeAttribute('oninput');
-		input.removeAttribute('onblur');
-
-		input.addEventListener('input', function() {
-			checkInputFunction(this); // 'this' doit faire référence à l'élément input
-		});
-		input.addEventListener('blur', function() {
-			checkInputFunction(this); // 'this' doit faire référence à l'élément input
-		});
 	});
 
 	checkSaveButton();
