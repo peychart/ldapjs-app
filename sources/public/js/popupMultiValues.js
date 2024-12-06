@@ -17,7 +17,8 @@ function initializePopup(input) {
 	popupOptions.addEventListener('click', (event) => {
 		const clickedOption = event.target.closest('.option'); // Trouver l'élément .option cliqué
 		if (clickedOption) {
-			index(Array.from(popupOptions.children).indexOf(clickedOption)); // Mettre à jour l'index
+			// Mettre à jour l'index
+			input.value = options[index(Array.from(popupOptions.children).indexOf(clickedOption))] || '';
 			input.focus();
 		}
 	});
@@ -42,11 +43,14 @@ function initializePopup(input) {
 		const rect = input.getBoundingClientRect();
 		popupOptions.style.width = `${input.offsetWidth}px`;	// Ajuster la largeur sur celle de l'input
 		popupOptions.style.top = `${rect.bottom + window.scrollY - 45}px`; // juste sous le champ
-		setTimeout(() => {popupOptions.style.display = 'block';}, 0);
+//		setTimeout(() => {popupOptions.style.display = 'block';}, 0);
+		popupOptions.style.display = 'block';
 	}
 
 	// Ouvrir la popup lorsque le champ input reçoit le focus
-	input.addEventListener('focus', () => {renderOptions();});
+	input.addEventListener('focus', () => {	// Laisser le temps au popup de se refermer sur click ...
+		setTimeout(() => {renderOptions();}, 250);	// pour ensuite se ré-ouvrir.
+	});
 
 	// Sauvegarde de l'event oninput existant, s'il y a
 	const originalOnInput = (typeof input.oninput === 'function') ?input.oninput :null;
@@ -65,15 +69,15 @@ function initializePopup(input) {
 
 	// Sur perte du focus de input ET popupOptions, fermer la popup
 	input.addEventListener('blur', () => {
-		if (document.activeElement === popupOptions) {
-			input.fous();
+		setTimeout( () => {if (document.activeElement === popupOptions) {
+			input.focus();
 		} else {
 			if (adding>=0) options.splice(adding, 1);
 			if (!input.value.length && options.length)
 				input.value = options[index(options.length - 1)] || '';
 			input.setAttribute('data-values', JSON.stringify(options)); // Mettre à jour les multi-values
 			popupOptions.style.display = 'none'; // Fermer la popup
-		}
+		};}, 250);	// laisser le temps de l'event click pour le popup ...
 	});
 
 	// Gestionnaire d'événements
