@@ -105,7 +105,7 @@ function initializePopup(input) {
 		}	}
 	});
 
-	 function triggerInputEvent(input) {
+	function triggerInputEvent(input) {
 		// Crée un nouvel événement input  
 		const event = new Event('input', {
 			bubbles: true, // L'événement peut se propager  
