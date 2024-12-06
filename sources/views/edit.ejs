@@ -488,7 +488,7 @@ function checkInputFunction(input) {
 		const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
 				|| objectClass.MAY?.find(attr => attr.NAME.includes(attrName));
 
-		// Excution des scripts personnailisés
+		// Excution des scripts personnailisés sur la valeur en cours de saisie
 		if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
 			// Transmettre l'input de saisie ( ->id(name) ) pour les champs multi-values :
 			const defaultValue = input.classList.contains('multi-values')
@@ -498,14 +498,14 @@ function checkInputFunction(input) {
 				?(safeJSONParse(input.getAttribute('data-value'))[input.getAttribute('data-index')] || '[]')
 				:input.value;
 
-			try { // USER FUNCTION
+			try { // lancement du script
 				eval (objectAttribute.valueCheck[0]);
 				check (document.getElementById(input.name) ?? input, objectClassesDetails, defaultValue, currentValue);
 			} catch (error) {
+				// Envoi du message d'erreur éventuel vers le client
 				document.getElementById('error').textContent = 'Erreur de définition dans la fonction check() ...';
-				setTimeout(() => {document.getElementById('error').textContent = '';}, 5000);
+				setTimeout(() => {document.getElementById('error').textContent = '';}, 500);
 			}
-		}
 
 		// Mise à jour de l'attribut dans les autres onglets
 		const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
@@ -694,7 +694,7 @@ function arraysEqualWithDuplicates(arr1, arr2) {
 function isDataChanged() {
 	// Sélectionne tous les inputs de type text et multi-values dans .tab-pane
 	const inputs = document.querySelectorAll('.tab-pane input.field[type="text"]');
-	const inputMap = {}; // Tableau pour stocker les inputs non clonés
+	const inputMap = {}; // Object pour stocker les inputs non clonés
 	inputs.forEach(input => {
 		if (input.name) inputMap[input.name] = input; // Garantir l'unicité des input.name traités
 	});
@@ -707,6 +707,14 @@ function isDataChanged() {
 		const currentValue = input.classList.contains('multi-values')
 			?safeJSONParse(input.getAttribute('data-value') || '[]')
 			:input.defaultValue;
+
+if (input.name === 'telephoneNumber') {
+console.log('\n');
+console.log('checkInput input.name: ', input.name);
+console.log('defaultValue: ', defaultValue);
+console.log('currentValue: ', currentValue);
+}
+
 		return !arraysEqualWithDuplicates(defaultValue, currentValue);
 	});
 
