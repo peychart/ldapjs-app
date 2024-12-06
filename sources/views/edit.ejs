@@ -470,7 +470,7 @@ function checkInputFunction(input) {
 	}
 
 	let attrName = input.name;
-	if (attrName) {
+	if (attrName?.length) {
 		const objectClassIndex = parseInt(input.dataset.objectClassIndex);
 		const objectClass = objectClassesDetails[objectClassIndex];
 		const objectAttribute = objectClass.MUST?.find(attr => attr.NAME.includes(attrName))
@@ -480,10 +480,10 @@ function checkInputFunction(input) {
 		if (objectAttribute.valueCheck && objectAttribute.valueCheck[0]) {
 			// Transmettre l'input de saisie ( ->id(name) ) pour les champs multi-values :
 			const defaultValue = input.classList.contains('multi-values')
-				?(safeJSONParse(input.getAttribute('data-default-value'))[input.getAttribute('data-index')] || '[]')
+				?(safeJSONParse(input.getAttribute('data-default-values'))[input.getAttribute('data-index')] || '[]')
 				:input.defaultValue;
 			const currentValue = input.classList.contains('multi-values')
-				?(safeJSONParse(input.getAttribute('data-value'))[input.getAttribute('data-index')] || '[]')
+				?(safeJSONParse(input.getAttribute('data-values'))[input.getAttribute('data-index')] || '[]')
 				:input.value;
 
 			try { // lancement du script
@@ -494,18 +494,21 @@ function checkInputFunction(input) {
 				document.getElementById('error').textContent = 'Erreur de définition dans la fonction check() ...';
 				setTimeout(() => {document.getElementById('error').textContent = '';}, 500);
 			}
+		}
 
 		// Mise à jour de l'attribut dans les autres onglets
 		const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
 		allTabs.forEach(tab => {
 			tab.querySelectorAll(`input[name="${attrName}"]`).forEach(field => {
 				field.value = input.value;
+				if (field.classList.contains('multi-values'))
+					field.setAttribute('data-values', input.getAttribute('data-values'));
 			});
 		});
 
 		// Mise à jour de l'état du bouton de Validaion
-		setTimeout(() => {checkSaveButton()}, 750);
-		}
+//		setTimeout(() => {checkSaveButton()}, 750);
+		checkSaveButton();
 	}
 }
 
@@ -690,19 +693,11 @@ function isDataChanged() {
 	// Vérifier les changements attribut par attribut dans le masque
 	const hasChanged = Object.values(inputMap).some(input => {
 		const defaultValue = input.classList.contains('multi-values')
-			?safeJSONParse(input.getAttribute('data-default-value') || '[]')
+			?safeJSONParse(input.getAttribute('data-default-values') || '[]')
 			:input.value;
 		const currentValue = input.classList.contains('multi-values')
-			?safeJSONParse(input.getAttribute('data-value') || '[]')
+			?safeJSONParse(input.getAttribute('data-values') || '[]')
 			:input.defaultValue;
-
-if (input.name === 'telephoneNumber') {
-console.log('\n');
-console.log('checkInput input.name: ', input.name);
-console.log('defaultValue: ', defaultValue);
-console.log('currentValue: ', currentValue);
-}
-
 		return !arraysEqualWithDuplicates(defaultValue, currentValue);
 	});
 
@@ -721,7 +716,7 @@ function areAllMUSTAttributesFilled() {
 
 	return allMUSTAttributeNames.every(name => {
 		const input = document.getElementsByName(name)[0];
-		return (input.classList.contains('multi-values') ?safeJSONParse(input.getAttribute('data-value') || '[]') :input.value.trim()).length > 0;
+		return (input.classList.contains('multi-values') ?safeJSONParse(input.getAttribute('data-values') || '[]') :input.value.trim()).length > 0;
 	});
 }
 
@@ -839,7 +834,7 @@ function removeHiddenTabs() {
 
 		// Mettre à jour les input.value des champs multi-values
 		document.querySelectorAll('input.multi-values').forEach(input => {
-			input.value = input.getAttribute('data-value');
+			input.value = input.getAttribute('data-values');
 		});
 	}
 }
