@@ -59,14 +59,12 @@ function initializePopup(input) {
 	// Mise à jour de la valeur pointée par l'index en temps réel
 	input.addEventListener('input', () => {
 		options[index()] = input.value; // Mettre à jour la valeur actuelle pointée par l'index
-		if (input.value.length) {
-			input.setAttribute('data-values', JSON.stringify(options)); // Mettre à jour les multi-values
-		} else if (adding<0) {	// DELETE de la valeur d'index()
+		if (!input.value.length && adding<0) {	// DELETE de la valeur d'index()
 			options = options.filter(item => item !== "");	// Filtre les options vides
 			if (index() >= options.length && options.length) index(options.length-1);
-			input.setAttribute('data-values', JSON.stringify(options)); // Mettre à jour les multi-values
 			input.value = options[index()] || '';
 		}
+		input.setAttribute('data-values', JSON.stringify(options)); // Mettre à jour les multi-values
 		renderOptions(); // Rendre les options pour mettre à jour
 	}); if (originalOnInput) input.addEventListener('input', originalOnInput);
 
@@ -75,15 +73,16 @@ function initializePopup(input) {
 		setTimeout( () => {if (document.activeElement === popupOptions) {
 			input.focus();
 		} else {
-			if (adding>=0) {
+			if (adding>=0 && !input.value.length) {
 				options.splice(adding, 1);
 				index(options.length - 1);
-			}if (!input.value.length && options.length)
-				index(options.length - 1);
+			}
+			if (!input.value.length && options.length) index(options.length - 1);
 			input.value = options[index()] || '';
 			input.setAttribute('data-values', JSON.stringify(options)); // Mettre à jour les multi-values
 			popupOptions.style.display = 'none'; // Fermer la popup
 		};}, 250);	// laisser le temps de l'event click pour le popup ...
+		adding = -1;
 	});
 
 	// Gestionnaire d'événements
