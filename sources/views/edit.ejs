@@ -448,19 +448,48 @@ const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 let reloadRequest = false;
 
 function init() {
-	objectClassesDetails.forEach(objectClass => { // Hidden les onglet DELETED
+	// Hidden des onglets DELETED
+	objectClassesDetails.forEach(objectClass => {
 		if (!!objectClass.DELETED) {
-			// Cacher l'onglet
-			document.getElementById(objectClass.NAME[0] + '-tab').style.display="none";
-			// Cacher le contenu de l'onglet
-			document.getElementById(objectClass.NAME[0]).style.display="none";
+			document.getElementById(objectClass.NAME[0] + '-tab').style.display="none"; // Cacher l'onglet
+			document.getElementById(objectClass.NAME[0]).style.display="none"; // Cacher le contenu de l'onglet
 		}
+	});
+
+	// Ajout de l'event contrôle de la dernière mise à jour éventuelle depuis le check() attribut
+	document.querySelectorAll('input.field').forEach(input => {
+		input.addEventListener('changed', function() {
+			synchronize(input); // 'this' doit faire référence à l'élément input
+		});
 	});
 
 	checkSaveButton();
 
 	// Affichage d'un eventuel message transmis du serveur
 	if (errMsg)	document.getElementById('error').textContent = errMsg;
+}
+
+function synchronize(input) {	// des différents champs/onglets pour l'attribut
+	// Mise à jour des values des chamos multi-values éventuellement modifiés par le check() des propriétés d'attribut
+	if (input.classList.contains('multi-values')) {
+		if (input.value.length) {
+			let options = input.getAttribute('data-values');
+			options[input.getAttribute('data-index')] = input.value;
+			input.setAttribute('data-values', JSON.stringify(options));
+	}	}
+
+	// Mise à jour de l'attribut dans les autres onglets
+	const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
+	allTabs.forEach(tab => {
+		tab.querySelectorAll(`input[name="${input.name}"]`).forEach(field => {
+			field.value = input.value;
+			if (field.classList.contains('multi-values'))
+				field.setAttribute('data-values', input.getAttribute('data-values'));
+		});
+	});
+
+	// Mise à jour de l'état du bouton de Validaion
+	checkSaveButton();
 }
 
 function checkInputFunction(input) {
@@ -495,20 +524,7 @@ function checkInputFunction(input) {
 				setTimeout(() => {document.getElementById('error').textContent = '';}, 500);
 			}
 		}
-
-		// Mise à jour de l'attribut dans les autres onglets
-		const allTabs = document.querySelectorAll('.tab-pane'); // Sélectionner tous les onglets
-		allTabs.forEach(tab => {
-			tab.querySelectorAll(`input[name="${attrName}"]`).forEach(field => {
-				field.value = input.value;
-				if (field.classList.contains('multi-values'))
-					field.setAttribute('data-values', input.getAttribute('data-values'));
-			});
-		});
-
-		// Mise à jour de l'état du bouton de Validaion
-//		setTimeout(() => {checkSaveButton()}, 750);
-		checkSaveButton();
+		synchronize(input);
 	}
 }
 
