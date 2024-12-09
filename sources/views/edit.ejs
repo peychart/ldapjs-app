@@ -473,7 +473,7 @@ function synchronize(input) {	// des différents champs/onglets pour l'attribut
 	// Mise à jour des values des chamos multi-values éventuellement modifiés par le check() des propriétés d'attribut
 	if (input.classList.contains('multi-values')) {
 		if (input.value.length) {
-			let options = input.getAttribute('data-values');
+			let options = JSON.parse(input.getAttribute('data-values'));
 			options[input.getAttribute('data-index')] = input.value;
 			input.setAttribute('data-values', JSON.stringify(options));
 	}	}
@@ -517,7 +517,8 @@ function checkInputFunction(input) {
 
 			try { // lancement du script
 				eval (objectAttribute.valueCheck[0]);
-				check (document.getElementById(input.name) ?? input, objectClassesDetails, defaultValue, currentValue);
+				check (input, objectClassesDetails, defaultValue, currentValue);
+
 			} catch (error) {
 				// Envoi du message d'erreur éventuel vers le client
 				document.getElementById('error').textContent = 'Erreur de définition dans la fonction check() ...';
