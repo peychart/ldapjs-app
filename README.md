@@ -243,7 +243,7 @@ function check(input, data, initialValue) {
  input.addEventListener('change', validateHandler); 
 }
 function validateFinalInput(input, initialValue) {
- const r = input.value.split('.'); return (r.length===1 || r.length=== 5) && !r[r.length-1].length;
+ const r = input.value.split('.'); return (r.length===0 || r.length=== 4) && !r[r.length-1].length;
 }
 ```
 
