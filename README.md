@@ -260,6 +260,9 @@ Recherche :
 Edition :
  ![](doc/images/edit.png)
 
+Multi-values :
+ ![](doc/images/multiValues.png)
+
 Ajout/suppression d'objectClasses :
 ![](doc/images/addObjectClass.png)
 
