@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Résultats de la Recherche LDAP</title>
+	<title>Recherche LDAP</title>
 	<style>
 		body {
 			background: linear-gradient(to bottom, #ffffe0, #ffeb3b);
@@ -134,11 +134,11 @@
 	</style>
 </head>
 <body>
-	<h1>Résultats de la Recherche</h1>
+	<h1>Recherche LDAP</h1>
 
 	<div class="header-buttons">
 		<form action="/search" method="post">
-			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including '*') ..." required value="<%= searchTerm || '' %>">
+			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including  * ) ..." required value="<%= searchTerm || '' %>">
 			<button type="submit">Rechercher</button>
 
 			<!-- Dropdown pour les objectClasses de TYPE STRUCTURAL avec tooltip -->
@@ -252,7 +252,7 @@ const searchProfiles = {
 			"dNSDomain"
 		],
 		"attributes": [
-			"dc",
+			"domainComponent",
 			"telephoneNumber",
 			"description"
 		]
@@ -300,7 +300,27 @@ function selectProfile(profile) {
 	resetObjectClassesAndAttributes();
 
 	// Mettre à jour les objectClasses et attributs en fonction du profil sélectionné
-	updateObjectClassesAndAttributes();
+	const selectedProfileData = searchProfiles[selectedProfile];
+
+	// Sélecter la liste des objectClasses du profil retenu
+	selectedProfileData.objectClasses.forEach(objectClass => {
+		const checkbox = document.querySelector(`.objectClassCheckbox[value="${objectClass}"]`);
+		if (checkbox) {
+			checkbox.checked = true; // Cocher l'objectClass
+			checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
+		}
+	});
+
+	// Sélecter la liste des attributes du profil retenu
+	const mustAttributesDiv = document.getElementById("mustAttributes");
+	const mayAttributesDiv  = document.getElementById("mayAttributes");
+	selectedProfileData.attributes.forEach(attribute => {
+		const checkbox = mustAttributesDiv.querySelector(`#must-${attribute}`) || mayAttributesDiv.querySelector(`#may-${attribute}`);
+		if (checkbox) {
+			checkbox.checked = true; // Cocher l'objectClass
+			checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
+		}
+	});
 }
 
 // Fonction pour réinitialiser les checkboxes
@@ -321,38 +341,7 @@ function resetObjectClassesAndAttributes() {
 	attributesDropdown.style.display = 'none'; // Masquer le dropdown
 }
 
-// Fonction pour mettre à jour les objectClasses et attributs en fonction du profil sélectionné
-function updateObjectClassesAndAttributes() {
-	if (selectedProfile) {
-		const selectedProfileData = searchProfiles[selectedProfile];
-
-		// Mettre à jour les checkboxes pour les objectClasses
-		selectedProfileData.objectClasses.forEach(objectClass => {
-			const checkbox = document.querySelector(`.objectClassCheckbox[value="${objectClass}"]`);
-			if (checkbox) {
-				checkbox.checked = true; // Cocher l'objectClass
-				checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
-			}
-		});
-
-		// Ajouter les attributs correspondants
-		const mustAttributesDiv = document.getElementById("mustAttributes");
-		selectedProfileData.attributes.forEach(attribute => {
-			const checkboxId = `must-${attribute}`;
-			const checkboxDiv = document.createElement("div");
-			checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" checked> ${attribute}</label>`;
-			mustAttributesDiv.appendChild(checkboxDiv);
-			selectedAttributes[attribute] = true; // Enregistrer l'état
-		});
-	}
-
-	// Afficher le dropdown des attributs
-	const attributesDropdown = document.getElementById("attributesDropdown");
-	attributesDropdown.style.display = 'block'; // Afficher le dropdown des attributs
-	document.getElementById("attributesBtn").disabled = false; // Activer le bouton
-}
-
-// Gérer le changement d'objectClass
+// Gérer la sélection/dé-sélection d'objectClasses
 document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 	checkbox.addEventListener("change", function() {
 		const mustAttributesDiv = document.getElementById("mustAttributes");
@@ -366,41 +355,39 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 		const selectedObjectClasses = Array.from(document.querySelectorAll('.objectClassCheckbox:checked'))
 			.map(cb => cb.value);
 
-		// Utiliser des ensembles pour éviter les doublons  
-		const seenMustAttributes = new Set(); // Pour les attributs MUST  
-		const seenMayAttributes = new Set(); // Pour les attributs MAY
-
 		// Mettre à jour le tooltip des attributs  
 		const attributesTooltip = document.getElementById("attributesTooltip");
 		attributesTooltip.textContent = selectedObjectClasses.length > 0 
 			? "Sélectionner les attributs objets de la recherche" 
 			: "Sélectionner préalablement au moins un objectClass"; // Texte par défaut
 
-		// Première étape : Remplir les ensembles avec les valeurs des attributs  
+		// Utiliser des ensembles pour éviter les doublons  
+		const seenMustAttributes = new Set(); // Pour les attributs MUST  
+		const seenMayAttributes = new Set(); // Pour les attributs MAY
+
+		// Ajouter aux sets les valeurs des nouveaux attributs de l'objectClass sélectionné
 		selectedObjectClasses.forEach(selectedClass => {
 			const objectClass = ldapSchema.objectClasses.find(cls => cls.NAME[0] === selectedClass);
 			if (objectClass) {
-				// Ajouter les attributs MUST de l'objectClass sélectionné  
+				// Ajouter les attributs MUST
 				if (objectClass.MUST && objectClass.MUST.length > 0) {
 					objectClass.MUST.forEach(attribute => {
 						seenMustAttributes.add(attribute); // Ajouter à l'ensemble des MUST  
 					});
 				}
-				// Ajouter les attributs MAY de l'objectClass sélectionné  
+				// Ajouter les attributs MAY
 				if (objectClass.MAY && objectClass.MAY.length > 0) {
 					objectClass.MAY.forEach(attribute => {
-						seenMayAttributes.add(attribute); // Ajouter à l'ensemble des MAY  
+						seenMayAttributes.add(attribute); // Ajouter des MAY à son SET
 					});
 				}
 			}
 		});
 
-		// Deuxième étape : Retirer les attributs MUST de l'ensemble des MAY  
-		seenMustAttributes.forEach(attribute => {
-			seenMayAttributes.delete(attribute); // Retirer les attributs MUST des MAY  
-		});
+		// Deuxième étape : Retirer les attributs MUST du set des MAY  
+		seenMustAttributes.forEach(attribute => {seenMayAttributes.delete(attribute);});
 
-		// Troisième étape : Mettre à jour les checkboxes à partir des ensembles  
+		// Troisième étape : Mettre à jour les checkboxes à partir des sets  
 		// Générer les checkboxes pour MUST  
 		seenMustAttributes.forEach(attribute => {
 			const checkboxId = `must-${attribute}`;
