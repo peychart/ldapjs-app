@@ -75,6 +75,8 @@ level: 'error', // 'info' Niveau de log par défaut
 		// Récupération du schéma LDAP
 		const ldapSchema = await loadSchema(ldap, config);
 
+//console.log('ldapSchema: ', JSON.stringify(ldapSchema, null, 2));	// Pour debug
+
 		// Configuration des middlewares
 		app.use(bodyParser.json()); // Pour traiter les JSON
 		app.use(bodyParser.urlencoded({ extended: true })); // Pour parser les données de formulaire
@@ -234,7 +236,7 @@ level: 'error', // 'info' Niveau de log par défaut
 		// Route de recherche (GET)
 		app.get('/search', async (req, res) => {
 			// Rendre la vue de recherche
-			res.render('search', { results: null, searchTerm: req.body.searchTerm, error: null });
+			res.render('search', { results: null, searchTerm: req.body.searchTerm, error: null, ldapSchema: ldapSchema });
 		});
 
 		// Route de recherche (POST)
@@ -257,7 +259,7 @@ level: 'error', // 'info' Niveau de log par défaut
 				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
 				// Passer le searchTerm à la vue avec un statut 200 (OK)
-				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, error: null });
+				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, error: null, ldapSchema: ldapSchema });
 
 			} catch(error) {
 					console.error('Erreur:', error);
@@ -265,7 +267,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					client.unbind(); // Assurez-vous que le client est délié
 				}
 				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
-				return ress.status(500).render('search', { results: null, searchTerm: null, error: error.message });
+				return ress.status(500).render('search', { results: null, searchTerm: null, error: error.message, ldapSchema: ldapSchema });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
