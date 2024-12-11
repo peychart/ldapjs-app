@@ -254,6 +254,9 @@ function validateFinalInput(input, initialValue) {
 Page de connexion :
  ![](doc/images/login.png)
 
+Définition de la recherche :
+ ![](doc/images/searchDef.png)
+
 Recherche :
  ![](doc/images/search.png)
 
