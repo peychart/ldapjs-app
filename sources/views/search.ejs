@@ -40,21 +40,99 @@
             padding: 8px 12px;
             border: none;
             border-radius: 4px;
-            background-color: #D3D3D3;
+            background-color: #D3D3D3; /* Couleur de fond */
             color: black;
             cursor: pointer;
         }
         button:hover {
-            background-color: #C0C0C0;
+            background-color: #C0C0C0; /* Couleur de fond */
         }
         input[type="text"] {
             padding: 8px;
             border-radius: 4px;
             border: 1px solid #ccc;
             width: 270px;
+            background-color: #FFF5E0; /* Couleur orange plus clair */
         }
-       .logout-button {
+        .logout-button {
             margin-left: auto; /* Pour pousser le bouton à droite */
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            margin-left: 10px; /* Espacement à gauche */
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #FFF5E0; /* Saumon atténué (plus clair) */
+            border: 1px solid #ccc;
+            z-index: 1;
+            height: 400px; /* Hauteur maximale */
+            min-height: 100px; /* Hauteur maximale */
+            max-height: 1200px; /* Hauteur maximale */
+            overflow-y: auto; /* Scroll si trop d'options */
+            min-width: 300px; /* Largeur minimale */
+            padding: 5px;
+            resize: vertical; /* Permettre le redimensionnement vertical */
+        }
+        .dropdown-content label {
+            display: block;
+            padding: 8px;
+            cursor: pointer;
+            color: black; /* Couleur normale */
+        }
+        .dropdown-content label:hover {
+            background-color: #f1f1f1; /* Changement de couleur au survol */
+        }
+        .show {
+            display: block; /* Afficher le dropdown */
+        }
+        .checkboxes {
+            display: flex;
+            flex-direction: column;
+        }
+        .attributes-separator {
+            height: 20px; /* Hauteur visible pour clic */
+            background-color: #ccc; /* Couleur de fond */
+            text-align: center;
+            line-height: 20px; /* Centrer le texte */
+            width: 100%; /* Largeur complète */
+            border-top: 1px solid #aaa; /* Bordure en haut */
+            margin-top: 5px;
+        }
+        /* Style pour le tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 250px; /* Largeur du tooltip */
+            background-color: #555; /* Couleur de fond du tooltip */
+            color: #fff; /* Couleur du texte */
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Positionnement au-dessus de l'élément */
+            left: 50%;
+            margin-left: -125px; /* Centrer le tooltip */
+            opacity: 0; /* Commence caché */
+            transition: opacity 0.3s; /* Transition pour l'apparition */
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible; /* Afficher le tooltip au survol */
+            opacity: 1; /* Rendre visible */
+        }
+        .profils {
+            color: grey;
+        }
+        .selected-profile {
+            font-weight: bold; /* Profil sélectionné en gras */
+            color: black; /* Afficher en noir */
         }
     </style>
 </head>
@@ -63,8 +141,44 @@
 
     <div class="header-buttons">
         <form action="/search" method="post">
-            <input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : ( including * ) ..." required value="<%= searchTerm || '' %>">
+            <input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including '*') ..." required value="<%= searchTerm || '' %>">
             <button type="submit">Rechercher</button>
+
+            <!-- Dropdown pour les objectClasses de TYPE STRUCTURAL avec tooltip -->
+            <div class="dropdown tooltip">
+                <button type="button" id="objectClassBtn">Object Classes</button>
+                <span class="tooltiptext">Sélectionner les objectClasses objets de la recherche.</span>
+                <div class="dropdown-content" height="300px;" id="objectClassDropdown">
+                    <div class="attributes-separator">Profils enregistrés</div>
+                    <div id="profilesContainer"></div>
+                    <div class="attributes-separator">Créer un nouveau profil</div>
+                    <div class="checkboxes" id="objectClassCheckboxes">
+                        <% 
+                            const sortedObjectClasses = ldapSchema.objectClasses  
+                                .filter(objectClass => objectClass.TYPE === 'STRUCTURAL' || objectClass.TYPE === 'AUXILIARY')
+                                .sort((a, b) => a.NAME[0].localeCompare(b.NAME[0]));
+                            
+                            sortedObjectClasses.forEach(objectClass => { %>
+                                <label>
+                                    <input type="checkbox" class="objectClassCheckbox" value="<%= objectClass.NAME[0] %>">
+                                    <%= objectClass.NAME[0] %>
+                                </label>
+                            <% }); %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dropdown pour les attributs MUST et MAY de l'objectClass sélectionné -->
+            <div class="dropdown tooltip">
+                <button type="button" id="mustAttributesBtn" disabled>Attributes</button>
+                <span class="tooltiptext" id="attributesTooltip">Sélectionner préalablement au moins un objectClass</span>
+                <div class="dropdown-content" id="mustAttributesDropdown" height="100px;" style="display: none;">
+                    <div class="attributes-separator">MUST attributes</div>
+                    <div class="checkboxes" id="mustAttributes"></div>
+                    <div class="attributes-separator">MAY attributes</div>
+                    <div class="checkboxes" id="mayAttributes"></div>
+                </div>
+            </div>
         </form>
         
         <div class="reset-button">
@@ -117,22 +231,258 @@
             <% } %>
         </tbody>
     </table>
-    <script>
-		// Mettre le focus sur le champ de recherche lors du chargement de la page  
-		window.onload = function() {
-        	// Placer le focus sur le champ de recherche lors du chargement de la page  
-			document.getElementById("searchTerm").focus();
-		};
+<script>
+    const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
+    const searchProfiles = {
+        "personnes": {
+            "objectClasses": [
+                "person",
+                "personne",
+                "inetOrgPerson"
+            ],
+            "attributes": [
+                "uid",
+                "cn",
+                "sn",
+                "telephoneNumber",
+                "o",
+                "mail",
+                "employeeNumber"
+            ]
+        },
+        "services": {
+            "objectClasses": [
+                "domain",
+                "dNSDomain"
+            ],
+            "attributes": [
+                "dc",
+                "telephoneNumber",
+                "description"
+            ]
+        }
+    };
 
-        function handleHeaderClick(header) {
-            // Votre logique pour gérer le clic sur l'en-tête  
-            alert("Vous avez cliqué sur : " + header.innerText);
+    let selectedAttributes = {}; // Objet pour stocker l'état des checkboxes
+    let selectedProfile = null; // Pour suivre le profil actuellement sélectionné
+
+    // Mettre le focus sur le champ de recherche lors du chargement de la page
+    window.onload = function() {
+        document.getElementById("searchTerm").focus();
+        populateProfiles(); // Appeler la fonction pour peupler les profils
+    };
+
+    // Fonction pour peupler les profils enregistrés
+    function populateProfiles() {
+        const profilesContainer = document.getElementById('profilesContainer');
+        profilesContainer.innerHTML = ''; // Vider le conteneur avant de le remplir
+        const profiles = Object.keys(searchProfiles);
+
+        if (profiles.length === 0) {
+            profilesContainer.innerHTML = '<label class="profils">Aucun profil encore enregistré ...</label>';
+        } else {
+            profiles.forEach(profile => {
+                const profileLink = document.createElement('div');
+                profileLink.classList.add('profils');
+                profileLink.innerHTML = `<span class="profile-item" id="${profile}">${profile}</span>`;
+                profileLink.addEventListener('click', () => selectProfile(profile));
+                profilesContainer.appendChild(profileLink);
+            });
+        }
+    }
+
+    // Fonction pour sélectionner un profil
+    function selectProfile(profile) {
+        if (selectedProfile) {
+            document.getElementById(selectedProfile).classList.remove('selected-profile');
         }
 
-        // Sélectionner le contenu du champ input lorsque celui-ci reçoit le focus  
-        document.getElementById("searchTerm").addEventListener("focus", function() {
-            this.select();
+        selectedProfile = profile; // Mettre à jour le profil sélectionné
+        const profileItem = document.getElementById(profile);
+        profileItem.classList.add('selected-profile'); // Ajouter la sélection
+
+        // Réinitialiser les checkboxes avant de mettre à jour
+        resetObjectClassesAndAttributes();
+
+        // Mettre à jour les objectClasses et attributs en fonction du profil sélectionné
+        updateObjectClassesAndAttributes();
+    }
+
+    // Fonction pour réinitialiser les checkboxes
+    function resetObjectClassesAndAttributes() {
+        const objectClassCheckboxes = document.querySelectorAll('.objectClassCheckbox');
+        const mustAttributesDiv = document.getElementById("mustAttributes");
+        const mayAttributesDiv = document.getElementById("mayAttributes");
+        mustAttributesDiv.innerHTML = ''; // Réinitialiser les options MUST
+        mayAttributesDiv.innerHTML = ''; // Réinitialiser les options MAY
+
+        // Réinitialiser et désélectionner les checkboxes des objectClasses
+        objectClassCheckboxes.forEach(checkbox => {
+            checkbox.checked = false; // Désélectionner toutes les checkboxes
         });
-    </script>
+
+        // Masquer le dropdown des attributs
+        const mustAttributesDropdown = document.getElementById("mustAttributesDropdown");
+        mustAttributesDropdown.style.display = 'none'; // Masquer le dropdown
+    }
+
+    // Fonction pour mettre à jour les objectClasses et attributs en fonction du profil sélectionné
+    function updateObjectClassesAndAttributes() {
+        if (selectedProfile) {
+            const selectedProfileData = searchProfiles[selectedProfile];
+
+            // Mettre à jour les checkboxes pour les objectClasses
+            selectedProfileData.objectClasses.forEach(objectClass => {
+                const checkbox = document.querySelector(`.objectClassCheckbox[value="${objectClass}"]`);
+                if (checkbox) {
+                    checkbox.checked = true; // Cocher l'objectClass
+                    checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
+                }
+            });
+
+            // Ajouter les attributs correspondants
+            const mustAttributesDiv = document.getElementById("mustAttributes");
+            selectedProfileData.attributes.forEach(attribute => {
+                const checkboxId = `must-${attribute}`;
+                const checkboxDiv = document.createElement("div");
+                checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" checked> ${attribute}</label>`;
+                mustAttributesDiv.appendChild(checkboxDiv);
+                selectedAttributes[attribute] = true; // Enregistrer l'état
+            });
+        }
+
+        // Afficher le dropdown des attributs
+        const mustAttributesDropdown = document.getElementById("mustAttributesDropdown");
+        mustAttributesDropdown.style.display = 'block'; // Afficher le dropdown des attributs
+        document.getElementById("mustAttributesBtn").disabled = false; // Activer le bouton
+    }
+
+    // Afficher/Masquer le dropdown des objectClasses
+    document.getElementById("objectClassBtn").addEventListener("click", function() {
+        const dropdown = document.getElementById("objectClassDropdown");
+        dropdown.classList.toggle("show");
+    });
+
+    // Gérer le changement d'objectClass
+    document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
+        checkbox.addEventListener("change", function() {
+            const mustAttributesDiv = document.getElementById("mustAttributes");
+            const mayAttributesDiv = document.getElementById("mayAttributes");
+            mustAttributesDiv.innerHTML = ''; // Réinitialiser les options MUST
+            mayAttributesDiv.innerHTML = ''; // Réinitialiser les options MAY
+            const mustAttributesDropdown = document.getElementById("mustAttributesDropdown");
+            mustAttributesDropdown.style.display = 'none'; // Masquer le dropdown
+
+            // Récupérer tous les objectClasses sélectionnés
+            const selectedObjectClasses = Array.from(document.querySelectorAll('.objectClassCheckbox:checked'))
+                .map(cb => cb.value);
+
+            // Utiliser des ensembles pour éviter les doublons
+            const seenAttributes = new Set();
+
+            // Mettre à jour le tooltip des attributs
+            const attributesTooltip = document.getElementById("attributesTooltip");
+            if (selectedObjectClasses.length > 0) {
+                attributesTooltip.textContent = "Sélectionner les attributs objets de la recherche"; // Mettre à jour le texte
+            } else {
+                attributesTooltip.textContent = "Sélectionner préalablement au moins un objectClass"; // Texte par défaut
+            }
+
+            selectedObjectClasses.forEach(selectedClass => {
+                const objectClass = ldapSchema.objectClasses.find(cls => cls.NAME[0] === selectedClass);
+                if (objectClass) {
+                    // Ajouter les attributs MUST de l'objectClass sélectionné
+                    if (objectClass.MUST && objectClass.MUST.length > 0) {
+                        objectClass.MUST.forEach(attribute => {
+                            const checkboxId = `must-${attribute}`;
+                            const checkboxDiv = document.createElement("div");
+                            const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré
+                            checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
+                            mustAttributesDiv.appendChild(checkboxDiv);
+                            // Enregistrer l'état du checkbox
+                            document.getElementById(checkboxId).addEventListener('change', function() {
+                                selectedAttributes[attribute] = this.checked; // Mettre à jour l'état
+                            });
+                        });
+                    }
+                    // Ajouter les attributs MAY de l'objectClass sélectionné
+                    if (objectClass.MAY && objectClass.MAY.length > 0) {
+                        objectClass.MAY.forEach(attribute => {
+                            const checkboxId = `may-${attribute}`;
+                            const checkboxDiv = document.createElement("div");
+                            const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré
+                            checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
+                            mayAttributesDiv.appendChild(checkboxDiv);
+                            // Enregistrer l'état du checkbox
+                            document.getElementById(checkboxId).addEventListener('change', function() {
+                                selectedAttributes[attribute] = this.checked; // Mettre à jour l'état
+                            });
+                        });
+                    }
+                }
+            });
+
+            // Afficher le dropdown des attributs si au moins un objectClass est sélectionné
+            if (selectedObjectClasses.length > 0) {
+                mustAttributesDropdown.style.display = 'block'; // Afficher le dropdown des attributs
+                document.getElementById("mustAttributesBtn").disabled = false; // Activer le bouton
+            } else {
+                document.getElementById("mustAttributesBtn").disabled = true; // Désactiver le bouton si aucun objectClass sélectionné
+            }
+        });
+    });
+
+    // Afficher/Masquer le dropdown des attributs MUST
+    document.getElementById("mustAttributesBtn").addEventListener("click", function() {
+        const mustAttributesDropdown = document.getElementById("mustAttributesDropdown");
+        mustAttributesDropdown.style.display = mustAttributesDropdown.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Fonctionnalité de redimensionnement pour le dropdown
+    function makeResizable(resizeBtn, dropdownContent) {
+        let startY, startHeight;
+
+        resizeBtn.addEventListener('mousedown', function(e) {
+            startY = e.clientY;
+            startHeight = parseInt(window.getComputedStyle(dropdownContent).height, 10);
+            document.documentElement.addEventListener('mousemove', doDrag);
+            document.documentElement.addEventListener('mouseup', stopDrag);
+        });
+
+        function doDrag(e) {
+            const newHeight = startHeight + (e.clientY - startY); // Permet d'agrandir ou de réduire
+            dropdownContent.style.height = newHeight + 'px';
+        }
+
+        function stopDrag() {
+            document.documentElement.removeEventListener('mousemove', doDrag);
+            document.documentElement.removeEventListener('mouseup', stopDrag);
+        }
+    }
+
+    // Rendre le redimensionnement possible pour les dropdowns avec les boutons
+    makeResizable(document.getElementById('mustAttributesResizeBtn'), document.getElementById('mustAttributesDropdown'));
+
+    // Fermer le dropdown si on clique en dehors
+    window.addEventListener('click', function(event) {
+        const objectClassDropdown = document.getElementById("objectClassDropdown");
+        const mustAttributesDropdown = document.getElementById("mustAttributesDropdown");
+
+        // Vérifier si le clic est en dehors des dropdowns
+        if (!event.target.matches('#objectClassBtn') && !event.target.matches('#mustAttributesBtn') &&
+            !objectClassDropdown.contains(event.target) && !mustAttributesDropdown.contains(event.target)) {
+            objectClassDropdown.classList.remove('show');
+            mustAttributesDropdown.style.display = 'none'; // Fermer le dropdown des attributs
+        }
+    });
+
+    function handleHeaderClick(header) {
+        alert("Vous avez cliqué sur : " + header.innerText);
+    }
+
+    document.getElementById("searchTerm").addEventListener("focus", function() {
+        this.select();
+    });
+</script>
 </body>
 </html>
