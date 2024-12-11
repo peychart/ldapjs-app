@@ -127,9 +127,6 @@
 			visibility: visible; /* Afficher le tooltip au survol */
 			opacity: 1; /* Rendre visible */
 		}
-		.profils {
-			color: grey;
-		}
 		.selected-profile {
 			font-weight: bold; /* Profil sélectionné en gras */
 			color: black; /* Afficher en noir */
@@ -153,17 +150,16 @@
 					<div id="profilesContainer"></div>
 					<div class="attributes-separator">Créer un nouveau profil</div>
 					<div class="checkboxes" id="objectClassCheckboxes">
-						<% 
-							const sortedObjectClasses = ldapSchema.objectClasses  
-								.filter(objectClass => objectClass.TYPE === 'STRUCTURAL' || objectClass.TYPE === 'AUXILIARY')
-								.sort((a, b) => a.NAME[0].localeCompare(b.NAME[0]));
-							
-							sortedObjectClasses.forEach(objectClass => { %>
-								<label>
-									<input type="checkbox" class="objectClassCheckbox" value="<%= objectClass.NAME[0] %>">
-									<%= objectClass.NAME[0] %>
-								</label>
-							<% }); %>
+					<%	const sortedObjectClasses = ldapSchema.objectClasses  
+							.filter(objectClass => objectClass.TYPE === 'STRUCTURAL' || objectClass.TYPE === 'AUXILIARY')
+							.sort((a, b) => a.NAME[0].localeCompare(b.NAME[0]));
+					
+						sortedObjectClasses.forEach(objectClass => { %>
+							<label>
+								<input type="checkbox" class="objectClassCheckbox" value="<%= objectClass.NAME[0] %>">
+								<%= objectClass.NAME[0] %>
+							</label>
+						<% }); %>
 					</div>
 				</div>
 			</div>
@@ -234,7 +230,7 @@
 <script>
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 const searchProfiles = {
-	"personnes": {
+	"Personnes": {
 		"objectClasses": [
 			"person",
 			"personne",
@@ -250,7 +246,7 @@ const searchProfiles = {
 			"employeeNumber"
 		]
 	},
-	"services": {
+	"Services": {
 		"objectClasses": [
 			"domain",
 			"dNSDomain"
@@ -279,12 +275,12 @@ function populateProfiles() {
 	const profiles = Object.keys(searchProfiles);
 
 	if (profiles.length === 0) {
-		profilesContainer.innerHTML = '<label class="profils">Aucun profil encore enregistré ...</label>';
+		profilesContainer.innerHTML = '<label class="profils" style="color: grey;">Aucun profil encore enregistré ...</label>';
 	} else {
 		profiles.forEach(profile => {
 			const profileLink = document.createElement('div');
 			profileLink.classList.add('profils');
-			profileLink.innerHTML = `<span class="profile-item" id="${profile}">${profile}</span>`;
+			profileLink.innerHTML = `<span class="profile-item" id="${profile}" style="color: black;">- ${profile}</span>`;
 			profileLink.addEventListener('click', () => selectProfile(profile));
 			profilesContainer.appendChild(profileLink);
 		});
@@ -293,13 +289,12 @@ function populateProfiles() {
 
 // Fonction pour sélectionner un profil
 function selectProfile(profile) {
-	if (selectedProfile) {
+	if (selectedProfile) {	// dé-select l'ancien profil sélectionné
 		document.getElementById(selectedProfile).classList.remove('selected-profile');
 	}
 
-	selectedProfile = profile; // Mettre à jour le profil sélectionné
-	const profileItem = document.getElementById(profile);
-	profileItem.classList.add('selected-profile'); // Ajouter la sélection
+	selectedProfile = profile; // Mettre à jour le nouveau profil sélectionné
+	document.getElementById(profile).classList.add('selected-profile'); // Marquer la sélection
 
 	// Réinitialiser les checkboxes avant de mettre à jour
 	resetObjectClassesAndAttributes();
@@ -356,12 +351,6 @@ function updateObjectClassesAndAttributes() {
 	attributesDropdown.style.display = 'block'; // Afficher le dropdown des attributs
 	document.getElementById("attributesBtn").disabled = false; // Activer le bouton
 }
-
-// Afficher/Masquer le dropdown des objectClasses
-document.getElementById("objectClassBtn").addEventListener("click", function() {
-	const dropdown = document.getElementById("objectClassDropdown");
-	dropdown.classList.toggle("show");
-});
 
 // Gérer le changement d'objectClass
 document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
@@ -446,6 +435,12 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 			document.getElementById("attributesBtn").disabled = true; // Désactiver le bouton si aucun objectClass sélectionné  
 		}
 	});
+});
+
+// Afficher/Masquer le dropdown des objectClasses
+document.getElementById("objectClassBtn").addEventListener("click", function() {
+	const dropdown = document.getElementById("objectClassDropdown");
+	dropdown.classList.toggle("show");
 });
 
 // Afficher/Masquer le dropdown des attributs MUST  
