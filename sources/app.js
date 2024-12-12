@@ -280,6 +280,41 @@ level: 'error', // 'info' Niveau de log par défaut
 			}
 		});
 
+		// Route de définition des recherches (POST)
+		app.post('/searchDef', async (req, res) => {
+
+			// Créer un client LDAP
+			const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+
+			const opts = {
+				filter: `(&(objectClass=person)(|(uid=${searchTerm})(cn=${searchTerm})(sn=${searchTerm})(givenName=${searchTerm})(employeeNumber=${searchTerm})))`,
+				scope: 'sub',
+				attributes: ['dn', 'uid', 'cn', 'sn', 'telephoneNumber', 'o', 'mail', 'employeeNumber']
+			};
+
+			try {
+				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
+
+				// Récupérer les résultats de la recherche LDAP
+				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
+
+				// Passer le searchTerm à la vue avec un statut 200 (OK)
+				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, error: null, ldapSchema: ldapSchema });
+
+			} catch(error) {
+				;
+			} finally {
+				// Déconnexion du client principal
+				if (client) {
+					try {
+						await client.unbind();
+					} catch(unbindError) {
+						console.error('Erreur lors de la déconnexion du client:', unbindError);
+					}
+				}
+			}
+		});
+
 		/* *****************************
 		 * Route d'édition de l'oject dn
 		 */
