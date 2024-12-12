@@ -140,13 +140,15 @@
 		<form action="/search" method="post">
 			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including  * ) ..." required value="<%= searchTerm || '' %>">
 			<button type="submit">Rechercher</button>
+		</form>
 
+		<form action="/searchDef" method="post">
 			<!-- Dropdown pour les objectClasses de TYPE STRUCTURAL avec tooltip -->
 			<div class="dropdown tooltip">
 				<button type="button" id="objectClassBtn">Object Classes</button>
 				<span class="tooltiptext">Sélectionner les objectClasses objets de la recherche.</span>
 				<div class="dropdown-content" height="300px;" id="objectClassDropdown">
-					<div class="attributes-separator">Profils enregistrés</div>
+					<div class="attributes-separator">Profils de recherche</div>
 					<div id="profilesContainer"></div>
 					<div class="attributes-separator">Créer un nouveau profil</div>
 					<div class="checkboxes" id="objectClassCheckboxes">
