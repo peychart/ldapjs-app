@@ -142,7 +142,8 @@
 			<button type="submit">Rechercher</button>
 		</form>
 
-		<form action="/searchDef" method="post">
+		<form action="/searchDef" method="post" id="searchDefForm">
+			<input type="hidden" id="newProfileName" name="newProfileName">
 			<!-- Dropdown pour les objectClasses de TYPE STRUCTURAL avec tooltip -->
 			<div class="dropdown tooltip">
 				<button type="button" id="objectClassBtn">Object Classes</button>
@@ -150,9 +151,9 @@
 				<div class="dropdown-content" height="300px;" id="objectClassDropdown">
 					<div class="attributes-separator">Profils de recherche</div>
 					<div id="profilesContainer"></div>
-					<div class="attributes-separator">Créer un nouveau profil</div>
+					<div class="attributes-separator" onclick="createNewProfile()">Créer un nouveau profil</div>
 					<div class="checkboxes" id="objectClassCheckboxes">
-					<%	const sortedObjectClasses = ldapSchema.objectClasses  
+					<%	const sortedObjectClasses = ldapSchema.objectClasses
 							.filter(objectClass => objectClass.TYPE === 'STRUCTURAL' || objectClass.TYPE === 'AUXILIARY')
 							.sort((a, b) => a.NAME[0].localeCompare(b.NAME[0]));
 					
@@ -231,35 +232,7 @@
 	</table>
 <script>
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
-const searchProfiles = {
-	"Personnes": {
-		"objectClasses": [
-			"person",
-			"personne",
-			"inetOrgPerson"
-		],
-		"attributes": [
-			"uid",
-			"cn",
-			"sn",
-			"telephoneNumber",
-			"o",
-			"mail",
-			"employeeNumber"
-		]
-	},
-	"Services": {
-		"objectClasses": [
-			"domain",
-			"dNSDomain"
-		],
-		"attributes": [
-			"domainComponent",
-			"telephoneNumber",
-			"description"
-		]
-	}
-};
+const searchProfiles = <%- JSON.stringify(searchProfiles) %>;
 
 let selectedAttributes = {}; // Objet pour stocker l'état des checkboxes
 let selectedProfile = null; // Pour suivre le profil actuellement sélectionné
@@ -325,6 +298,79 @@ function selectProfile(profile) {
 	});
 }
 
+function checkSameProfileExist(selectedObjectClasses) { // Vérification parmi les profiles existants
+ 	// Créer une fonction pour comparer deux tableaux
+	const arraysAreEqual = (arr1, arr2) => {
+		if (arr1.length !== arr2.length) return false;
+		const set1 = new Set(arr1);
+		const set2 = new Set(arr2);
+		for (const item of set1)
+			if (!set2.has(item)) return false;
+		return true;
+	};
+
+	// Parcourt chaque profil dans searchProfiles
+	for (const profileName in searchProfiles) {
+		const profileObjectClasses = searchProfiles[profileName].objectClasses;
+
+		// Vérifie si les objectClasses sélectionnés sont strictement les mêmes que ceux du profil à créer
+		if (arraysAreEqual(selectedObjectClasses, profileObjectClasses)) {
+			return profileName; // Un profil similaire a été trouvé
+	}	}
+
+	return null; // Aucun profil similaire n'a été trouvé
+}
+
+function checkSelectionsNewProfile() { // Vérifier les sélections requises à la création d'un nouveau profil
+	const objectClassCheckboxes = document.querySelectorAll('#objectClassCheckboxes .objectClassCheckbox');
+	const mustAttributes = document.querySelectorAll('#mustAttributes input[type="checkbox"]');
+	const mayAttributes = document.querySelectorAll('#mayAttributes input[type="checkbox"]');
+
+	// Vérifier si au moins une checkbox est cochée dans objectClassCheckboxes
+	const isAnyObjectClassChecked = Array.from(objectClassCheckboxes).some(checkbox => checkbox.checked);
+
+	// Vérifier si au moins une checkbox est cochée dans mustAttributes ou mayAttributes
+	const isAnyMustChecked = Array.from(mustAttributes).some(checkbox => checkbox.checked);
+	const isAnyMayChecked = Array.from(mayAttributes).some(checkbox => checkbox.checked);
+
+	return isAnyObjectClassChecked && (isAnyMustChecked || isAnyMayChecked);
+}
+
+function createNewProfile() {
+	if (!checkSelectionsNewProfile()) {
+		alert("Il faut prélablement définir ce nouveau profile !...\n (selectionner au moins un objectClass et un attribut de recherche)");
+		return;
+	}
+
+	const myProfil = prompt("Nom de ce nouveau profil :");
+	if (myProfil) {
+		const selectedObjectClasses = Array.from(document.querySelectorAll('#objectClassCheckboxes .objectClassCheckbox:checked')).map(checkbox => checkbox.value);
+		const similarProfile = checkSameProfileExist(selectedObjectClasses);
+		if (similarProfile) {
+			alert("Un profil similaire existe déjà : " + similarProfile);
+			return; // Stoppe l'exécution si un profil similaire est trouvé
+		}
+
+		// Vérifie si un profil de même nom existe déjà
+		let existingProfileName = null;
+		for (const profileName in searchProfiles) {
+			if (profileName.toLowerCase() === myProfil.toLowerCase()) {
+				existingProfileName = profileName; // Conserver le nom d'origine pour l'affichage  
+				break;
+		}	}
+
+		if (existingProfileName &&
+			!confirm("Un profil de nom '" + existingProfileName + "' existe déjà !\nSouhaitez-vous le remplacer ?")) {
+			return; // Exit si l'utilisateur ne souhaite pas remplacer
+		}
+
+		// Soumission du formulaire de création de profil
+		document.getElementById('newProfileName').value = myProfil;
+
+		document.getElementById("searchDefForm").submit();
+	}
+}
+
 // Fonction pour réinitialiser les checkboxes
 function resetObjectClassesAndAttributes() {
 	const objectClassCheckboxes = document.querySelectorAll('.objectClassCheckbox');
@@ -357,14 +403,14 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 		const selectedObjectClasses = Array.from(document.querySelectorAll('.objectClassCheckbox:checked'))
 			.map(cb => cb.value);
 
-		// Mettre à jour le tooltip des attributs  
+		// Mettre à jour le tooltip des attributs
 		const attributesTooltip = document.getElementById("attributesTooltip");
 		attributesTooltip.textContent = selectedObjectClasses.length > 0 
 			? "Sélectionner les attributs objets de la recherche" 
 			: "Sélectionner préalablement au moins un objectClass"; // Texte par défaut
 
-		// Utiliser des ensembles pour éviter les doublons  
-		const seenMustAttributes = new Set(); // Pour les attributs MUST  
+		// Utiliser des ensembles pour éviter les doublons
+		const seenMustAttributes = new Set(); // Pour les attributs MUST
 		const seenMayAttributes = new Set(); // Pour les attributs MAY
 
 		// Ajouter aux sets les valeurs des nouveaux attributs de l'objectClass sélectionné
@@ -374,7 +420,7 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 				// Ajouter les attributs MUST
 				if (objectClass.MUST && objectClass.MUST.length > 0) {
 					objectClass.MUST.forEach(attribute => {
-						seenMustAttributes.add(attribute); // Ajouter à l'ensemble des MUST  
+						seenMustAttributes.add(attribute); // Ajouter à l'ensemble des MUST
 					});
 				}
 				// Ajouter les attributs MAY
@@ -386,42 +432,42 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 			}
 		});
 
-		// Deuxième étape : Retirer les attributs MUST du set des MAY  
+		// Deuxième étape : Retirer les attributs MUST du set des MAY
 		seenMustAttributes.forEach(attribute => {seenMayAttributes.delete(attribute);});
 
-		// Troisième étape : Mettre à jour les checkboxes à partir des sets  
-		// Générer les checkboxes pour MUST  
+		// Troisième étape : Mettre à jour les checkboxes à partir des sets
+		// Générer les checkboxes pour MUST
 		seenMustAttributes.forEach(attribute => {
 			const checkboxId = `must-${attribute}`;
 			const checkboxDiv = document.createElement("div");
-			const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré  
+			const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré
 			checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
 			mustAttributesDiv.appendChild(checkboxDiv);
-			// Enregistrer l'état du checkbox  
+			// Enregistrer l'état du checkbox
 			document.getElementById(checkboxId).addEventListener('change', function() {
-				selectedAttributes[attribute] = this.checked; // Mettre à jour l'état  
+				selectedAttributes[attribute] = this.checked; // Mettre à jour l'état
 			});
 		});
 
-		// Générer les checkboxes pour MAY  
+		// Générer les checkboxes pour MAY
 		seenMayAttributes.forEach(attribute => {
 			const checkboxId = `may-${attribute}`;
 			const checkboxDiv = document.createElement("div");
-			const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré  
+			const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré
 			checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
 			mayAttributesDiv.appendChild(checkboxDiv);
-			// Enregistrer l'état du checkbox  
+			// Enregistrer l'état du checkbox
 			document.getElementById(checkboxId).addEventListener('change', function() {
-				selectedAttributes[attribute] = this.checked; // Mettre à jour l'état  
+				selectedAttributes[attribute] = this.checked; // Mettre à jour l'état
 			});
 		});
 
-		// Afficher le dropdown des attributs si au moins un objectClass est sélectionné  
+		// Afficher le dropdown des attributs si au moins un objectClass est sélectionné
 		if (selectedObjectClasses.length > 0) {
-			attributesDropdown.style.display = 'block'; // Afficher le dropdown des attributs  
-			document.getElementById("attributesBtn").disabled = false; // Activer le bouton  
+			attributesDropdown.style.display = 'block'; // Afficher le dropdown des attributs
+			document.getElementById("attributesBtn").disabled = false; // Activer le bouton
 		} else {
-			document.getElementById("attributesBtn").disabled = true; // Désactiver le bouton si aucun objectClass sélectionné  
+			document.getElementById("attributesBtn").disabled = true; // Désactiver le bouton si aucun objectClass sélectionné
 		}
 	});
 });
@@ -432,7 +478,7 @@ document.getElementById("objectClassBtn").addEventListener("click", function() {
 	dropdown.classList.toggle("show");
 });
 
-// Afficher/Masquer le dropdown des attributs MUST  
+// Afficher/Masquer le dropdown des attributs MUST
 document.getElementById("attributesBtn").addEventListener("click", function() {
 	const attributesDropdown = document.getElementById("attributesDropdown");
 	attributesDropdown.style.display = attributesDropdown.style.display === 'block' ? 'none' : 'block';
