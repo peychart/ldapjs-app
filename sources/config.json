@@ -16,7 +16,8 @@
     },
     "configDn": {
         "root": "ou=carnetLDAP,ou=application,dc=example,dc=com",
-        "attributs": "ou=attribut"
+        "attributs": "ou=attribut",
+        "searchProfile": "ou=searchProfile"
     },
     "logFile": "logs/application.log",
     "sessionSecret": "votre_secret_complexe"
