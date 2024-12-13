@@ -138,17 +138,17 @@
 
 	<div class="header-buttons">
 		<form action="/search" method="post">
-			<input type="hidden" id="profile" name="profile" value="{}">
+			<input type="hidden" id="profile" name="profile" value="<%= JSON.stringify(selectedProfile || {}) %>">
 			<input type="hidden" id="searchProfiles" name="searchProfiles" value="<%= JSON.stringify(searchProfiles) %>">
 			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including  * ) ..." required value="<%= searchTerm || '' %>">
-			<button type="submit">Rechercher</button>
+			<button type="button" onclick="searchSubmit(this.form)">Rechercher</button>
 		</form>
 
 		<form action="/searchDef" method="post" id="searchDefForm">
 			<input type="hidden" id="newProfileName" name="newProfileName">
 			<!-- Dropdown pour les objectClasses de TYPE STRUCTURAL avec tooltip -->
 			<div class="dropdown tooltip">
-				<button type="button" id="objectClassBtn">Object Classes</button>
+				<button type="button" id="objectClassBtn">ObjectClasses</button>
 				<span class="tooltiptext">Sélectionner les objectClasses objets de la recherche.</span>
 				<div class="dropdown-content" height="300px;" id="objectClassDropdown">
 					<div class="attributes-separator">Profils de recherche</div>
@@ -261,6 +261,8 @@ function populateProfiles() {
 			profileLink.addEventListener('click', () => selectProfile(profile));
 			profilesContainer.appendChild(profileLink);
 		});
+
+		selectProfile(JSON.parse(document.getElementById("profile").value)?.name);
 	}
 }
 
@@ -271,6 +273,8 @@ function updateProfileSpan(profile) {
 
 // Fonction pour sélectionner un profil
 function selectProfile(profile) {
+	if (!profile?.length)
+		return;
 	if (selectedProfile) {	// dé-select l'ancien profil sélectionné
 		document.getElementById(selectedProfile).classList.remove('selected-profile');
 	}
@@ -479,13 +483,21 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 
 		// Afficher le dropdown des attributs si au moins un objectClass est sélectionné
 		if (selectedObjectClasses.length > 0) {
-			attributesDropdown.style.display = 'block'; // Afficher le dropdown des attributs
+			attributesDropdown.style.display = objectClassDropdown.classList.contains("show") ?'block' :'none'; // Afficher le dropdown des attributs
 			document.getElementById("attributesBtn").disabled = false; // Activer le bouton
 		} else {
 			document.getElementById("attributesBtn").disabled = true; // Désactiver le bouton si aucun objectClass sélectionné
 		}
 	});
 });
+
+function searchSubmit(form) {
+	if (!selectedProfile){
+		alert("Sélectionner préalablement un profil de recherche !...\n(ObjectClasses et Attributes de recherche)");
+		return;
+	}
+	form.submit();
+}
 
 // Afficher/Masquer le dropdown des objectClasses
 document.getElementById("objectClassBtn").addEventListener("click", function() {
@@ -496,7 +508,7 @@ document.getElementById("objectClassBtn").addEventListener("click", function() {
 // Afficher/Masquer le dropdown des attributs MUST
 document.getElementById("attributesBtn").addEventListener("click", function() {
 	const attributesDropdown = document.getElementById("attributesDropdown");
-	attributesDropdown.style.display = attributesDropdown.style.display === 'block' ? 'none' : 'block';
+	attributesDropdown.style.display = (objectClassDropdown.classList.contains("show") && attributesDropdown.style.display === 'block') ?'none' :'block';
 });
 
 // Fermer le dropdown si on clique en dehors
