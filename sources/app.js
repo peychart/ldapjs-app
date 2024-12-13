@@ -250,28 +250,35 @@ level: 'error', // 'info' Niveau de log par défaut
 
 				// Récupérer les résultats de la recherche LDAP
 				const searchProfiles = await searchLDAP(client, ldapDn, opts).catch(() => {
-					return []; // Retourner un tableau vide en cas d'erreur  
+					return []; // Retourner un tableau vide en cas d'erreur
 				});
 
 				//const profilesToRender = searchProfiles.length > 0 ?searchProfiles :searchProfiles_exemple;
 				const profilesToRender = {};
 				searchProfiles.forEach(profile => {
-					const name = profile.cn[0]; // Récupérer le nom de l'entrée  
+					const name = profile.cn[0]; // Récupérer le nom de l'entrée
 					profilesToRender[name] = {
-						objectClasses: profile.ou, // Utiliser 'ou' pour les classes d'objet  
-						attributes: profile.l // Utiliser 'l' pour les attributs  
+						objectClasses: profile.ou, // Utiliser 'ou' pour les classes d'objet
+						attributes: profile.l // Utiliser 'l' pour les attributs
 					};
 				});
 
+				// Lire les cookies pour obtenir les données précédentes
+				const selectedProfileName = req.cookies.selectedProfile || ''; // Lire le DN du cookie, s'il existe
+				const selectedProfile = {
+					...(selectedProfileName ?{name:selectedProfileName} :{}),
+					...profilesToRender?.[selectedProfileName]
+				};
+
 				// Rendre la vue de recherche
-				res.render('search', { results: null, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles: profilesToRender, error: null });
+				res.render('search', { results: null, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles: profilesToRender, selectedProfile, error: null });
 			} catch(error) {
 					console.error('Erreur:', error);
 				if (client) {
 					client.unbind(); // Assurez-vous que le client est délié
 				}
 				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
-				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles: profilesToRender, error: error.message });
+				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles: profilesToRender, selectedProfile, error: error.message });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
@@ -289,6 +296,9 @@ level: 'error', // 'info' Niveau de log par défaut
 			const searchTerm = req.body.searchTerm;
 			const profile = JSON.parse(req.body.profile);
 			const searchProfiles = JSON.parse(req.body.searchProfiles);
+
+			// Mémoriser le dernier login dans un cookie
+			res.cookie('selectedProfile', profile?.name, { maxAge: 24 * 60 * 60 * 1000 }); // Expire dans 1 jour
 
 			// Créer un client LDAP
 			const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
@@ -310,7 +320,7 @@ level: 'error', // 'info' Niveau de log par défaut
 				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
 				// Passer le searchTerm à la vue avec un statut 200 (OK)
-				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles, error: null });
+				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles, selectedProfile: profile, error: null });
 
 			} catch(error) {
 					console.error('Erreur:', error);
@@ -318,7 +328,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					client.unbind(); // Assurez-vous que le client est délié
 				}
 				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
-				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles, error: error.message });
+				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles, selectedProfile: profile, error: error.message });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
