@@ -243,13 +243,15 @@ level: 'error', // 'info' Niveau de log par défaut
 				scope: 'sub',
 				attributes: ['cn', 'ou', 'l']
 			};
-			const ldapDn = (config.configDn.searchProfile ?? 'ou=searchProfile') + ',' + config.configDn.root;
+			const ldapDn = (config.configDn.searchProfiles ?? 'ou=searchProfile') + ',' + config.configDn.root;
 
 			try {
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
 				// Récupérer les résultats de la recherche LDAP
-				const searchProfiles = await searchLDAP(client, ldapDn, opts);
+				const searchProfiles = await searchLDAP(client, ldapDn, opts).catch(() => {
+					return []; // Retourner un tableau vide en cas d'erreur  
+				});
 
 				//const profilesToRender = searchProfiles.length > 0 ?searchProfiles :searchProfiles_exemple;
 				const profilesToRender = {};
@@ -269,7 +271,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					client.unbind(); // Assurez-vous que le client est délié
 				}
 				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
-				return res.status(500).render('search', { results: null, searchTerm: null, error: error.message, ldapSchema: ldapSchema });
+				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles: profilesToRender, error: error.message });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
@@ -285,14 +287,20 @@ level: 'error', // 'info' Niveau de log par défaut
 		// Route de recherche (POST)
 		app.post('/search', async (req, res) => {
 			const searchTerm = req.body.searchTerm;
+			const profile = JSON.parse(req.body.profile);
+			const searchProfiles = JSON.parse(req.body.searchProfiles);
 
 			// Créer un client LDAP
 			const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
+			// Construire les options de recherche
+			const objectClassFilter = profile.objectClasses.map(cls => `(objectClass=${cls})`).join('');
+			const attributeFilters = profile.attributes.map(attr => `(${attr}=${searchTerm})`).join('');
+			const filter = `(&${objectClassFilter}(|${attributeFilters}))`;
 			const opts = {
-				filter: `(&(objectClass=person)(|(uid=${searchTerm})(cn=${searchTerm})(sn=${searchTerm})(givenName=${searchTerm})(employeeNumber=${searchTerm})))`,
+				filter: filter,
 				scope: 'sub',
-				attributes: ['dn', 'uid', 'cn', 'sn', 'telephoneNumber', 'o', 'mail', 'employeeNumber']
+				attributes: ['dn', ...profile.attributes]
 			};
 
 			try {
@@ -302,7 +310,7 @@ level: 'error', // 'info' Niveau de log par défaut
 				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
 				// Passer le searchTerm à la vue avec un statut 200 (OK)
-				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, error: null, ldapSchema: ldapSchema });
+				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles, error: null });
 
 			} catch(error) {
 					console.error('Erreur:', error);
@@ -310,7 +318,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					client.unbind(); // Assurez-vous que le client est délié
 				}
 				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
-				return res.status(500).render('search', { results: null, searchTerm: null, error: error.message, ldapSchema: ldapSchema });
+				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles, error: error.message });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
