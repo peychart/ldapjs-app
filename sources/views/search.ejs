@@ -134,10 +134,12 @@
 	</style>
 </head>
 <body>
-	<h1>Recherche LDAP</h1>
+	<h1>Recherche <span id="profileSpan"></span></h1>
 
 	<div class="header-buttons">
 		<form action="/search" method="post">
+			<input type="hidden" id="profile" name="profile" value="{}">
+			<input type="hidden" id="searchProfiles" name="searchProfiles" value="<%= JSON.stringify(searchProfiles) %>">
 			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including  * ) ..." required value="<%= searchTerm || '' %>">
 			<button type="submit">Rechercher</button>
 		</form>
@@ -232,7 +234,7 @@
 	</table>
 <script>
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
-const searchProfiles = <%- JSON.stringify(searchProfiles) %>;
+const searchProfiles = JSON.parse(document.getElementById('searchProfiles').value);
 
 let selectedAttributes = {}; // Objet pour stocker l'état des checkboxes
 let selectedProfile = null; // Pour suivre le profil actuellement sélectionné
@@ -262,6 +264,11 @@ function populateProfiles() {
 	}
 }
 
+function updateProfileSpan(profile) {
+	document.getElementById("profile").value = JSON.stringify(profile);
+	document.getElementById("profileSpan").textContent = profile.name.length ?'de "' + profile.name + '" :' :'';
+}
+
 // Fonction pour sélectionner un profil
 function selectProfile(profile) {
 	if (selectedProfile) {	// dé-select l'ancien profil sélectionné
@@ -276,6 +283,11 @@ function selectProfile(profile) {
 
 	// Mettre à jour les objectClasses et attributs en fonction du profil sélectionné
 	const selectedProfileData = searchProfiles[selectedProfile];
+	const profileData = {
+		name: profile,
+		objectClasses: [],
+		attributes: []
+	};
 
 	// Sélecter la liste des objectClasses du profil retenu
 	selectedProfileData.objectClasses.forEach(objectClass => {
@@ -283,6 +295,7 @@ function selectProfile(profile) {
 		if (checkbox) {
 			checkbox.checked = true; // Cocher l'objectClass
 			checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
+			profileData.objectClasses.push(objectClass);
 		}
 	});
 
@@ -294,8 +307,10 @@ function selectProfile(profile) {
 		if (checkbox) {
 			checkbox.checked = true; // Cocher l'objectClass
 			checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
+			profileData.attributes.push(attribute); 
 		}
 	});
+	updateProfileSpan(profileData);
 }
 
 function checkSameProfileExist(selectedObjectClasses) { // Vérification parmi les profiles existants
