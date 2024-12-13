@@ -28,7 +28,7 @@ const defaultNodePort = 3000;
 const defaultLdapPort = 3000;
 
 const loadConfig = () => {
-	let config = {};
+	let config = null;
 	if (fs.existsSync(configPath)) {
 		const data = fs.readFileSync(configPath);
 
