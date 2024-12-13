@@ -71,7 +71,8 @@ const loadConfig = () => {
 			},
 			configDn: {
 				root: "ou=carnetLDAP,ou=application," + baseDN,
-				attributs: "ou=attribut"
+				attributs: "ou=attribut",
+				searchProfiles: "ou=searchProfile"
 			},
 			logFile: "logs/application.log",
 			sessionSecret: "secret_complexe"
