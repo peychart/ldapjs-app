@@ -367,7 +367,7 @@ async function createOrganizationalUnit(client, dn) {
  */
 async function updateAttributeConfigInLDAP(client, config, attrName, attrConf) {
 	try {
-		const root = config.configDn.attributs + ',' + config.configDn.root;
+		const root = (config.configDn.attributs ?? 'ou=attribut') + ',' + config.configDn.root;
 		await checkAndCreateOrganizationalUnit(client, root);
 
 		const dn = 'cn=' + attrName + ',' + root;
