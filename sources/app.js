@@ -264,11 +264,7 @@ level: 'error', // 'info' Niveau de log par défaut
 				});
 
 				// Lire les cookies pour obtenir les données précédentes
-				const selectedProfileName = req.cookies.selectedProfile || ''; // Lire le DN du cookie, s'il existe
-				const selectedProfile = {
-					...(selectedProfileName ?{name:selectedProfileName} :{}),
-					...profilesToRender?.[selectedProfileName]
-				};
+				const selectedProfile = req.cookies.selectedProfile || ''; // Lire le DN du cookie, s'il existe
 
 				// Rendre la vue de recherche
 				res.render('search', { results: null, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles: profilesToRender, selectedProfile, error: null });
@@ -294,33 +290,37 @@ level: 'error', // 'info' Niveau de log par défaut
 		// Route de recherche (POST)
 		app.post('/search', async (req, res) => {
 			const searchTerm = req.body.searchTerm;
-			const profile = JSON.parse(req.body.profile);
+			const selectedProfile = req.body.selectedProfile;
 			const searchProfiles = JSON.parse(req.body.searchProfiles);
+			const profile = searchProfiles[selectedProfile];
 
 			// Mémoriser le dernier login dans un cookie
-			res.cookie('selectedProfile', profile?.name, { maxAge: 24 * 60 * 60 * 1000 }); // Expire dans 1 jour
+			res.cookie('selectedProfile', selectedProfile, { maxAge: 24 * 60 * 60 * 1000 }); // Expire dans 1 jour
 
 			// Créer un client LDAP
 			const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
-			// Construire les options de recherche
-			const objectClassFilter = profile.objectClasses.map(cls => `(objectClass=${cls})`).join('');
-			const attributeFilters = profile.attributes.map(attr => `(${attr}=${searchTerm})`).join('');
-			const filter = `(&${objectClassFilter}(|${attributeFilters}))`;
-			const opts = {
-				filter: filter,
-				scope: 'sub',
-				attributes: ['dn', ...profile.attributes]
-			};
-
 			try {
+				if (!profile || Object.keys(profile).length === 0)
+				 	throw new Error('Aucun profile de recherche sélectionné !...');
+
+				// Construire les options de recherche
+				const objectClassFilter = profile.objectClasses.map(cls => `(objectClass=${cls})`).join('');
+				const attributeFilters = profile.attributes.map(attr => `(${attr}=${searchTerm})`).join('');
+				const filter = `(&${objectClassFilter}(|${attributeFilters}))`;
+				const opts = {
+					filter: filter,
+					scope: 'sub',
+					attributes: ['dn', ...profile.attributes]
+				};
+
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
 				// Récupérer les résultats de la recherche LDAP
 				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
 
 				// Passer le searchTerm à la vue avec un statut 200 (OK)
-				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles, selectedProfile: profile, error: null });
+				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles, selectedProfile, error: null });
 
 			} catch(error) {
 					console.error('Erreur:', error);
@@ -328,7 +328,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					client.unbind(); // Assurez-vous que le client est délié
 				}
 				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
-				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles, selectedProfile: profile, error: error.message });
+				return res.status(500).redirect('search', { error: error.message });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
