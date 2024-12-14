@@ -342,35 +342,54 @@ level: 'error', // 'info' Niveau de log par défaut
 
 		// Route de définition des recherches (POST)
 		app.post('/searchDef', async (req, res) => {
-
-			// Créer un client LDAP
+			// Déclaration du client de connexion
 			const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
 
-			const opts = {
-				filter: `(&(objectClass=person)(|(uid=${searchTerm})(cn=${searchTerm})(sn=${searchTerm})(givenName=${searchTerm})(employeeNumber=${searchTerm})))`,
-				scope: 'sub',
-				attributes: ['dn', 'uid', 'cn', 'sn', 'telephoneNumber', 'o', 'mail', 'employeeNumber']
-			};
+			let dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
+			let attrName = null; // Initialisation pour le nom de l'attribut
+			let attrConf = {
+				objectClass: ['top', 'applicationProcess'],
+				l: [],
+				ou: []
+			}; // Initialisation d'un objet pour stocker les configurations de l'attribut
 
 			try {
+				// Connexion au serveur LDAP
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
-				// Récupérer les résultats de la recherche LDAP
-				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
+				// Récupérer les clés du corps de la requête
+				const keys = Object.keys(req.body);
 
-				// Passer le searchTerm à la vue avec un statut 200 (OK)
-				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, searchProfiles, error: null, ldapSchema: ldapSchema });
+				const ldapDn = 'cn=' + req.body.newProfileName + ',' + (config.configDn.searchProfiles ?? 'ou=searchProfile') + ',' + config.configDn.root;
+
+				for (let key of keys) {
+					if (key.startsWith('must-') || key.startsWith('may-')) {
+						attrConf.l.push(req.body[key]);
+					} else if (key !== 'newProfileName') {
+						attrConf.ou.push(req.body[key]);
+				}	}
+
+console.log('ldapDn: ', ldapDn);
+console.log('attrConf: ', attrConf);
+
+				// Validation des données
+				if (!req.body.newProfileName) {
+					return res.status(400).send('Données manquantes dans \'/search/:dn\'.');
+				}
+
+				// Mise à jour dans la base LDAP
+//				await updateAttributeConfigInLDAP(client, config, ldapDn, attrConf);
+
+				return res.redirect('search');
+				//return res.redirect(`/newEdit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
 
 			} catch(error) {
-				;
+				console.error('Erreur:', error);
+				res.status(500).send({ message: 'Erreur lors de la mise à jour de l\'attribut', error: error.message });
 			} finally {
-				// Déconnexion du client principal
+				// Déconnexion du client LDAP
 				if (client) {
-					try {
-						await client.unbind();
-					} catch(unbindError) {
-						console.error('Erreur lors de la déconnexion du client:', unbindError);
-					}
+					client.unbind();
 				}
 			}
 		});
