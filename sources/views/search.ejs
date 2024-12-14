@@ -161,7 +161,7 @@
 					
 						sortedObjectClasses.forEach(objectClass => { %>
 							<label>
-								<input type="checkbox" class="objectClassCheckbox" value="<%= objectClass.NAME[0] %>">
+								<input type="checkbox" class="objectClassCheckbox" name="<%= objectClass.NAME[0] %>" value="<%= objectClass.NAME[0] %>">
 								<%= objectClass.NAME[0] %>
 							</label>
 						<% }); %>
@@ -273,11 +273,11 @@ function updateProfileSpan(profile) {
 
 // Fonction pour sélectionner un profil
 function selectProfile(profile) {
-	if (!profile?.length)
-		return;
 	if (selectedProfile) {	// dé-select l'ancien profil sélectionné
 		document.getElementById(selectedProfile).classList.remove('selected-profile');
 	}
+	if (!profile?.length)
+		return;
 
 	selectedProfile = profile; // Mettre à jour le nouveau profil sélectionné
 	document.getElementById(profile).classList.add('selected-profile'); // Marquer la sélection
@@ -460,7 +460,7 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 			const checkboxId = `must-${attribute}`;
 			const checkboxDiv = document.createElement("div");
 			const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré
-			checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
+			checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" name="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
 			mustAttributesDiv.appendChild(checkboxDiv);
 			// Enregistrer l'état du checkbox
 			document.getElementById(checkboxId).addEventListener('change', function() {
@@ -473,7 +473,7 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 			const checkboxId = `may-${attribute}`;
 			const checkboxDiv = document.createElement("div");
 			const isChecked = selectedAttributes[attribute] || false; // Vérifier l'état enregistré
-			checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
+			checkboxDiv.innerHTML = `<label><input type="checkbox" id="${checkboxId}" name="${checkboxId}" value="${attribute}" ${isChecked ? 'checked' : ''}> ${attribute}</label>`;
 			mayAttributesDiv.appendChild(checkboxDiv);
 			// Enregistrer l'état du checkbox
 			document.getElementById(checkboxId).addEventListener('change', function() {
