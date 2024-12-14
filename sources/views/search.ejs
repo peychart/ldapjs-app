@@ -138,7 +138,7 @@
 
 	<div class="header-buttons">
 		<form action="/search" method="post">
-			<input type="hidden" id="profile" name="profile" value="<%= JSON.stringify(selectedProfile || {}) %>">
+			<input type="hidden" id="selectedProfile" name="selectedProfile" value="<%= selectedProfile || '' %>">
 			<input type="hidden" id="searchProfiles" name="searchProfiles" value="<%= JSON.stringify(searchProfiles) %>">
 			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including  * ) ..." required value="<%= searchTerm || '' %>">
 			<button type="button" onclick="searchSubmit(this.form)">Rechercher</button>
@@ -151,7 +151,7 @@
 				<button type="button" id="objectClassBtn">ObjectClasses</button>
 				<span class="tooltiptext">Sélectionner les objectClasses objets de la recherche.</span>
 				<div class="dropdown-content" height="300px;" id="objectClassDropdown">
-					<div class="attributes-separator">Profils de recherche</div>
+					<div class="attributes-separator" onclick="updateProfileSpan('')">Profils de recherche</div>
 					<div id="profilesContainer"></div>
 					<div class="attributes-separator" onclick="createNewProfile()">Créer un nouveau profil</div>
 					<div class="checkboxes" id="objectClassCheckboxes">
@@ -237,7 +237,6 @@ const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 const searchProfiles = JSON.parse(document.getElementById('searchProfiles').value);
 
 let selectedAttributes = {}; // Objet pour stocker l'état des checkboxes
-let selectedProfile = null; // Pour suivre le profil actuellement sélectionné
 
 // Mettre le focus sur le champ de recherche lors du chargement de la page
 window.onload = function() {
@@ -261,60 +260,51 @@ function populateProfiles() {
 			profileLink.addEventListener('click', () => selectProfile(profile));
 			profilesContainer.appendChild(profileLink);
 		});
-
-		selectProfile(JSON.parse(document.getElementById("profile").value)?.name);
-	}
-}
+		selectProfile(document.getElementById("selectedProfile").value);
+}	}
 
 function updateProfileSpan(profile) {
-	document.getElementById("profile").value = JSON.stringify(profile);
-	document.getElementById("profileSpan").textContent = profile.name.length ?'de "' + profile.name + '" :' :'';
-}
+	const previousSelectedProfile = document.getElementById("selectedProfile").value;
+	document.getElementById("selectedProfile").value = profile;
+	document.getElementById("profileSpan").textContent = profile ?'de "' + profile + '" :' :'';
+	if (previousSelectedProfile) {	// dé-select l'ancien profil sélectionné
+		// Réinitialiser les checkboxes avant de mettre à jour éventuelle
+		resetObjectClassesAndAttributes();
+		document.getElementById(previousSelectedProfile).classList.remove('selected-profile');
+}	}
 
-// Fonction pour sélectionner un profil
-function selectProfile(profile) {
-	if (selectedProfile) {	// dé-select l'ancien profil sélectionné
-		document.getElementById(selectedProfile).classList.remove('selected-profile');
+function selectProfile(newProfile) {
+	// Vérifier que ce profil existe
+	const selectedProfileData = newProfile ? searchProfiles[newProfile] ?? {} :{};
+	if (!Object.keys(selectedProfileData).length)
+		newProfile = '';
+
+	updateProfileSpan(newProfile);
+
+	if (newProfile) { // Mettre à jour les objectClasses et attributs en fonction du profil sélectionné
+		document.getElementById(newProfile)?.classList.add('selected-profile'); // Marquer la nouvelle sélection
+
+		// Sélecter la liste des objectClasses du profil retenu
+		selectedProfileData.objectClasses.forEach(objectClass => {
+			const checkbox = document.querySelector(`.objectClassCheckbox[value="${objectClass}"]`);
+			if (checkbox) {
+				checkbox.checked = true; // Cocher l'objectClass
+				checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
+			}
+		});
+
+		// Sélecter la liste des attributes du profil retenu
+		const mustAttributesDiv = document.getElementById("mustAttributes");
+		const mayAttributesDiv  = document.getElementById("mayAttributes");
+		selectedProfileData.attributes.forEach(attribute => {
+			const checkbox = mustAttributesDiv.querySelector(`#must-${attribute}`) || mayAttributesDiv.querySelector(`#may-${attribute}`);
+			if (checkbox) {
+				checkbox.checked = true; // Cocher l'objectClass
+				checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
+			}
+		});
 	}
-	if (!profile?.length)
-		return;
-
-	selectedProfile = profile; // Mettre à jour le nouveau profil sélectionné
-	document.getElementById(profile).classList.add('selected-profile'); // Marquer la sélection
-
-	// Réinitialiser les checkboxes avant de mettre à jour
-	resetObjectClassesAndAttributes();
-
-	// Mettre à jour les objectClasses et attributs en fonction du profil sélectionné
-	const selectedProfileData = searchProfiles[selectedProfile];
-	const profileData = {
-		name: profile,
-		objectClasses: [],
-		attributes: []
-	};
-
-	// Sélecter la liste des objectClasses du profil retenu
-	selectedProfileData.objectClasses.forEach(objectClass => {
-		const checkbox = document.querySelector(`.objectClassCheckbox[value="${objectClass}"]`);
-		if (checkbox) {
-			checkbox.checked = true; // Cocher l'objectClass
-			checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
-			profileData.objectClasses.push(objectClass);
-		}
-	});
-
-	// Sélecter la liste des attributes du profil retenu
-	const mustAttributesDiv = document.getElementById("mustAttributes");
-	const mayAttributesDiv  = document.getElementById("mayAttributes");
-	selectedProfileData.attributes.forEach(attribute => {
-		const checkbox = mustAttributesDiv.querySelector(`#must-${attribute}`) || mayAttributesDiv.querySelector(`#may-${attribute}`);
-		if (checkbox) {
-			checkbox.checked = true; // Cocher l'objectClass
-			checkbox.dispatchEvent(new Event('change')); // Déclencher l'événement de changement
-			profileData.attributes.push(attribute); 
-		}
-	});
-	updateProfileSpan(profileData);
+	setTimeout(() => {document.getElementById("attributesDropdown").style.display = 'none'}, 1000);
 }
 
 function checkSameProfileExist(selectedObjectClasses) { // Vérification parmi les profiles existants
@@ -361,8 +351,14 @@ function createNewProfile() {
 		return;
 	}
 
-	const myProfil = prompt("Nom de ce nouveau profil :");
-	if (myProfil) {
+	let myProfile = document.getElementById("selectedProfile").value;
+	if (myProfile && !confirm(`Vous allez modifier le profil actuellement sélectionné : "${myProfile}" ...`)) {
+		 myProfile = '';
+	}
+	if (!myProfile)
+		myProfile = prompt("Nom d'un nouveau profil :");
+	
+	if (myProfile) {
 		const selectedObjectClasses = Array.from(document.querySelectorAll('#objectClassCheckboxes .objectClassCheckbox:checked')).map(checkbox => checkbox.value);
 		const similarProfile = checkSameProfileExist(selectedObjectClasses);
 		if (similarProfile) {
@@ -373,18 +369,18 @@ function createNewProfile() {
 		// Vérifie si un profil de même nom existe déjà
 		let existingProfileName = null;
 		for (const profileName in searchProfiles) {
-			if (profileName.toLowerCase() === myProfil.toLowerCase()) {
+			if (profileName.toLowerCase() === myProfile.toLowerCase()) {
 				existingProfileName = profileName; // Conserver le nom d'origine pour l'affichage  
 				break;
 		}	}
 
 		if (existingProfileName &&
-			!confirm("Un profil de nom '" + existingProfileName + "' existe déjà !\nSouhaitez-vous le remplacer ?")) {
+			!confirm("Le profil de nom '" + existingProfileName + "' existe déjà !\nEtes-vous sûr de vouloir le remplacer ?")) {
 			return; // Exit si l'utilisateur ne souhaite pas remplacer
 		}
 
 		// Soumission du formulaire de création de profil
-		document.getElementById('newProfileName').value = myProfil;
+		document.getElementById('newProfileName').value = myProfile;
 
 		document.getElementById("searchDefForm").submit();
 	}
@@ -492,9 +488,13 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 });
 
 function searchSubmit(form) {
-	if (!selectedProfile){
+	if (!document.getElementById('searchTerm').value.length) {
+		alert("Saisir une valeur de recherche ...");
+		return false;
+	}
+	if (!document.getElementById("selectedProfile").value){
 		alert("Sélectionner préalablement un profil de recherche !...\n(ObjectClasses et Attributes de recherche)");
-		return;
+		return false;
 	}
 	form.submit();
 }
