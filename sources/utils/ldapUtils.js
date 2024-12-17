@@ -620,24 +620,56 @@ function getObjectClassByName(ldapSchema, name) {
 	return objectClass ? objectClass : null;
 }
 
+function getAllSupObjectClasses(ldapSchema, objectClass) {
+	if (!objectClass)
+		throw new Error('Invalid object class provided');
+	if (typeof objectClass !== 'object') {
+		objectClass = getObjectClassByName(ldapSchema, objectClass);
+		if (typeof objectClass !== 'object')
+			throw new Error('Invalid object class provided');
+	}
+
+	const getSupObjectClasses = (cls) => {
+		let results = [];
+		const superClasses = Array.isArray(cls.SUP) ? cls.SUP : [cls.SUP];
+
+		for (const sup of superClasses) {
+			if (sup && sup !== 'top') {	// Exclure 'top'
+				const supClass = getObjectClassByName(ldapSchema, sup);
+				if (supClass) {
+					results.push(supClass.NAME[0]); // Ajout du nom de la classe supérieure
+					// Appel récursif pour obtenir les classes supérieures	
+					results = results.concat(getSupObjectClasses(supClass));
+		}	}	}
+		return results; // Retourner la liste des classes d'objet supérieures
+	};
+
+	return getSupObjectClasses(objectClass);
+}
+
 /*
  * Ajouter tous les attributs MUST hérités
  */
 function setInheritedMustAttributes(ldapSchema, objectClass) {
-	if (!objectClass || typeof objectClass !== 'object') {
-		throw new Error('Invalid objectClass provided');
+	if (!objectClass)
+		throw new Error('Invalid object class provided');
+	if (typeof objectClass !== 'object') {
+		objectClass = getObjectClassByName(ldapSchema, objectClass);
+		if (typeof objectClass !== 'object')
+			throw new Error('Invalid object class provided');
 	}
 
 	const setInheritedMustAttributesFromSuperClasses = (cls) => {
-		 let results = [...(cls.MUST || [])]; // Initialiser avec les attributs MUST actuels sous forme de tableau
+		let results = [...(cls.MUST || [])]; // Initialiser avec les attributs MUST actuels sous forme de tableau
+		const superClasses = Array.isArray(cls.SUP) ? cls.SUP : [cls.SUP];
 
-		if (cls.SUP && cls.SUP !== 'top') {
-			const supClass = getObjectClassByName(ldapSchema, cls.SUP);
-			if (supClass) {
-				const supMustAttributes = setInheritedMustAttributesFromSuperClasses(supClass);
-				results = Array.from(new Set([...results, ...supMustAttributes]));
-			}
-		}
+		for (const sup of superClasses) {
+			if (sup && sup !== 'top') {	// Exclure 'top'
+				const supClass = getObjectClassByName(ldapSchema, sup);
+				if (supClass) {
+					const supMustAttributes = setInheritedMustAttributesFromSuperClasses(supClass);
+					results = Array.from(new Set([...results, ...supMustAttributes]));
+		}	}	}
 		return results; // Retourner le tableau des attributs MUST
 	};
 
@@ -688,6 +720,7 @@ module.exports = {
 	rawSearchLDAP,
 	loadSchema,
 	getUserRoleFromDatabase,
+	getAllSupObjectClasses,
 	setInheritedMustAttributes,
 	enrichObjectClassWithAttributes,
 	getObjectClassByName,
