@@ -38,6 +38,7 @@ const {
 	rawSearchLDAP,
 	loadSchema,
 	getUserRoleFromDatabase,
+	getAllSupObjectClasses,
 	setInheritedMustAttributes,
 	enrichObjectClassWithAttributes,
 	getObjectClassByName,
@@ -308,6 +309,23 @@ level: 'error', // 'info' Niveau de log par défaut
 				if (!profile || Object.keys(profile).length === 0)
 				 	throw new Error('Aucun profile de recherche sélectionné !...');
 
+				// Fonction de recherche de tous les noms d'un attribut
+				const getAllAttributeNames = function(attrName) {
+					for (const attribute of ldapSchema.attributes) {
+						if (attribute.NAME.includes(attrName)) {
+							// Retourne tous les autres noms sauf celui donné
+							return attribute.NAME;
+					}	}
+					return []; // Si non trouvé, retourne un tableau vide
+				};
+
+				// Ajout des sysnonymes de noms d'attributs au profil
+				const allNames = new Set();
+				profile.attributes.forEach(attr => {
+					getAllAttributeNames(attr).forEach(name => allNames.add(name));
+				});
+				profile.attributes = Array.from(allNames);
+
 				// Construire les options de recherche
 				const objectClassFilter = profile.objectClasses.map(cls => `(objectClass=${cls})`).join('');
 				const attributeFilters = profile.attributes.map(attr => `(${attr}=${searchTerm})`).join('');
@@ -317,6 +335,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					scope: 'sub',
 					attributes: ['dn', ...profile.attributes]
 				};
+//console.log('\nopts: ', opts);
 
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
@@ -435,11 +454,22 @@ level: 'error', // 'info' Niveau de log par défaut
 //console.clear(); console.log('objectData: ', JSON.stringify(objectData, null, 2)); // Display for debug
 
 				// On élimie l'objectClass === 'top'
-				const objectClassesToSearch = [
+				let objectClassesToSearch = [
 					...(objectData?.objectClass.filter(item => item !== 'top') || []),
 					...(req.session.edit?.ADDED || [])
 				]; if (!objectClassesToSearch.length)
 					throw new Error('DN à éditer vide: création ?...');
+
+				// Ajout des objectClasses SUP (excluding 'top')
+				const addSupObjectClasses = (ldapSchema, objectClassesToSearch) => {
+					const allSupClasses = new Set(); // Utiliser un Set pour éviter les doublons
+					for (const objClass of objectClassesToSearch) {
+						const supClasses = getAllSupObjectClasses(ldapSchema, objClass);
+						supClasses.forEach(supClass => allSupClasses.add(supClass));
+					}
+					return Array.from(allSupClasses);
+				};
+				objectClassesToSearch = [...new Set([...objectClassesToSearch, ...addSupObjectClasses(ldapSchema, objectClassesToSearch)])];
 
 				// Récupérer la définition de chaque objectClass composant notre dn à éditer
 				const objectClassesDetails = objectClassesToSearch.map(objectClassName => {
