@@ -461,8 +461,11 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 
 		// Ajouter aux sets les valeurs des nouveaux attributs de l'objectClass sélectionné
 		selectedObjectClasses.forEach(selectedClass => {
-			const objectClass = ldapSchema.objectClasses.find(cls => cls.NAME[0] === selectedClass);
-			if (objectClass) {
+			const obj = ldapSchema.objectClasses.find(cls => cls.NAME[0] === selectedClass);
+			if (obj) {
+				// Ajout des SUP attributes
+				const objectClass = setInheritedMustAttributes(ldapSchema, obj);
+
 				// Ajouter les attributs MUST
 				if (objectClass.MUST && objectClass.MUST.length > 0) {
 					objectClass.MUST.forEach(attribute => {
@@ -517,6 +520,38 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 		}
 	});
 });
+
+// Récupération de la définition complète d'un objectClass dans le schema de la base
+function getObjectClassByName(ldapSchema, name) {
+    const objectClass = ldapSchema.objectClasses.find(schema => schema.NAME.includes(name));
+    return objectClass ? objectClass : null;
+}
+
+// Ajouter tous les attributs MUST hérités
+function setInheritedMustAttributes(ldapSchema, objectClass) {
+	if (!objectClass || typeof objectClass !== 'object') {
+		throw new Error('Invalid objectClass provided');
+	}
+
+	const setInheritedMustAttributesFromSuperClasses = (cls) => {
+		 let results = [...(cls.MUST || [])]; // Initialiser avec les attributs MUST actuels sous forme de tableau
+
+		if (cls.SUP && cls.SUP !== 'top') {
+			const supClass = getObjectClassByName(ldapSchema, cls.SUP);
+			if (supClass) {
+				const supMustAttributes = setInheritedMustAttributesFromSuperClasses(supClass);
+				results = Array.from(new Set([...results, ...supMustAttributes]));
+			}
+		}
+		return results; // Retourner le tableau des attributs MUST
+	};
+
+	return {
+		...objectClass,
+		MUST: setInheritedMustAttributesFromSuperClasses(objectClass)
+	};
+}
+
 
 function searchSubmit(form) {
 	if (!document.getElementById('searchTerm').value.length) {
