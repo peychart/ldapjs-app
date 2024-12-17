@@ -365,20 +365,12 @@ async function createOrganizationalUnit(client, dn) {
  * @param {Object} updates - Les modifications à appliquer.
  * @returns {Promise<void>}
  */
-async function updateAttributeConfigInLDAP(client, config, attrName, attrConf) {
+async function updateAPPConfig(client, entryName, rootDn, entry) {
 	try {
-		const root = (config.configDn.attributs ?? 'ou=attribut') + ',' + config.configDn.root;
-		await checkAndCreateOrganizationalUnit(client, root);
+		await checkAndCreateOrganizationalUnit(client, rootDn);
+		const dn = entryName + ',' + rootDn;
 
-		const dn = 'cn=' + attrName + ',' + root;
-		const entry = {
-			objectClass: ['top', 'applicationProcess'],
-			cn: attrName,
-			...(attrConf.customWording && { l: attrConf.customWording }),
-			...(attrConf.MULTIVALUE != null && { ou: !attrConf.MULTIVALUE ? 'SINGLE-VALUE' : 'MULTI-VALUE' }),
-			...(attrConf.valueCheck && { description: attrConf.valueCheck })
-		};
-//console.log('entry: ', JSON.stringify(entry, null, 2)); // Pour debug
+//console.log('\ndn: ', dn,'\nentry: ', JSON.stringify(entry, null, 2)); return;	// Pour debug
 
 		// Remove de l'entrée existante
 		const dnExists = await checkDNExists(client, dn);
@@ -393,7 +385,10 @@ async function updateAttributeConfigInLDAP(client, config, attrName, attrConf) {
 			});
 		}
 
-		if (Object.entries(entry).length > 2) {
+		// Veŕification d'entrée non vide
+		const { [dn.split('=')[0]]: _, objectClass, ...remainingAttributes } = entry;
+
+		if (Object.keys(remainingAttributes).length > 0) {
 			// Ajouter la nouvelle entrée de custom attribut
 			await new Promise((resolve, reject) => {
 				client.add(dn, entry, (err) => {
@@ -698,5 +693,5 @@ module.exports = {
 	getObjectClassByName,
 	getObjectClassesByType,
 	updateLDAP,
-	updateAttributeConfigInLDAP
+	updateAPPConfig
 };
