@@ -138,9 +138,9 @@
 
 	<div class="header-buttons">
 		<form action="/search" method="post">
-			<input type="hidden" id="selectedProfile" name="selectedProfile" value="<%= selectedProfile || '' %>">
+			<input type="hidden" id="selectedProfile" name="selectedProfile" value="<%= selectedProfile ?? '' %>">
 			<input type="hidden" id="searchProfiles" name="searchProfiles" value="<%= JSON.stringify(searchProfiles) %>">
-			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including  * ) ..." required value="<%= searchTerm || '' %>">
+			<input type="text" id="searchTerm" name="searchTerm" placeholder="Recherche : (including  * ) ..." required value="<%= searchTerm ?? '' %>">
 			<button type="button" onclick="searchSubmit(this.form)">Rechercher</button>
 		</form>
 
@@ -184,7 +184,7 @@
 		
 		<div class="reset-button">
 			<form action="/search" method="post">
-				<button type="submit">Effacer</button>
+				<button type="button" onclick="reload()">Effacer</button>
 			</form>
 		</div>
 
@@ -244,6 +244,10 @@ window.onload = function() {
 	populateProfiles(); // Appeler la fonction pour peupler les profils
 };
 
+function reload() {
+	window.location.href = '/search';
+}
+
 // Fonction pour peupler les profils enregistrés
 function populateProfiles() {
 	const profilesContainer = document.getElementById('profilesContainer');
@@ -256,18 +260,45 @@ function populateProfiles() {
 		profiles.forEach(profile => {
 			const profileLink = document.createElement('div');
 			profileLink.classList.add('profils');
-			profileLink.innerHTML = `<span class="profile-item" id="${profile}" style="color: black;">- ${profile}</span>`;
+			profileLink.style.display = 'flex'; // Activer flexbox
+			profileLink.style.justifyContent = 'space-between'; // Justifier le contenu
+			profileLink.style.alignItems = 'center'; // Centrer verticalement
+			profileLink.style.marginBottom = '5px'; // Ajout d'un espacement entre les profils
+
+			// Créer le contenu du profil avec un bouton de suppression
+			profileLink.innerHTML = `<span class="profile-item" id="${profile}" style="color: black;">- ${profile}</span><button class="remove-profile" type="button" style="color: red; border: 1px solid grey; cursor: pointer; margin-left: 10px; border-radius: 4px; padding: 2px 5px;" title="Suppression du profil"><b>x</b></button>`;
+
+			// Écouter le clic sur le profil pour le sélectionner
 			profileLink.addEventListener('click', () => selectProfile(profile));
+
+			// Ajouter l'événement au bouton de suppression
+			const removeButton = profileLink.querySelector('.remove-profile');
+			removeButton.addEventListener('click', (event) => {
+				event.stopPropagation(); // Empêche la propagation du clic au parent
+				removeProfil(profile);
+			});
+
 			profilesContainer.appendChild(profileLink);
 		});
 		selectProfile(document.getElementById("selectedProfile").value);
 }	}
 
+function removeProfil(profile) {
+	// Logique pour supprimer le profil
+	if (!confirm(`Êtes-vous sûr de vouloir supprimer le profil : ${profile} ?`))
+		return false;
+
+	// Effacement du profil
+	updateProfileSpan(profile);
+	document.getElementById('newProfileName').value = profile;
+	document.getElementById("searchDefForm").submit();
+}
+
 function updateProfileSpan(profile) {
 	const previousSelectedProfile = document.getElementById("selectedProfile").value;
 	document.getElementById("selectedProfile").value = profile;
 	document.getElementById("profileSpan").textContent = profile ?'de "' + profile + '" :' :'';
-	if (previousSelectedProfile) {	// dé-select l'ancien profil sélectionné
+	if (previousSelectedProfile.length) {	// dé-select l'ancien profil sélectionné
 		// Réinitialiser les checkboxes avant de mettre à jour éventuelle
 		resetObjectClassesAndAttributes();
 		document.getElementById(previousSelectedProfile).classList.remove('selected-profile');
@@ -370,7 +401,7 @@ function createNewProfile() {
 		let existingProfileName = null;
 		for (const profileName in searchProfiles) {
 			if (profileName.toLowerCase() === myProfile.toLowerCase()) {
-				existingProfileName = profileName; // Conserver le nom d'origine pour l'affichage  
+				existingProfileName = profileName; // Conserver le nom d'origine pour l'affichage
 				break;
 		}	}
 
@@ -501,8 +532,12 @@ function searchSubmit(form) {
 
 // Afficher/Masquer le dropdown des objectClasses
 document.getElementById("objectClassBtn").addEventListener("click", function() {
-	const dropdown = document.getElementById("objectClassDropdown");
-	dropdown.classList.toggle("show");
+	const objectClassDropdown = document.getElementById("objectClassDropdown");
+	objectClassDropdown.classList.toggle("show");
+
+	// Fermer aussi les attributs lorsqu'on ferme les objectClasses
+	if(!objectClassDropdown.classList.contains("show"))
+		document.getElementById("attributesDropdown").style.display = 'none';
 });
 
 // Afficher/Masquer le dropdown des attributs MUST
