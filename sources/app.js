@@ -43,7 +43,7 @@ const {
 	getObjectClassByName,
 	getObjectClassesByType,
 	updateLDAP,
-	updateAttributeConfigInLDAP
+	updateAPPConfig
 } = require('./utils/ldapUtils');
 const {
 	loadConfig
@@ -243,13 +243,13 @@ level: 'error', // 'info' Niveau de log par défaut
 				scope: 'sub',
 				attributes: ['cn', 'ou', 'l']
 			};
-			const ldapDn = (config.configDn.searchProfiles ?? 'ou=searchProfile') + ',' + config.configDn.root;
+			const rootDn = (config.configDn.searchProfiles ?? 'ou=searchProfile') + ',' + config.configDn.root;
 
 			try {
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
 				// Récupérer les résultats de la recherche LDAP
-				const searchProfiles = await searchLDAP(client, ldapDn, opts).catch(() => {
+				const searchProfiles = await searchLDAP(client, rootDn, opts).catch(() => {
 					return []; // Retourner un tableau vide en cas d'erreur
 				});
 
@@ -264,7 +264,11 @@ level: 'error', // 'info' Niveau de log par défaut
 				});
 
 				// Lire les cookies pour obtenir les données précédentes
-				const selectedProfile = req.cookies.selectedProfile || ''; // Lire le DN du cookie, s'il existe
+				const selectedProfile = req.cookies.selectedProfile
+					?(Object.keys(profilesToRender).includes(req.cookies.selectedProfile)
+						?req.cookies.selectedProfile
+						:'')
+					:'';
 
 				// Rendre la vue de recherche
 				res.render('search', { results: null, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles: profilesToRender, selectedProfile, error: null });
@@ -347,11 +351,7 @@ level: 'error', // 'info' Niveau de log par défaut
 
 			let dn = req.params.dn; // Assignation de dn depuis les paramètres de l'URL;
 			let attrName = null; // Initialisation pour le nom de l'attribut
-			let attrConf = {
-				objectClass: ['top', 'applicationProcess'],
-				l: [],
-				ou: []
-			}; // Initialisation d'un objet pour stocker les configurations de l'attribut
+			let entry = { objectClass: ['top', 'applicationProcess'] };
 
 			try {
 				// Connexion au serveur LDAP
@@ -360,17 +360,17 @@ level: 'error', // 'info' Niveau de log par défaut
 				// Récupérer les clés du corps de la requête
 				const keys = Object.keys(req.body);
 
-				const ldapDn = 'cn=' + req.body.newProfileName + ',' + (config.configDn.searchProfiles ?? 'ou=searchProfile') + ',' + config.configDn.root;
+				const rootDn = (config.configDn.searchProfiles ?? 'ou=searchProfile') + ',' + config.configDn.root;
 
 				for (let key of keys) {
 					if (key.startsWith('must-') || key.startsWith('may-')) {
-						attrConf.l.push(req.body[key]);
+						if (!entry.l) entry.l = [];
+						entry.l.push(req.body[key]);
 					} else if (key !== 'newProfileName') {
-						attrConf.ou.push(req.body[key]);
+						if (!entry.ou) entry.ou = [];
+						entry.ou.push(req.body[key]);
 				}	}
-
-console.log('ldapDn: ', ldapDn);
-console.log('attrConf: ', attrConf);
+				entry.cn = req.body.newProfileName;
 
 				// Validation des données
 				if (!req.body.newProfileName) {
@@ -378,7 +378,7 @@ console.log('attrConf: ', attrConf);
 				}
 
 				// Mise à jour dans la base LDAP
-//				await updateAttributeConfigInLDAP(client, config, ldapDn, attrConf);
+				await updateAPPConfig(client, 'cn=' + req.body.newProfileName, rootDn, entry);
 
 				return res.redirect('search');
 				//return res.redirect(`/newEdit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
@@ -390,8 +390,7 @@ console.log('attrConf: ', attrConf);
 				// Déconnexion du client LDAP
 				if (client) {
 					client.unbind();
-				}
-			}
+			}	}
 		});
 
 		/* *****************************
@@ -703,6 +702,8 @@ console.log('attrConf: ', attrConf);
 				// Connexion au serveur LDAP
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
+				const rootDn = (config.configDn.attributs ?? 'ou=attribut') + ',' + config.configDn.root;
+
 				// Récupérer les clés du corps de la requête
 				const keys = Object.keys(req.body);
 
@@ -724,8 +725,16 @@ console.log('attrConf: ', attrConf);
 					return res.status(400).send('Données manquantes dans \'/update-attributeCtl/:dn\'.');
 				}
 
+				const entry = {
+					objectClass: ['top', 'applicationProcess'],
+					cn: attrName,
+					...(attrConf.customWording && { l: attrConf.customWording }),
+					...(attrConf.MULTIVALUE != null && { ou: !attrConf.MULTIVALUE ? 'SINGLE-VALUE' : 'MULTI-VALUE' }),
+					...(attrConf.valueCheck && { description: attrConf.valueCheck })
+				};
+
 				// Mise à jour dans la base LDAP
-				await updateAttributeConfigInLDAP(client, config, attrName, attrConf);
+				await updateAPPConfig(client, 'cn=' + attrName, rootDn, entry);
 
 				return res.redirect(`/newEdit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
 				//return res.redirect(`/edit/${dn}`);
@@ -737,8 +746,7 @@ console.log('attrConf: ', attrConf);
 				// Déconnexion du client LDAP
 				if (client) {
 					client.unbind();
-				}
-			}
+			}	}
 		});
 
 		// Lancer le serveur
