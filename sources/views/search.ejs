@@ -383,7 +383,7 @@ function createNewProfile() {
 	}
 
 	let myProfile = document.getElementById("selectedProfile").value;
-	if (myProfile && !confirm(`Vous allez modifier le profil actuellement sélectionné : "${myProfile}" ...`)) {
+	if (myProfile && !confirm(`Vous allez modifier le profil actuellement sélectionné : "${myProfile}" ...\n(Remarque: si vous souhaitez désélectionner le profil actuel, cliquer sur "Profils de recherche")`)) {
 		 myProfile = '';
 	}
 	if (!myProfile)
@@ -393,7 +393,7 @@ function createNewProfile() {
 		const selectedObjectClasses = Array.from(document.querySelectorAll('#objectClassCheckboxes .objectClassCheckbox:checked')).map(checkbox => checkbox.value);
 		const similarProfile = checkSameProfileExist(selectedObjectClasses);
 		if (similarProfile) {
-			alert("Un profil similaire existe déjà : " + similarProfile);
+			alert("Un profil identique existe déjà : " + similarProfile);
 			return; // Stoppe l'exécution si un profil similaire est trouvé
 		}
 
