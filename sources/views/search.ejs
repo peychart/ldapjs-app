@@ -256,11 +256,8 @@ function reload() {
 // Fonction pour trier le tableau par un attribut donné
 let sortOrder = {}; // Objet pour stocker l'ordre de tri de chaque colonne
 function sortTableBy(attribute) {
-	 const tbody = document.getElementById('table-body');
-	const rows = Array.from(tbody.querySelectorAll('tr')); // Récupérer toutes les lignes du corps du tableau
-
-	const headerRow = rows[0]; // La première ligne est l'en-tête  
-	const dataRows = rows.slice(0); // Stocker uniquement les données 
+	const tbody = document.getElementById('table-body');
+	const dataRows = Array.from(tbody.querySelectorAll('tr')); // Récupérer toutes les lignes du corps du tableau
 
 	// Afficher le nombre de lignes récupérées 
 	console.log(`Number of data rows (excluding header): ${dataRows.length}`);
@@ -295,7 +292,6 @@ function sortTableBy(attribute) {
 
 	// Vider le tableau et réinsérer l'en-tête, puis les lignes triées  
 	tbody.innerHTML = ''; // Vider le corps du tableau  
-	tbody.appendChild(headerRow); // Réinsérer l'en-tête  
 	sortedRows.forEach(row => tbody.appendChild(row)); // Ajouter les lignes triées  
 }
 
