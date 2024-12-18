@@ -256,47 +256,47 @@ function reload() {
 // Fonction pour trier le tableau par un attribut donné
 let sortOrder = {}; // Objet pour stocker l'ordre de tri de chaque colonne
 function sortTableBy(attribute) {
-	const tbody = document.getElementById('table-body');
-    const rows = Array.from(tbody.querySelectorAll('tr')); // Récupérer toutes les lignes du corps du tableau
+	 const tbody = document.getElementById('table-body');
+	const rows = Array.from(tbody.querySelectorAll('tr')); // Récupérer toutes les lignes du corps du tableau
 
-    // Nous n'excluons pas l'en-tête car nous voulons trier toutes les lignes  
-    const dataRows = rows; // On garde toutes les lignes, y compris l'en-tête
+	const headerRow = rows[0]; // La première ligne est l'en-tête  
+	const dataRows = rows.slice(0); // Stocker uniquement les données 
 
-    // Afficher le nombre de lignes récupérées  
-    console.log(`Number of data rows (including header): ${dataRows.length}`);
+	// Afficher le nombre de lignes récupérées 
+	console.log(`Number of data rows (excluding header): ${dataRows.length}`);
 
-    // Afficher le contenu des lignes avant le tri  
-    dataRows.forEach((row, index) => {
-        const cells = Array.from(row.querySelectorAll('td'));
-        const cellValues = cells.map(cell => cell.innerText.trim());
-        console.log(`Row ${index + 1}: `, cellValues);
-    });
+	// Afficher le contenu des lignes avant le tri  
+	dataRows.forEach((row, index) => {
+		const cells = Array.from(row.querySelectorAll('td'));
+		const cellValues = cells.map(cell => cell.innerText.trim());
+		console.log(`Row ${index + 1}: `, cellValues);
+	});
 
-    // Déterminer l'ordre de tri pour cette colonne  
-    sortOrder[attribute] = !sortOrder[attribute]; // Inverser l'ordre chaque fois que l'en-tête est cliqué
+	// Changer l'ordre de tri pour cette colonne  
+	sortOrder[attribute] = !sortOrder[attribute]; // Inverser l'ordre chaque fois que l'en-tête est cliqué
 
-    // Tri des lignes de données  
-    const sortedRows = dataRows.slice(1).sort((a, b) => { // On exclut l'en-tête pour le tri  
-        const aValue = a.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
-        const bValue = b.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
+	// Tri des lignes de données  
+	const sortedRows = [...dataRows].sort((a, b) => { // Crée une copie pour trier  
+		const aValue = a.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
+		const bValue = b.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
 
-        // Vérifier si la colonne contient des nombres ou des dates  
-        const isNumber = !isNaN(aValue) && !isNaN(bValue);
-        const isDate = !isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue));
+		// Vérifier si la colonne contient des nombres ou des dates  
+		const isNumber = !isNaN(aValue) && !isNaN(bValue);
+		const isDate = !isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue));
 
-        if (isNumber) {
-            return sortOrder[attribute] ? aValue - bValue : bValue - aValue;
-        } else if (isDate) {
-            return sortOrder[attribute] ? new Date(aValue) - new Date(bValue) : new Date(bValue) - new Date(aValue);
-        } else {
-            return sortOrder[attribute] ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        }
-    });
+		if (isNumber) {
+			return sortOrder[attribute] ? aValue - bValue : bValue - aValue;
+		} else if (isDate) {
+			return sortOrder[attribute] ? new Date(aValue) - new Date(bValue) : new Date(bValue) - new Date(aValue);
+		} else {
+			return sortOrder[attribute] ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+		}
+	});
 
-    // Vider le tableau et réinsérer les lignes triées  
-    tbody.innerHTML = ''; // Vider le corps du tableau  
-    tbody.appendChild(rows[0]); // Réinsérer l'en-tête  
-    sortedRows.forEach(row => tbody.appendChild(row)); // Ajouter les lignes triées 
+	// Vider le tableau et réinsérer l'en-tête, puis les lignes triées  
+	tbody.innerHTML = ''; // Vider le corps du tableau  
+	tbody.appendChild(headerRow); // Réinsérer l'en-tête  
+	sortedRows.forEach(row => tbody.appendChild(row)); // Ajouter les lignes triées  
 }
 
 // Fonction pour obtenir l'index de la colonne correspondante à un attribut
