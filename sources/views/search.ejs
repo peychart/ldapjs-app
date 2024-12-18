@@ -158,7 +158,7 @@
 					<%	const sortedObjectClasses = ldapSchema.objectClasses
 							.filter(objectClass => objectClass.TYPE === 'STRUCTURAL' || objectClass.TYPE === 'AUXILIARY')
 							.sort((a, b) => a.NAME[0].localeCompare(b.NAME[0]));
-					
+
 						sortedObjectClasses.forEach(objectClass => { %>
 							<label>
 								<input type="checkbox" class="objectClassCheckbox" name="<%= objectClass.NAME[0] %>" value="<%= objectClass.NAME[0] %>">
@@ -181,7 +181,7 @@
 				</div>
 			</div>
 		</form>
-		
+
 		<div class="reset-button">
 			<form action="/search" method="post">
 				<button type="button" onclick="reload()">Effacer</button>
@@ -204,30 +204,36 @@
 		<thead>
 			<tr>
 				<th onclick="handleHeaderClick(this)">Action</th>
-				<th onclick="handleHeaderClick(this)">Identifiant</th>
-				<th onclick="handleHeaderClick(this)">Login</th>
-				<th onclick="handleHeaderClick(this)">Service</th>
-				<th onclick="handleHeaderClick(this)">Téléphone</th>
-				<th onclick="handleHeaderClick(this)">Mail</th>
+				<% if (results && results.length > 0) { %>
+					<% 
+						const keys = Object.keys(results[0]); 
+					%>
+					<% keys.forEach(key => { %>
+						<th onclick="sortTableBy('<%= key %>')"><%= key %></th>
+					<% }) %>
+				<% } %>
 			</tr>
 		</thead>
-		<tbody>
+		<tbody id="table-body">
 			<% if (results && results.length > 0) { %>
 				<% results.forEach(user => { %>
 					<tr>
 						<td>
 							<button onclick="location.href='/newEdit/<%= user.dn %>'">Éditer</button>
 						</td>
-						<td><%= user.cn %></td>
-						<td><%= user.uid %></td>
-						<td><%= user.o || 'N/A' %></td>
-						<td><%= user.telephoneNumber || 'N/A' %></td>
-						<td><%= user.mail || 'N/A' %></td>
+						<% 
+							const keys = Object.keys(results[0]); 
+							keys.forEach(key => {
+						%>
+							<td>
+								<%= user[key] || 'N/A' %>
+							</td>
+						<% }) %>
 					</tr>
 				<% }) %>
 			<% } else { %>
 				<tr>
-					<td colspan="6" class="empty-message">Aucun résultat trouvé.</td>
+					<td colspan="<%= (results && results.length > 0) ? Object.keys(results[0]).length + 1 : 6 %>" class="empty-message">Aucun résultat trouvé.</td>
 				</tr>
 			<% } %>
 		</tbody>
@@ -235,7 +241,6 @@
 <script>
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
 const searchProfiles = JSON.parse(document.getElementById('searchProfiles').value);
-
 let selectedAttributes = {}; // Objet pour stocker l'état des checkboxes
 
 // Mettre le focus sur le champ de recherche lors du chargement de la page
@@ -246,6 +251,62 @@ window.onload = function() {
 
 function reload() {
 	window.location.href = '/search';
+}
+
+// Fonction pour trier le tableau par un attribut donné
+let sortOrder = {}; // Objet pour stocker l'ordre de tri de chaque colonne
+function sortTableBy(attribute) {
+	const tbody = document.getElementById('table-body');
+    const rows = Array.from(tbody.querySelectorAll('tr')); // Récupérer toutes les lignes du corps du tableau
+
+    // Nous n'excluons pas l'en-tête car nous voulons trier toutes les lignes  
+    const dataRows = rows; // On garde toutes les lignes, y compris l'en-tête
+
+    // Afficher le nombre de lignes récupérées  
+    console.log(`Number of data rows (including header): ${dataRows.length}`);
+
+    // Afficher le contenu des lignes avant le tri  
+    dataRows.forEach((row, index) => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        const cellValues = cells.map(cell => cell.innerText.trim());
+        console.log(`Row ${index + 1}: `, cellValues);
+    });
+
+    // Déterminer l'ordre de tri pour cette colonne  
+    sortOrder[attribute] = !sortOrder[attribute]; // Inverser l'ordre chaque fois que l'en-tête est cliqué
+
+    // Tri des lignes de données  
+    const sortedRows = dataRows.slice(1).sort((a, b) => { // On exclut l'en-tête pour le tri  
+        const aValue = a.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
+        const bValue = b.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
+
+        // Vérifier si la colonne contient des nombres ou des dates  
+        const isNumber = !isNaN(aValue) && !isNaN(bValue);
+        const isDate = !isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue));
+
+        if (isNumber) {
+            return sortOrder[attribute] ? aValue - bValue : bValue - aValue;
+        } else if (isDate) {
+            return sortOrder[attribute] ? new Date(aValue) - new Date(bValue) : new Date(bValue) - new Date(aValue);
+        } else {
+            return sortOrder[attribute] ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        }
+    });
+
+    // Vider le tableau et réinsérer les lignes triées  
+    tbody.innerHTML = ''; // Vider le corps du tableau  
+    tbody.appendChild(rows[0]); // Réinsérer l'en-tête  
+    sortedRows.forEach(row => tbody.appendChild(row)); // Ajouter les lignes triées 
+}
+
+// Fonction pour obtenir l'index de la colonne correspondante à un attribut
+function getColumnIndex(attribute) {
+	const headerCells = document.querySelectorAll('thead th');
+	for (let i = 1; i < headerCells.length; i++) { // Commencer à 1 pour ignorer la première colonne "Action"
+		if (headerCells[i].innerText === attribute) {
+			return i + 1; // +1 pour tenir compte de la colonne d'action  
+	}	}
+	return -1; // Retourne -1 si l'attribut n'est pas trouvé  
 }
 
 // Fonction pour peupler les profils enregistrés
@@ -388,7 +449,7 @@ function createNewProfile() {
 	}
 	if (!myProfile)
 		myProfile = prompt("Nom d'un nouveau profil :");
-	
+
 	if (myProfile) {
 		const selectedObjectClasses = Array.from(document.querySelectorAll('#objectClassCheckboxes .objectClassCheckbox:checked')).map(checkbox => checkbox.value);
 		const similarProfile = checkSameProfileExist(selectedObjectClasses);
@@ -451,8 +512,8 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 
 		// Mettre à jour le tooltip des attributs
 		const attributesTooltip = document.getElementById("attributesTooltip");
-		attributesTooltip.textContent = selectedObjectClasses.length > 0 
-			? "Sélectionner les attributs objets de la recherche" 
+		attributesTooltip.textContent = selectedObjectClasses.length > 0
+			? "Sélectionner les attributs objets de la recherche"
 			: "Sélectionner préalablement au moins un objectClass"; // Texte par défaut
 
 		// Utiliser des ensembles pour éviter les doublons
@@ -523,8 +584,8 @@ document.querySelectorAll('.objectClassCheckbox').forEach(checkbox => {
 
 // Récupération de la définition complète d'un objectClass dans le schema de la base
 function getObjectClassByName(ldapSchema, name) {
-    const objectClass = ldapSchema.objectClasses.find(schema => schema.NAME.includes(name));
-    return objectClass ? objectClass : null;
+	const objectClass = ldapSchema.objectClasses.find(schema => schema.NAME.includes(name));
+	return objectClass ? objectClass : null;
 }
 
 // Ajouter tous les attributs MUST hérités
@@ -593,10 +654,6 @@ window.addEventListener('click', function(event) {
 		attributesDropdown.style.display = 'none'; // Fermer le dropdown des attributs
 	}
 });
-
-function handleHeaderClick(header) {
-	alert("Vous avez cliqué sur : " + header.innerText);
-}
 
 document.getElementById("searchTerm").addEventListener("focus", function() {
 	this.select();
