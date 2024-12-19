@@ -274,7 +274,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					:'';
 
 				// Rendre la vue de recherche
-				res.render('search', { results: null, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles: profilesToRender, selectedProfile, error: null });
+				res.render('search', { results: null, searchTerm: req.body.searchTerm, ldapSchema, attributesConfig, searchProfiles: profilesToRender, selectedProfile, error: null });
 			} catch(error) {
 					console.error('Erreur:', error);
 				if (client) {
