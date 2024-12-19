@@ -427,7 +427,7 @@ async function loadAttributesConfig(config) {
 			return {
 				oid: attrConf.cn[0],
 				...(attrConf.l && {customWording: attrConf.l[0]}),
-				...(attrConf.ou && {customMultiValue: attrConf.ou[0])),
+				...(attrConf.ou && {customMultiValue: attrConf.ou[0]}),
 				...(attrConf.description && {valueCheck: attrConf.description[0]})
 			};
 		});
