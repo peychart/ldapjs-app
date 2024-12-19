@@ -234,10 +234,10 @@
 
 	<div class="header-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;">
 		<h2 style="margin: 0;">
-			<%= results.length>1 ?results.length+' Résultats :' :results.length+' Résultat :' %>
+			<%= (results?.length ?? 0)<2 ?(results?.length ?? 0) +' Résultat :' :results.length+' Résultats :' %>
 		</h2>
 		<div style="display: flex; align-items: center;">
-			<button onclick="exportTableToCSV('results.csv')" style="margin-left: 10px;" <%= !results.length ?'disabled' :'' %>>
+			<button onclick="exportTableToCSV('results.csv')" style="margin-left: 10px;" <%= !results?.length ?'disabled' :'' %>>
 				Export CSV
 			</button>
 			<button onclick="importCSV()" style="margin-left: 10px;">
