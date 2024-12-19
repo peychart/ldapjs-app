@@ -75,7 +75,6 @@ level: 'error', // 'info' Niveau de log par défaut
 	try {
 		// Récupération du schéma LDAP
 		const ldapSchema = await loadSchema(ldap, config);
-
 //console.log('ldapSchema: ', JSON.stringify(ldapSchema, null, 2));	// Pour debug
 
 		// Configuration des middlewares
@@ -335,12 +334,37 @@ level: 'error', // 'info' Niveau de log par défaut
 					scope: 'sub',
 					attributes: ['dn', ...profile.attributes]
 				};
-//console.log('\nopts: ', opts);
 
 				await bindClient(client, config.ldap.data.bindDN, config.ldap.data.bindPassword);
 
 				// Récupérer les résultats de la recherche LDAP
 				const results = await searchLDAP(client, config.ldap.data.baseDN, opts);
+
+				// Ajout des attributs manquants
+				results.forEach(result => {
+					opts.attributes.forEach(attribute => {
+						if (!result.hasOwnProperty(attribute)) {
+							result[attribute] = []; // Ajouter l'attribut avec la valeur 'N/A'
+						}
+					});
+				});
+
+				// Suppression des attributs synonymes
+				results.forEach(result => {
+					Object.keys(result).forEach(attrName => {
+						const attribute = ldapSchema.attributes.find(item => item.NAME.some(name => name === attrName));
+						if (attribute) {
+							const primaryAttrName = attribute.NAME[0];
+							for (let i = attribute.NAME.length - 1; i >= 0; i--) {
+								const name = attribute.NAME[i];
+								if (name !== primaryAttrName) {
+									if (result[name] && result[name].length) {
+										result[primaryAttrName] = result[name];
+									}
+									delete result[name];
+						}	}	}
+					});
+				});
 
 				// Passer le searchTerm à la vue avec un statut 200 (OK)
 				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles, selectedProfile, error: null });
