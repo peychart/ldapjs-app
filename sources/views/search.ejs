@@ -335,8 +335,16 @@ function sortTableBy(attribute) {
 		const cellValues = cells.map(cell => cell.innerText.trim());
 	});
 
+	// Réinitialiser l'indicateur de l'ancien attribut de tri
+	if (!(attribute in sortOrder)) {
+		if (Object.keys(sortOrder).length) sortOrder[Object.keys(sortOrder)[0]] = null;
+		updateSortIndicators(sortOrder);
+		sorOrder = {};
+	}
+
 	// Changer l'ordre de tri pour cette colonne  
 	sortOrder[attribute] = !sortOrder[attribute]; // Inverser l'ordre chaque fois que l'en-tête est cliqué
+	updateSortIndicators(sortOrder);
 
 	// Tri des lignes de données  
 	const sortedRows = [...dataRows].sort((a, b) => { // Crée une copie pour trier  
@@ -359,6 +367,23 @@ function sortTableBy(attribute) {
 	// Vider le tableau et réinsérer l'en-tête, puis les lignes triées  
 	tbody.innerHTML = ''; // Vider le corps du tableau  
 	sortedRows.forEach(row => tbody.appendChild(row)); // Ajouter les lignes triées  
+}
+
+function updateSortIndicators(currentSortOrder) {
+	const headers = document.querySelectorAll('.sortable-header'); // Sélectionne tous les en-têtes triables
+
+	headers.forEach(header => {
+		const span = header.querySelector('.sort-indicator'); // Trouver l'indicateur de tri
+		const attribute = header.querySelector('span').innerText.trim(); // Récupérer le texte de l'en-tête
+
+		// Vérifie si l'attribut est dans sortOrder
+		if (attribute in currentSortOrder) {
+			// Met à jour l'indicateur basé sur l'état actuel
+			span.innerText = currentSortOrder[attribute] === null ? '⇅' : (currentSortOrder[attribute] ? '↓' : '↑');
+		} else {
+			span.innerText = '⇅'; // Réinitialiser les autres indicateurs à leur état par défaut
+		}
+	});
 }
 
 // Fonction pour obtenir l'index de la colonne correspondante à un attribut
@@ -714,7 +739,6 @@ function setInheritedMustAttributes(ldapSchema, objectClass) {
 		MUST: setInheritedMustAttributesFromSuperClasses(objectClass)
 	};
 }
-
 
 function searchSubmit(form) {
 	if (!document.getElementById('searchTerm').value.length) {
