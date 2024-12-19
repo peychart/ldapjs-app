@@ -47,6 +47,11 @@
 		button:hover {
 			background-color: #C0C0C0; /* Couleur de fond */
 		}
+		button:disabled {
+			opacity: 0.5;  /* Réduit l'opacité pour donner un aspect grisé */
+			pointer-events: none;  /* Désactive les interactions */
+			cursor: not-allowed;  /* Change le curseur pour indiquer que le bouton est désactivé */
+		}
 		input[type="text"] {
 			padding: 8px;
 			border-radius: 4px;
@@ -131,6 +136,34 @@
 			font-weight: bold; /* Profil sélectionné en gras */
 			color: black; /* Afficher en noir */
 		}
+		.sortable-header {
+			cursor: pointer; /* Indique que l'en-tête est cliquable */
+			position: relative; /* Pour le positionnement des éléments enfants */
+//			padding: 8px; /* Espacement interne */
+//			text-align: left; /* Alignez le texte à gauche */
+		}
+		.sortable-header > div {
+			display: flex; /* Utiliser flexbox pour le contenu de l'en-tête */
+			justify-content: space-between; /* Espace entre le texte et l'icône */
+			align-items: center; /* Centre verticalement */
+			width: 100%; /* Assurez-vous que cela prend toute la largeur de la cellule */
+		}
+		.sortable-header .sort-indicator {
+			position: absolute; /* Positionnement absolu pour l'indicateur de tri */
+			right: 10px; /* Positionnez l'indicateur à droite */
+			top: 50%; /* Centre verticalement */
+			transform: translateY(-50%); /* Ajustement pour centrer l'icône */
+			font-size: 0.8em; /* Taille réduite pour l'indicateur */
+			color: #888; /* Couleur de l'indicateur */
+		}
+		.sort-indicator {
+			font-size: 0.8em; /* Taille réduite pour l'indicateur */
+			color: #888; /* Couleur de l'indicateur */
+			margin-left: 5px; /* Petite marge à gauche de l'icône */
+		}
+		.sort-indicator:hover {
+			color: black; /* Change la couleur au survol si besoin */
+		}
 	</style>
 </head>
 <body>
@@ -199,44 +232,81 @@
 		<p style="color: red;"><%= error %></p>
 	<% } %>
 
-	<h2>Résultats :</h2>
+	<div class="header-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0;">
+		<h2 style="margin: 0;">
+			<%= results.length>1 ?results.length+' Résultats :' :results.length+' Résultat :' %>
+		</h2>
+		<div style="display: flex; align-items: center;">
+			<button onclick="exportTableToCSV('results.csv')" style="margin-left: 10px;" <%= !results.length ?'disabled' :'' %>>
+				Export CSV
+			</button>
+			<button onclick="importCSV()" style="margin-left: 10px;">
+				Import CSV
+			</button>
+		</div>
+	</div>
 	<table>
 		<thead>
-			<tr>
-				<th onclick="handleHeaderClick(this)">Action</th>
-				<% if (results && results.length > 0) { %>
+		<tr>
+			<th onclick="handleHeaderClick(this)">Action</th>
+			<% if (results && results.length > 0) { %>
+				<% 
+					const keys = Object.keys(results[0]); 
+					keys.forEach(key => {
+						// Afficher toutes les colonnes sauf "dn" dans l'en-tête  
+						if (key !== 'dn') {
+				%>
+					<th onclick="sortTableBy('<%= key %>')" class="sortable-header">
+						<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+							<span><%= key %></span>
+							<span class="sort-indicator">⇅</span>
+						</div>
+					</th>
+				<% 
+						}
+					});
+				%>
+				<th onclick="sortTableBy('dn')" class="sortable-header">
+					<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+						<span>dn</span>
+						<span class="sort-indicator">⇅</span>
+					</div>
+				</th> <!-- Ajouter "dn" à la fin de l'en-tête -->
+			<% } %>
+		</tr>
+	</thead>
+	<tbody id="table-body">
+		<% if (results && results.length > 0) { %>
+			<% results.forEach(user => { %>
+				<tr>
+					<td>
+						<button onclick="location.href='/newEdit/<%= user.dn %>'">Éditer</button>
+					</td>
 					<% 
 						const keys = Object.keys(results[0]); 
+						const userData = [];
+						keys.forEach(key => {
+							// Ajouter toutes les colonnes sauf "dn" d'abord  
+							if (key !== 'dn') {
+								userData.push(user[key] || 'N/A'); // Ajouter les autres données  
+							}
+						});
+						// Ajouter "dn" à la fin  
+						if (user.dn) {
+							userData.push(user.dn); // Ajouter "dn" à la fin  
+						}
 					%>
-					<% keys.forEach(key => { %>
-						<th onclick="sortTableBy('<%= key %>')"><%= key %></th>
+					<% userData.forEach(data => { %>
+						<td><%= data %></td>
 					<% }) %>
-				<% } %>
-			</tr>
-		</thead>
-		<tbody id="table-body">
-			<% if (results && results.length > 0) { %>
-				<% results.forEach(user => { %>
-					<tr>
-						<td>
-							<button onclick="location.href='/newEdit/<%= user.dn %>'">Éditer</button>
-						</td>
-						<% 
-							const keys = Object.keys(results[0]); 
-							keys.forEach(key => {
-						%>
-							<td>
-								<%= user[key] || 'N/A' %>
-							</td>
-						<% }) %>
-					</tr>
-				<% }) %>
-			<% } else { %>
-				<tr>
-					<td colspan="<%= (results && results.length > 0) ? Object.keys(results[0]).length + 1 : 6 %>" class="empty-message">Aucun résultat trouvé.</td>
 				</tr>
-			<% } %>
-		</tbody>
+			<% }) %>
+		<% } else { %>
+			<tr>
+				<td colspan="<%= (results && results.length > 0) ? Object.keys(results[0]).length + 1 : 6 %>" class="empty-message">Aucun résultat trouvé.</td>
+			</tr>
+		<% } %>
+	</tbody>
 	</table>
 <script>
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
@@ -259,14 +329,10 @@ function sortTableBy(attribute) {
 	const tbody = document.getElementById('table-body');
 	const dataRows = Array.from(tbody.querySelectorAll('tr')); // Récupérer toutes les lignes du corps du tableau
 
-	// Afficher le nombre de lignes récupérées 
-	console.log(`Number of data rows (excluding header): ${dataRows.length}`);
-
 	// Afficher le contenu des lignes avant le tri  
 	dataRows.forEach((row, index) => {
 		const cells = Array.from(row.querySelectorAll('td'));
 		const cellValues = cells.map(cell => cell.innerText.trim());
-		console.log(`Row ${index + 1}: `, cellValues);
 	});
 
 	// Changer l'ordre de tri pour cette colonne  
@@ -299,10 +365,50 @@ function sortTableBy(attribute) {
 function getColumnIndex(attribute) {
 	const headerCells = document.querySelectorAll('thead th');
 	for (let i = 1; i < headerCells.length; i++) { // Commencer à 1 pour ignorer la première colonne "Action"
-		if (headerCells[i].innerText === attribute) {
+		const headerText = headerCells[i].querySelector('span').textContent.trim();
+		if (headerText === attribute) {
 			return i + 1; // +1 pour tenir compte de la colonne d'action  
 	}	}
 	return -1; // Retourne -1 si l'attribut n'est pas trouvé  
+}
+
+function importCSV() {
+	alert("Désolé : cette fonction est en cours d'implémentation.");
+}
+
+function exportTableToCSV(filename) {
+	const rows = [];
+	const table = document.querySelector("table");
+	const headers = Array.from(table.querySelectorAll("thead th")).map((header, index) => {
+		// Ignorer le premier en-tête qui contient "Action"
+		return index === 0 ? null : header.innerText;
+	}).filter(header => header !== null); // Filtrer les en-têtes nuls
+
+	// Ajout des en-têtes, en ignorant la première  
+	rows.push(headers.join(","));
+
+	// Ajout des lignes de données, en ignorant la première cellule  
+	const cells = table.querySelectorAll("tbody tr");
+	cells.forEach(row => {
+		const rowData = Array.from(row.querySelectorAll("td")).map((cell, index) => {
+			// Ignorer la première cellule qui contient le bouton "Éditer"
+			return index === 0 ? null : cell.innerText.replace(/,/g, " "); // Remplacer les virgules pour éviter des colonnes supplémentaires  
+		}).filter(data => data !== null); // Filtrer les données nulle
+
+		rows.push(rowData.join(","));
+	});
+
+	// Création d'un fichier CSV  
+	const csvString = rows.join("\n");
+	const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+	const link = document.createElement("a");
+	const url = URL.createObjectURL(blob);
+	link.setAttribute("href", url);
+	link.setAttribute("download", filename);
+	link.style.visibility = 'hidden';
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
 }
 
 // Fonction pour peupler les profils enregistrés
