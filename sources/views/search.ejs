@@ -147,6 +147,13 @@
 			justify-content: space-between; /* Espace entre le texte et l'icône */
 			align-items: center; /* Centre verticalement */
 			width: 100%; /* Assurez-vous que cela prend toute la largeur de la cellule */
+			padding: 8px; /* Ajoutez un padding pour éviter le chevauchement */
+		}
+		.header-label {
+			flex-grow: 1; /* Prend tout l'espace disponible */
+			overflow: hidden; /* Évite le dépassement */
+			white-space: nowrap; /* Empêche le retour à la ligne */
+			text-overflow: ellipsis; /* Ajoute des points de suspension */
 		}
 		.sortable-header .sort-indicator {
 			position: absolute; /* Positionnement absolu pour l'indicateur de tri */
@@ -157,9 +164,9 @@
 			color: #888; /* Couleur de l'indicateur */
 		}
 		.sort-indicator {
+			margin-left: 10px; /* Ajoutez une marge à gauche pour espacer */
 			font-size: 0.8em; /* Taille réduite pour l'indicateur */
 			color: #888; /* Couleur de l'indicateur */
-			margin-left: 5px; /* Petite marge à gauche de l'icône */
 		}
 		.sort-indicator:hover {
 			color: black; /* Change la couleur au survol si besoin */
@@ -261,8 +268,8 @@
 							const headerLabel = oid ?attributesConfig.find(attr => attr.oid === oid)?.customWording ?? key :key;
 				%>
 					<th onclick="sortTableBy('<%= key %>')" class="sortable-header">
-						<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-							<span><%= headerLabel %></span>
+						<div>
+							<span class="header-label"><%= headerLabel %>&nbsp&nbsp
 							<span class="sort-indicator">⇅</span>
 						</div>
 					</th>
