@@ -407,6 +407,44 @@ async function updateAPPConfig(client, entryName, rootDn, entry) {
 	}
 }
 
+async function loadAttributesConfig(config) {
+	const client = ldap.createClient({ url: `${config.ldap.url}:${config.ldap.port}` });
+
+	try {
+		// Liaison au client LDAP
+		await bindClient(client, config.ldap.schema.bindDN, config.ldap.schema.bindPassword);
+		
+		// Recuperatio des customisations d'attributs
+		const attrDefDN = (config.configDn.attributs ?? 'ou=attribut') + ',' + config.configDn.root;
+		const attrDefOptions = {
+			scope: 'one',
+			attributes: [ 'cn', 'l', 'description', 'ou' ]
+		};
+		const searchResult = await searchLDAP(client, attrDefDN, attrDefOptions);
+
+		// Retournez le bon résultat
+		return searchResult.map(attrConf => {
+			return {
+				oid: attrConf.cn,
+				...(attrConf.l && {customWording: attrConf.l}),
+				...(attrConf.ou && {customMultiValue: attrConf.ou}),
+				...(attrConf.description && {valueCheck: attrConf.description})
+			};
+		});
+
+	} catch (error) {
+		console.error('Erreur lors de l\'extraction des customisations d\'attributs :', error);
+		throw error; // Laisser l'erreur remonter
+	} finally {
+		// Déconnexion du schemaClient
+		try {
+			await client.unbind();
+		} catch (unbindError) {
+			console.error('Erreur lors de la déconnexion de la base :', unbindError);
+		}
+	}
+}
+
 /*
  * Parse de la défiition d'attribut extraite du schema de la base
  */
@@ -719,6 +757,7 @@ module.exports = {
 	searchLDAP,
 	rawSearchLDAP,
 	loadSchema,
+	loadAttributesConfig,
 	getUserRoleFromDatabase,
 	getAllSupObjectClasses,
 	setInheritedMustAttributes,
