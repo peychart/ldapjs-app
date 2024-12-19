@@ -255,10 +255,14 @@
 					keys.forEach(key => {
 						// Afficher toutes les colonnes sauf "dn" dans l'en-tête  
 						if (key !== 'dn') {
+							// Récupérer dans le schéma l'OID correspondant à la clé
+							const oid = ldapSchema.attributes.find(attr => attr.NAME.includes(key))?.OID;
+							// Récupérer l'éventuel customWording à partir de l'oid dans attributesConfig
+							const headerLabel = oid ?attributesConfig.find(attr => attr.oid === oid)?.customWording ?? key :key;
 				%>
 					<th onclick="sortTableBy('<%= key %>')" class="sortable-header">
 						<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-							<span><%= key %></span>
+							<span><%= headerLabel %></span>
 							<span class="sort-indicator">⇅</span>
 						</div>
 					</th>
@@ -310,6 +314,7 @@
 	</table>
 <script>
 const ldapSchema = <%- JSON.stringify(ldapSchema) %>;
+const attributesConfig = <%- JSON.stringify(attributesConfig) %>;
 const searchProfiles = JSON.parse(document.getElementById('searchProfiles').value);
 let selectedAttributes = {}; // Objet pour stocker l'état des checkboxes
 
@@ -523,7 +528,7 @@ function selectProfile(newProfile) {
 			}
 		});
 	}
-	setTimeout(() => {document.getElementById("attributesDropdown").style.display = 'none'}, 1000);
+	document.getElementById("attributesDropdown").style.display = 'none';
 }
 
 function checkSameProfileExist(selectedObjectClasses) { // Vérification parmi les profiles existants
