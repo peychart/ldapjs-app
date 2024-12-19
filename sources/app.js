@@ -37,6 +37,7 @@ const {
 	searchLDAP,
 	rawSearchLDAP,
 	loadSchema,
+	loadAttributesConfig,
 	getUserRoleFromDatabase,
 	getAllSupObjectClasses,
 	setInheritedMustAttributes,
@@ -76,6 +77,8 @@ level: 'error', // 'info' Niveau de log par défaut
 		// Récupération du schéma LDAP
 		const ldapSchema = await loadSchema(ldap, config);
 //console.log('ldapSchema: ', JSON.stringify(ldapSchema, null, 2));	// Pour debug
+		let attributesConfig = await loadAttributesConfig(config);
+//console.log('attributesConfig: ', JSON.stringify(attributesConfig, null, 2)); // Display for debug
 
 		// Configuration des middlewares
 		app.use(bodyParser.json()); // Pour traiter les JSON
@@ -278,7 +281,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					client.unbind(); // Assurez-vous que le client est délié
 				}
 				// Passer l'erreur à la vue avec un statut 500 (Erreur interne du serveur)
-				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, searchProfiles: profilesToRender, selectedProfile, error: error.message });
+				return res.status(500).render('search', { results: null, searchTerm: null, ldapSchema, attributesConfig, searchProfiles: profilesToRender, selectedProfile, error: error.message });
 			} finally {
 				// Déconnexion du client principal
 				if (client) {
@@ -367,7 +370,7 @@ level: 'error', // 'info' Niveau de log par défaut
 				});
 
 				// Passer le searchTerm à la vue avec un statut 200 (OK)
-				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, searchProfiles, selectedProfile, error: null });
+				return res.status(200).render('search', { results, searchTerm: req.body.searchTerm, ldapSchema, attributesConfig, searchProfiles, selectedProfile, error: null });
 
 			} catch(error) {
 					console.error('Erreur:', error);
@@ -507,7 +510,7 @@ level: 'error', // 'info' Niveau de log par défaut
 					}
 				});
 
-				// Ajouter la propriété ADDED/DELEETD=true aux objectClasses éventuellement concernés
+				// Ajouter la propriété ADDED/DELETED=true aux objectClasses éventuellement concernés
 				['ADDED', 'DELETED'].forEach(type => {
 					objectClassesDetails.forEach(objCls => {
 						if (req.session.edit?.[type])
@@ -518,36 +521,25 @@ level: 'error', // 'info' Niveau de log par défaut
 
 //console.clear(); console.log('objectClassesDetails: ', JSON.stringify(objectClassesDetails, null, 2)); // Display for debug
 
-				// Recuperatio des customisations d'attributs
-				const attrDefDN = (config.configDn.attributs ?? 'ou=attribut') + ',' + config.configDn.root;
-				const attrDefOptions = {
-					scope: 'one',
-					attributes: [ 'cn', 'l', 'description', 'ou' ]
-				};
-				const attributesConfig = await searchLDAP(client, attrDefDN, attrDefOptions).catch(err => {
-					return [];
-				});
-//console.clear(); console.log('attributesConfig: ', JSON.stringify(attributesConfig, null, 2)); // Display for debug
-
 				// Enrich chaque objectClass du dn courant avec les data d'objectData et d'attributesConfig
 				//		1: avec les éventuelles customConf d'attributs définies dans attributesConfig
 				objectClassesDetails.forEach(objectClass => {
 					// Parcours des attributs de MUST et MAY
 					['MUST', 'MAY'].forEach(key => {
 						objectClass[key].forEach(currentAttr => {
-							const attrCustomizations = attributesConfig.find(item => item.cn.includes(currentAttr.OID)) ?? null;
+							const attrCustomizations = attributesConfig.find(item => item.oid.includes(currentAttr.OID)) ?? null;
 
 							// Déterminer si la data d'attribut doit être [] ou SINGLE_VALUE
-							const customMultiValue = attrCustomizations?.ou ?? null;
+							const customMultiValue = attrCustomizations?.customMultiValue ?? null;
 							const isMultiValue = !currentAttr.SINGLE_VALUE && (customMultiValue?.[0] !== 'SINGLE-VALUE');
 							if (!isMultiValue) currentAttr.MULTI_VALUE = 'SINGLE-VALUE';
 
 							if (attrCustomizations) {
 								// Ajout des customisations de l'attribut
-								if (attrCustomizations?.l || null)
-									currentAttr.customWording = attrCustomizations.l;
-								if (attrCustomizations?.description || null)
-									currentAttr.valueCheck = attrCustomizations?.description;
+								if (attrCustomizations?.customWording || null)
+									currentAttr.customWording = attrCustomizations.customWording;
+								if (attrCustomizations?.valueCheck || null)
+									currentAttr.valueCheck = attrCustomizations?.valueCheck;
 							}
 						});
 					});
@@ -789,6 +781,9 @@ level: 'error', // 'info' Niveau de log par défaut
 
 				// Mise à jour dans la base LDAP
 				await updateAPPConfig(client, 'cn=' + attrName, rootDn, entry);
+
+				// Rafraichir des customisations d'attributs avec les nouvelles valeurs
+				attributesConfig = await loadAttributesConfig(config);
 
 				return res.redirect(`/newEdit/${dn}?errMsg=${encodeURIComponent(req.session.edit?.errMsg || '')}`);
 				//return res.redirect(`/edit/${dn}`);
