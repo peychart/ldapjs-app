@@ -527,11 +527,11 @@ level: 'error', // 'info' Niveau de log par défaut
 					// Parcours des attributs de MUST et MAY
 					['MUST', 'MAY'].forEach(key => {
 						objectClass[key].forEach(currentAttr => {
-							const attrCustomizations = attributesConfig.find(item => item.oid.includes(currentAttr.OID)) ?? null;
+							const attrCustomizations = attributesConfig.find(item => item.oid === currentAttr.OID) ?? null;
 
 							// Déterminer si la data d'attribut doit être [] ou SINGLE_VALUE
 							const customMultiValue = attrCustomizations?.customMultiValue ?? null;
-							const isMultiValue = !currentAttr.SINGLE_VALUE && (customMultiValue?.[0] !== 'SINGLE-VALUE');
+							const isMultiValue = !currentAttr.SINGLE_VALUE && (customMultiValue !== 'SINGLE-VALUE');
 							if (!isMultiValue) currentAttr.MULTI_VALUE = 'SINGLE-VALUE';
 
 							if (attrCustomizations) {
