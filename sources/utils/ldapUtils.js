@@ -425,7 +425,7 @@ async function loadAttributesConfig(config) {
 		// Retournez le bon résultat
 		return searchResult.map(attrConf => {
 			return {
-				oid: attrConf.cn,
+				oid: attrConf.cn[0],
 				...(attrConf.l && {customWording: attrConf.l[0]}),
 				...(attrConf.ou && {customMultiValue: attrConf.ou[0])),
 				...(attrConf.description && {valueCheck: attrConf.description[0]})
