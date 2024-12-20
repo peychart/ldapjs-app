@@ -252,7 +252,7 @@
 			</button>
 		</div>
 	</div>
-	<table>
+	<table id="results">
 		<thead>
 		<tr>
 			<th onclick="handleHeaderClick(this)">Action</th>
@@ -269,7 +269,7 @@
 				%>
 					<th onclick="sortTableBy('<%= key %>')" class="sortable-header">
 						<div>
-							<span class="header-label"><%= headerLabel %>&nbsp&nbsp
+							<span class="header-label" data-key="<%= key %>"><%= headerLabel %></span>&nbsp&nbsp
 							<span class="sort-indicator">⇅</span>
 						</div>
 					</th>
@@ -278,8 +278,8 @@
 					});
 				%>
 				<th onclick="sortTableBy('dn')" class="sortable-header">
-					<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-						<span>dn</span>
+					<div>
+						<span class="header-label" data-key="dn">dn</span>&nbsp&nbsp
 						<span class="sort-indicator">⇅</span>
 					</div>
 				</th> <!-- Ajouter "dn" à la fin de l'en-tête -->
@@ -351,7 +351,7 @@ function sortTableBy(attribute) {
 	if (!(attribute in sortOrder)) {
 		if (Object.keys(sortOrder).length) sortOrder[Object.keys(sortOrder)[0]] = null;
 		updateSortIndicators(sortOrder);
-		sorOrder = {};
+		sortOrder = {};
 	}
 
 	// Changer l'ordre de tri pour cette colonne  
@@ -400,13 +400,13 @@ function updateSortIndicators(currentSortOrder) {
 
 // Fonction pour obtenir l'index de la colonne correspondante à un attribut
 function getColumnIndex(attribute) {
-	const headerCells = document.querySelectorAll('thead th');
+	const headerCells = document.getElementById("results").querySelectorAll('thead th');
 	for (let i = 1; i < headerCells.length; i++) { // Commencer à 1 pour ignorer la première colonne "Action"
-		const headerText = headerCells[i].querySelector('span').textContent.trim();
+		const headerText = headerCells[i].querySelector('span').getAttribute('data-key');
 		if (headerText === attribute) {
 			return i + 1; // +1 pour tenir compte de la colonne d'action  
 	}	}
-	return -1; // Retourne -1 si l'attribut n'est pas trouvé  
+	return -1; // Retourne -1 si l'attribut n'est pas trouvé
 }
 
 function importCSV() {
