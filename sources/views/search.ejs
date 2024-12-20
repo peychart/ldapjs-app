@@ -255,13 +255,11 @@
 	<table id="results">
 		<thead>
 		<tr>
-			<th onclick="handleHeaderClick(this)">Action</th>
+			<th onclick="changeLabels()" title="Permutter libellés customisés et noms d'attributs.">Action</th>
 			<% if (results && results.length > 0) { %>
-				<% 
-					const keys = Object.keys(results[0]); 
+				<%	const keys = Object.keys(results[0]);
 					keys.forEach(key => {
-						// Afficher toutes les colonnes sauf "dn" dans l'en-tête  
-						if (key !== 'dn') {
+						if (key !== 'dn') { // Afficher toutes les colonnes sauf "dn" dans l'en-tête (pour la fin)
 							// Récupérer dans le schéma l'OID correspondant à la clé
 							const oid = ldapSchema.attributes.find(attr => attr.NAME.includes(key))?.OID;
 							// Récupérer l'éventuel customWording à partir de l'oid dans attributesConfig
@@ -269,7 +267,7 @@
 				%>
 					<th onclick="sortTableBy('<%= key %>')" class="sortable-header">
 						<div>
-							<span class="header-label" data-key="<%= key %>"><%= headerLabel %></span>&nbsp&nbsp
+							<span class="header-label" data-key="<%= key %>" title="<%= key %>"><%= headerLabel %></span>&nbsp&nbsp
 							<span class="sort-indicator">⇅</span>
 						</div>
 					</th>
@@ -277,7 +275,7 @@
 						}
 					});
 				%>
-				<th onclick="sortTableBy('dn')" class="sortable-header">
+				<th onclick="sortTableBy('dn')" class="sortable-header" title=¨dn">
 					<div>
 						<span class="header-label" data-key="dn">dn</span>&nbsp&nbsp
 						<span class="sort-indicator">⇅</span>
@@ -294,17 +292,17 @@
 						<button onclick="location.href='/newEdit/<%= user.dn %>'">Éditer</button>
 					</td>
 					<% 
-						const keys = Object.keys(results[0]); 
+						const keys = Object.keys(results[0]);
 						const userData = [];
 						keys.forEach(key => {
-							// Ajouter toutes les colonnes sauf "dn" d'abord  
+							// Ajouter toutes les colonnes sauf "dn" d'abord
 							if (key !== 'dn') {
-								userData.push(user[key] || 'N/A'); // Ajouter les autres données  
+								userData.push(user[key] || 'N/A'); // Ajouter les autres données
 							}
 						});
-						// Ajouter "dn" à la fin  
+						// Ajouter "dn" à la fin
 						if (user.dn) {
-							userData.push(user.dn); // Ajouter "dn" à la fin  
+							userData.push(user.dn); // Ajouter "dn" à la fin
 						}
 					%>
 					<% userData.forEach(data => { %>
@@ -341,7 +339,7 @@ function sortTableBy(attribute) {
 	const tbody = document.getElementById('table-body');
 	const dataRows = Array.from(tbody.querySelectorAll('tr')); // Récupérer toutes les lignes du corps du tableau
 
-	// Afficher le contenu des lignes avant le tri  
+	// Afficher le contenu des lignes avant le tri
 	dataRows.forEach((row, index) => {
 		const cells = Array.from(row.querySelectorAll('td'));
 		const cellValues = cells.map(cell => cell.innerText.trim());
@@ -354,16 +352,16 @@ function sortTableBy(attribute) {
 		sortOrder = {};
 	}
 
-	// Changer l'ordre de tri pour cette colonne  
+	// Changer l'ordre de tri pour cette colonne
 	sortOrder[attribute] = !sortOrder[attribute]; // Inverser l'ordre chaque fois que l'en-tête est cliqué
 	updateSortIndicators(sortOrder);
 
-	// Tri des lignes de données  
-	const sortedRows = [...dataRows].sort((a, b) => { // Crée une copie pour trier  
+	// Tri des lignes de données
+	const sortedRows = [...dataRows].sort((a, b) => { // Crée une copie pour trier
 		const aValue = a.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
 		const bValue = b.querySelector(`td:nth-child(${getColumnIndex(attribute)})`).innerText.trim();
 
-		// Vérifier si la colonne contient des nombres ou des dates  
+		// Vérifier si la colonne contient des nombres ou des dates
 		const isNumber = !isNaN(aValue) && !isNaN(bValue);
 		const isDate = !isNaN(Date.parse(aValue)) && !isNaN(Date.parse(bValue));
 
@@ -376,9 +374,9 @@ function sortTableBy(attribute) {
 		}
 	});
 
-	// Vider le tableau et réinsérer l'en-tête, puis les lignes triées  
-	tbody.innerHTML = ''; // Vider le corps du tableau  
-	sortedRows.forEach(row => tbody.appendChild(row)); // Ajouter les lignes triées  
+	// Vider le tableau et réinsérer l'en-tête, puis les lignes triées
+	tbody.innerHTML = ''; // Vider le corps du tableau
+	sortedRows.forEach(row => tbody.appendChild(row)); // Ajouter les lignes triées
 }
 
 function updateSortIndicators(currentSortOrder) {
@@ -404,9 +402,22 @@ function getColumnIndex(attribute) {
 	for (let i = 1; i < headerCells.length; i++) { // Commencer à 1 pour ignorer la première colonne "Action"
 		const headerText = headerCells[i].querySelector('span').getAttribute('data-key');
 		if (headerText === attribute) {
-			return i + 1; // +1 pour tenir compte de la colonne d'action  
+			return i + 1; // +1 pour tenir compte de la colonne d'action
 	}	}
 	return -1; // Retourne -1 si l'attribut n'est pas trouvé
+}
+
+function changeLabels() {
+	// Récupérer tous les éléments avec la classe 'header-label'
+	const headerLabels = document.querySelectorAll('#results thead .header-label');
+
+	// Parcourir chaque en-tête et mettre à jour son texte
+	headerLabels.forEach(headerLabel => {
+		const currentText = headerLabel.textContent; // Récupérer le texte actuel
+        const currentTitle = headerLabel.getAttribute('title'); // Récupérer le title actuel
+		headerLabel.textContent = currentTitle; // Mettre le title dans textContent  
+        headerLabel.setAttribute('title', currentText); // Mettre le textContent dans title
+	});
 }
 
 function importCSV() {
@@ -421,21 +432,21 @@ function exportTableToCSV(filename) {
 		return index === 0 ? null : header.innerText;
 	}).filter(header => header !== null); // Filtrer les en-têtes nuls
 
-	// Ajout des en-têtes, en ignorant la première  
+	// Ajout des en-têtes, en ignorant la première
 	rows.push(headers.join(","));
 
-	// Ajout des lignes de données, en ignorant la première cellule  
+	// Ajout des lignes de données, en ignorant la première cellule
 	const cells = table.querySelectorAll("tbody tr");
 	cells.forEach(row => {
 		const rowData = Array.from(row.querySelectorAll("td")).map((cell, index) => {
 			// Ignorer la première cellule qui contient le bouton "Éditer"
-			return index === 0 ? null : cell.innerText.replace(/,/g, " "); // Remplacer les virgules pour éviter des colonnes supplémentaires  
+			return index === 0 ? null : cell.innerText.replace(/,/g, " "); // Remplacer les virgules pour éviter des colonnes supplémentaires
 		}).filter(data => data !== null); // Filtrer les données nulle
 
 		rows.push(rowData.join(","));
 	});
 
-	// Création d'un fichier CSV  
+	// Création d'un fichier CSV
 	const csvString = rows.join("\n");
 	const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
 	const link = document.createElement("a");
